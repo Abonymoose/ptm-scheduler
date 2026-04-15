@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -6,6 +7,14 @@ from database import get_db
 from routers import auth, slots, bookings
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 security = HTTPBearer()
 
