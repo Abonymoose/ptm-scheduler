@@ -2,15 +2,15 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+security = HTTPBearer()
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -33,5 +33,5 @@ def decode_token(token: str) -> dict:
             detail="Invalid or expired token"
         )
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    return decode_token(token)
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    return decode_token(credentials.credentials)
