@@ -62,3 +62,56 @@ async def get_slots(
     )
     rows = result.fetchall()
     return [dict(r._mapping) for r in rows]
+
+@router.get("/mine")
+async def get_my_slots(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Teachers only")
+
+    result = await db.execute(
+        text(
+            "SELECT s.id, s.start_time, s.end_time, s.capacity,"
+            " COUNT(b.id) as booked_count,"
+            " COALESCE(json_agg("
+            "   json_build_object('booking_id', b.id, 'parent_name', u.name, 'status', b.status)"
+            "   ORDER BY b.created_at"
+            " ) FILTER (WHERE b.id IS NOT NULL), '[]') as bookings"
+            " FROM slots s"
+            " LEFT JOIN bookings b ON s.id = b.slot_id AND b.status != 'cancelled'"
+            " LEFT JOIN users u ON b.parent_id = u.id"
+            " WHERE s.teacher_id = :tid"
+            " GROUP BY s.id"
+            " ORDER BY s.start_time"
+        ),
+        {"tid": current_user["sub"]}
+    )
+    rows = result.fetchall()
+    return [dict(r._mapping) for r in rows]
+
+@router.get("/all")
+async def get_all_slots(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    result = await db.execute(
+        text(
+            "SELECT s.id, s.start_time, s.end_time, s.capacity,"
+            " u.name as teacher_name,"
+            " COUNT(b.id) as booked_count"
+            " FROM slots s"
+            " JOIN users u ON s.teacher_id = u.id"
+            " LEFT JOIN bookings b ON s.id = b.slot_id AND b.status != 'cancelled'"
+            " WHERE s.school_id = :sid"
+            " GROUP BY s.id, u.name"
+            " ORDER BY s.start_time"
+        ),
+        {"sid": current_user["school_id"]}
+    )
+    rows = result.fetchall()
+    return [dict(r._mapping) for r in rows]

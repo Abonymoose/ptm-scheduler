@@ -5,12 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from database import get_db
 from routers import auth, slots, bookings
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
 
+_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+_allowed_origins = list({_frontend_url, "http://localhost:5173"})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

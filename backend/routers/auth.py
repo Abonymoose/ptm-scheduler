@@ -56,18 +56,18 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     )
     await db.commit()
 
-    token = create_access_token({"sub": user_id, "role": body.role, "school_id": str(school.id)})
+    token = create_access_token({"sub": user_id, "role": body.role, "school_id": str(school.id), "name": body.name})
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login")
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        text("SELECT id, hashed_password, role, school_id FROM users WHERE email = :email"),
+        text("SELECT id, hashed_password, role, school_id, name FROM users WHERE email = :email"),
         {"email": body.email}
     )
     user = result.fetchone()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"sub": str(user.id), "role": user.role, "school_id": str(user.school_id)})
+    token = create_access_token({"sub": str(user.id), "role": user.role, "school_id": str(user.school_id), "name": user.name})
     return {"access_token": token, "token_type": "bearer"}

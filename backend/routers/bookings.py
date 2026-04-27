@@ -69,6 +69,60 @@ async def create_booking(
 
     return {"booking_id": booking_id, "message": "Booking confirmed"}
 
+@router.delete("/{booking_id}")
+async def cancel_booking(
+    booking_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "parent":
+        raise HTTPException(status_code=403, detail="Only parents can cancel bookings")
+
+    result = await db.execute(
+        text("SELECT id, parent_id, status FROM bookings WHERE id = :bid"),
+        {"bid": booking_id}
+    )
+    booking = result.fetchone()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if str(booking.parent_id) != current_user["sub"]:
+        raise HTTPException(status_code=403, detail="Not your booking")
+    if booking.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Already cancelled")
+
+    await db.execute(
+        text("UPDATE bookings SET status = 'cancelled' WHERE id = :bid"),
+        {"bid": booking_id}
+    )
+    await db.commit()
+    return {"message": "Booking cancelled"}
+
+@router.get("/all")
+async def get_all_bookings(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    result = await db.execute(
+        text(
+            "SELECT b.id, b.status, b.created_at,"
+            " p.name as parent_name,"
+            " t.name as teacher_name,"
+            " s.start_time, s.end_time"
+            " FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " JOIN users p ON b.parent_id = p.id"
+            " JOIN users t ON s.teacher_id = t.id"
+            " WHERE s.school_id = :sid"
+            " ORDER BY s.start_time"
+        ),
+        {"sid": current_user["school_id"]}
+    )
+    rows = result.fetchall()
+    return [dict(r._mapping) for r in rows]
+
 @router.get("/")
 async def get_my_bookings(
     db: AsyncSession = Depends(get_db),
@@ -76,7 +130,7 @@ async def get_my_bookings(
 ):
     result = await db.execute(
         text(
-            "SELECT b.id, b.status, b.created_at,"
+            "SELECT b.id, b.slot_id, b.status, b.created_at,"
             " s.start_time, s.end_time,"
             " u.name as teacher_name"
             " FROM bookings b"

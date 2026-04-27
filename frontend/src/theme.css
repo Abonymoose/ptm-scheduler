@@ -1,0 +1,26 @@
+:root {
+  --primary: #F47920;
+  --dark: #1B3F7A;
+  --page-bg: #FFF8F3;
+  --card-bg: #fff;
+  --tint-bg: #FFF0E6;
+  --soft-bg: #FFF8F3;
+  --border-light: #FDE9D4;
+  --border-mid: #F4C099;
+  --border-dark: #F47920;
+  --text-primary: #1B3F7A;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
+  --text-orange: #C45A0A;
+  --booked-bg: #FFF0E6;
+  --free-bg: #F9FAFB;
+  --blocked-bg: #F3F4F6;
+  --cancel-red: #E24B4A;
+  --child1-bg: #FFF0E6;
+  --child1-border: #F47920;
+  --child1-text: #C45A0A;
+  --child2-bg: #EFF6FF;
+  --child2-border: #93C5FD;
+  --child2-text: #1D4ED8;
+  --topbar-subtext: #FFE0C0;
+}
