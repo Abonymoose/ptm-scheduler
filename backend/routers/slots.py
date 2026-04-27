@@ -49,13 +49,13 @@ async def get_slots(
     result = await db.execute(
         text(
             "SELECT s.id, s.start_time, s.end_time, s.capacity,"
-            " u.name as teacher_name,"
+            " s.teacher_id, u.name as teacher_name,"
             " COUNT(b.id) as booked_count"
             " FROM slots s"
             " JOIN users u ON s.teacher_id = u.id"
             " LEFT JOIN bookings b ON s.id = b.slot_id AND b.status != 'cancelled'"
             " WHERE s.school_id = :sid"
-            " GROUP BY s.id, u.name"
+            " GROUP BY s.id, s.teacher_id, u.name"
             " ORDER BY s.start_time"
         ),
         {"sid": current_user["school_id"]}

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(pip show *)",
-      "Bash(venv/Scripts/pip show *)"
+      "Bash(venv/Scripts/pip show *)",
+      "Bash(awk '{print length}' 1_login_v3.html)",
+      "Bash(npm run *)"
     ]
   }
 }

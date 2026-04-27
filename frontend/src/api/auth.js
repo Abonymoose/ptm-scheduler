@@ -11,3 +11,6 @@ export const signup = async (name, email, password, role, invite_code) => {
   const res = await axios.post(`${BASE_URL}/auth/signup`, { name, email, password, role, invite_code })
   return res.data
 }
+
+export const loginUser = async ({ email, password }) => login(email, password)
+export const signupUser = async ({ name, email, password, role, invite_code }) => signup(name, email, password, role, invite_code)
