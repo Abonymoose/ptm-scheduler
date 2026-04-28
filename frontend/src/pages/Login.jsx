@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { login } from '../api/auth'
 
 export default function Login() {
   const { loginUser } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +18,10 @@ export default function Login() {
     try {
       const data = await login(email, password)
       loginUser(data.access_token)
+      const payload = JSON.parse(atob(data.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+      if (payload.role === 'parent') navigate('/parent')
+      else if (payload.role === 'teacher') navigate('/teacher')
+      else if (payload.role === 'admin') navigate('/admin')
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.')
     }
