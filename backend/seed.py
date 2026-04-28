@@ -12,6 +12,11 @@ RAW_URL = os.getenv("DATABASE_URL")
 # asyncpg uses postgresql:// (not postgresql+asyncpg://)
 DATABASE_URL = RAW_URL.replace("postgresql+asyncpg://", "postgresql://").split("?")[0]
 
+PARENTS = [
+    ("Paras Mehta", "paras.mehta@gmail.com"),
+]
+PARENT_PASSWORD = "parent123"
+
 TEACHERS = [
     ("Sandhya Chhetri", "sandhya.chhetri@inventure.edu"),
     ("Anwesha Basu",    "anwesha.basu@inventure.edu"),
@@ -90,6 +95,33 @@ async def main():
         )
         teacher_ids["susan.christi@inventure.edu"] = uid
         print(f"  [added]  Susan Christi")
+
+    # --- Upsert parents ---
+    hashed_parent = hash_password(PARENT_PASSWORD)
+    print()
+    for name, email in PARENTS:
+        existing = await conn.fetchrow(
+            "SELECT id FROM users WHERE email = $1 AND school_id = $2",
+            email, school_id
+        )
+        if existing:
+            print(f"  [skip]   {name} ({email}) — already exists")
+        else:
+            uid = str(uuid.uuid4())
+            await conn.execute(
+                """
+                INSERT INTO users (id, school_id, name, email, hashed_password, role)
+                VALUES ($1, $2, $3, $4, $5, 'parent')
+                ON CONFLICT DO NOTHING
+                """,
+                uid, school_id, name, email, hashed_parent
+            )
+            print(f"  [added]  {name} ({email})")
+
+    # --- Reset parent passwords ---
+    new_hash = bcrypt.hashpw("parent123".encode(), bcrypt.gensalt()).decode()
+    await conn.execute("UPDATE users SET hashed_password = $1 WHERE email = $2", new_hash, "paras.mehta@gmail.com")
+    print(f"  [reset]  paras.mehta@gmail.com password -> parent123")
 
     print(f"\nSeeding slots ({NUM_SLOTS} per teacher, starting {PTM_DATE.strftime('%H:%M')}, 7-min intervals)...\n")
 

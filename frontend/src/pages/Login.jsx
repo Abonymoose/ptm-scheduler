@@ -9,17 +9,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const sanitize = (str) => str.replace(/[<>"'`;\\]/g, '').trim()
-
   const handleSubmit = async () => {
     setError('')
-    const cleanEmail = sanitize(email)
-    const cleanPassword = sanitize(password)
-    if (!cleanEmail || !cleanPassword) { setError('Please fill in all fields.'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) { setError('Please enter a valid email.'); return }
+    if (!email || !password) { setError('Please fill in all fields.'); return }
     setLoading(true)
     try {
-      const data = await login(cleanEmail, cleanPassword)
+      const data = await login(email, password)
       loginUser(data.access_token)
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password.')
