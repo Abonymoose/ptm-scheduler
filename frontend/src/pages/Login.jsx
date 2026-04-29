@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { login } from '../api/auth'
+import { LOGO_LARGE } from '../assets/logos'
 
 export default function Login() {
   const { loginUser } = useAuth()
@@ -45,8 +46,7 @@ export default function Login() {
       }}>
         {/* Orange header */}
         <div style={{ padding: 'clamp(20px,2.8vw,32px) clamp(20px,2.8vw,36px)', background: '#F47920', textAlign: 'center' }}>
-          <div style={{ fontSize: 'clamp(20px,2.5vw,28px)', fontWeight: 800, color: '#fff', letterSpacing: '-.03em' }}>PTM Scheduler</div>
-          <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.85)', marginTop: 6, fontWeight: 500 }}>Inventure Academy · Parent-Teacher Meetings</div>
+          <img src={LOGO_LARGE} style={{ height: 'clamp(48px,7vw,72px)', width: 'auto', filter: 'brightness(0) invert(1)' }} alt="Inventure Academy" />
         </div>
 
         {/* Form */}
