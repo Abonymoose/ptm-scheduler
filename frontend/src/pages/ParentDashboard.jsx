@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getSlots } from '../api/slots'
 import { createBooking, getMyBookings, cancelBooking, autoSchedule } from '../api/bookings'
+import { LOGO_LARGE } from '../assets/logos'
 
 // ── exact colors from 2_parent_v3.html ──
 const S = {
@@ -138,7 +139,10 @@ export default function ParentDashboard() {
               <div style={S.topbarSub}>Inventure Academy · PTM 09 Apr 2026</div>
             </div>
           </div>
-          <button onClick={logoutUser} style={S.logoutBtn}>Sign out</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)' }}>
+            <img src={LOGO_LARGE} style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} alt="Inventure" />
+            <button onClick={logoutUser} style={S.logoutBtn}>Sign out</button>
+          </div>
         </div>
 
         {/* MAIN TABS */}

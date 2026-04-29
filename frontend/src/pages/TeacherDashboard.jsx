@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
+import { LOGO_SMALL } from '../assets/logos'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -85,6 +86,7 @@ export default function TeacherDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
             <div style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
+            <img src={LOGO_SMALL} style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} alt="Inventure" />
             <button onClick={logoutUser} style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 600, padding: 'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)', borderRadius: 20, background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>
           </div>
         </div>
