@@ -45,8 +45,9 @@ export default function Login() {
         boxShadow: '0 2px 20px rgba(0,0,0,.06)',
       }}>
         {/* Orange header */}
-        <div style={{ padding: 'clamp(20px,2.8vw,32px) clamp(20px,2.8vw,36px)', background: '#F47920', textAlign: 'center' }}>
+        <div style={{ padding: 'clamp(20px,2.8vw,32px) clamp(20px,2.8vw,36px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <img src={LOGO_LARGE} style={{ height: 'clamp(48px,7vw,72px)', width: 'auto', filter: 'brightness(0) invert(1)' }} alt="Inventure Academy" />
+          <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.75)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>PTM Booker</div>
         </div>
 
         {/* Form */}
