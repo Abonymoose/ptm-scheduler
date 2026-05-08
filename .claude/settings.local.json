@@ -6,7 +6,13 @@
       "Bash(awk '{print length}' 1_login_v3.html)",
       "Bash(npm run *)",
       "Bash(wc *)",
-      "Bash(venv/Scripts/python seed.py)"
+      "Bash(venv/Scripts/python seed.py)",
+      "Bash(venv\\\\Scripts\\\\activate)",
+      "Bash(python seed.py)",
+      "Bash(venv\\\\Scripts\\\\python.exe seed.py)",
+      "Bash(py --version)",
+      "Bash(python3 seed.py)",
+      "Bash(\"/c/Users/Parshv Mehta/AppData/Local/Programs/Python/Python314/python.exe\" seed.py)"
     ]
   }
 }

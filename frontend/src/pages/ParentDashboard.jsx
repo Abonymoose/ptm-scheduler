@@ -100,7 +100,11 @@ export default function ParentDashboard() {
   }
 
   const teacherGroups = groupByTeacher()
-  const teachers = Object.keys(teacherGroups)
+  const CHILD_TEACHERS = {
+    p: ['Sandhya Chhetri', 'Helen Gilbert', 'Priya Naidu', 'Susan Christi', 'Anwesha Basu', 'Anthony Samuel', 'Sunaina Naugain', 'Shubha S', 'Muneezah Mattu'],
+    d: ['Kavya Sharma', 'Rina Patel', 'Deepa Nair', 'Preethi Rao', 'Anjali Menon', 'Swati Joshi'],
+  }
+  const teachers = Object.keys(teacherGroups).filter(t => CHILD_TEACHERS[activeChild]?.includes(t))
   const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name }))
   const allTimes = [...new Set(slots.map(s => s.start_time))].sort()
   const userInitials = user?.name ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'PM'
