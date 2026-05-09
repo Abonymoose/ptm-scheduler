@@ -194,65 +194,98 @@ export default function TeacherDashboard() {
         {/* MANAGE SLOTS */}
         {tab === 'm' && (
           <>
-            <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 'clamp(14px,2vw,28px)', flexWrap: 'wrap', flexShrink: 0, alignItems: 'center' }}>
-              <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
-              <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, color: '#9CA3AF' }}>{freeSlots.length} free</span>
-              <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, color: '#9CA3AF' }}>{breakSlots.length} break</span>
-              <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, color: '#9CA3AF' }}>0 blocked</span>
+            {/* Summary bar */}
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{freeSlots.length} free</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{breakSlots.length} break</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>0 blocked</span>
             </div>
-            <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100svh - 380px)', flex: 1 }}>
-              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
-              : slots.length === 0 ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)' }}>No slots yet</div>
-              : (
-                <div style={{ display: 'flex', gap: 'clamp(8px,1.2vw,14px)', minWidth: 'max-content', padding: 'clamp(10px,1.5vw,16px)' }}>
-                  {bands.map((band, bi) => (
-                    <div key={bi} style={{ width: 'clamp(130px,16vw,190px)', display: 'flex', flexDirection: 'column', gap: 'clamp(6px,1vw,9px)' }}>
-                      <div style={{ paddingBottom: 'clamp(6px,1vw,10px)', borderBottom: '2px solid #F4C099' }}>
-                        <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{band.label}</div>
-                        <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 2 }}>{band.slots.filter(s => s.booked_count > 0).length} booked</div>
-                      </div>
-                      {band.slots.map(slot => {
-                        const bk = slot.bookings?.length > 0 ? slot.bookings[0] : null
-                        const isBreak = slot.is_break || slot.type === 'break'
-                        const isBooked = slot.booked_count > 0
-                        const isSel = selectedSlot?.id === slot.id
-                        return (
-                          <div key={slot.id} onClick={() => setSelectedSlot(isSel ? null : slot)} style={{ borderRadius: 10, padding: 'clamp(8px,1.2vw,12px)', background: isBreak ? '#FFE8D0' : isBooked ? '#FFF0E6' : '#F9FAFB', border: isBreak ? '1.5px dashed #F47920' : isBooked ? '1.5px solid #F4C099' : '1.5px solid #E5E7EB', cursor: 'pointer', outline: isSel ? '2px solid #1B3F7A' : 'none', outlineOffset: 1, transition: 'outline .1s' }}>
-                            <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 3 }}>{fmt(slot.start_time)}</div>
-                            {isBooked ? (<>
-                              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk?.parent_name || 'Booked'}</div>
-                              {bk?.student_name && <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk.student_name}</div>}
-                            </>) : isBreak ? (
-                              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#C45A0A', fontWeight: 600 }}>Break</div>
-                            ) : (
-                              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF' }}>Free</div>
-                            )}
+
+            {/* Horizontal scrolling grid */}
+            <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100svh - 430px)', minHeight: 120, flexShrink: 0 }}>
+              {loading
+                ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+                : bands.length === 0
+                ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
+                : (
+                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: '16px 20px', width: 'max-content' }}>
+                    {bands.map((band, bi) => {
+                      const bandBooked = band.slots.filter(s => s.booked_count > 0).length
+                      return (
+                        <div key={bi} style={{ width: 160, flexShrink: 0 }}>
+                          {/* Column header */}
+                          <div style={{ paddingBottom: 8, marginBottom: 10, borderBottom: '2px solid #F4C099' }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1B3F7A' }}>{band.label}</div>
+                            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{bandBooked} booked</div>
                           </div>
-                        )
-                      })}
-                    </div>
-                  ))}
-                </div>
-              )}
+                          {/* Slot cards */}
+                          {[...band.slots]
+                            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+                            .map(slot => {
+                              const bk = slot.bookings?.[0] ?? null
+                              const isBooked = slot.booked_count > 0
+                              const isBreak = slot.is_break || slot.type === 'break'
+                              const isSel = selectedSlot?.id === slot.id
+                              return (
+                                <div
+                                  key={slot.id}
+                                  onClick={() => setSelectedSlot(isSel ? null : slot)}
+                                  style={{
+                                    borderRadius: 10,
+                                    padding: '10px 12px',
+                                    marginBottom: 8,
+                                    cursor: 'pointer',
+                                    background: isBreak ? '#FFE8D0' : isBooked ? '#FFF0E6' : '#F9FAFB',
+                                    border: isBreak ? '1.5px dashed #F47920' : isBooked ? '1.5px solid #F4C099' : '1.5px solid #E5E7EB',
+                                    outline: isSel ? '2px solid #1B3F7A' : '2px solid transparent',
+                                    outlineOffset: 1,
+                                    boxSizing: 'border-box',
+                                  }}
+                                >
+                                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{fmt(slot.start_time)}</div>
+                                  {isBooked ? (
+                                    <>
+                                      <div style={{ fontSize: 13, fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk?.parent_name || 'Booked'}</div>
+                                      {bk?.student_name && <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk.student_name}</div>}
+                                    </>
+                                  ) : isBreak ? (
+                                    <div style={{ fontSize: 12, color: '#C45A0A', fontWeight: 600 }}>Break</div>
+                                  ) : (
+                                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>Free</div>
+                                  )}
+                                </div>
+                              )
+                            })
+                          }
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              }
             </div>
+
             {/* Drawer */}
-            <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: 'clamp(12px,1.8vw,20px) clamp(16px,2.5vw,28px)', flexShrink: 0 }}>
+            <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '14px 20px', flexShrink: 0 }}>
               {selectedSlot ? (
                 <>
-                  <div style={{ fontSize: 'clamp(13px,1.6vw,18px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 'clamp(10px,1.4vw,16px)', letterSpacing: '-.01em' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>
                     {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].parent_name}` : ''}
                   </div>
-                  <div style={{ display: 'flex', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'wrap' }}>
-                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { showToast('Booking cancelled'); setSelectedSlot(null) }} style={{ fontSize: 'clamp(13px,1.6vw,17px)', padding: 'clamp(9px,1.3vw,14px) clamp(16px,2.2vw,26px)', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
-                    <button onClick={() => { showToast('Slot blocked'); setSelectedSlot(null) }} style={{ fontSize: 'clamp(13px,1.6vw,17px)', padding: 'clamp(9px,1.3vw,14px) clamp(16px,2.2vw,26px)', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Block slot</button>
-                    <button onClick={() => setSelectedSlot(null)} style={{ fontSize: 'clamp(13px,1.6vw,17px)', padding: 'clamp(9px,1.3vw,14px) clamp(16px,2.2vw,26px)', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Dismiss</button>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { showToast('Booking cancelled'); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
+                    <button onClick={() => { showToast('Slot blocked'); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Block slot</button>
+                    <button onClick={() => setSelectedSlot(null)} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Dismiss</button>
                   </div>
                 </>
-              ) : <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', color: '#C4B5A5', fontWeight: 500, textAlign: 'center' }}>Tap any slot to manage it</div>}
+              ) : <div style={{ fontSize: 14, color: '#C4B5A5', fontWeight: 500, textAlign: 'center' }}>Tap any slot to manage it</div>}
             </div>
-            <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{bookedSlots.length} of {slots.length} booked</span>
-              <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(12px,1.6vw,18px)', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
+
+            {/* Bottom bar */}
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 14, color: '#C45A0A', fontWeight: 600 }}>{bookedSlots.length} of {slots.length} booked</span>
+              <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
             </div>
           </>
         )}
