@@ -9,6 +9,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState('parent')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -31,58 +32,48 @@ export default function Login() {
 
   const onKey = e => { if (e.key === 'Enter') handleSubmit() }
 
+  const inp = { width: '100%', padding: 'clamp(10px,1.3vw,14px) clamp(12px,1.6vw,16px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', transition: 'border-color .15s, box-shadow .15s', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box' }
+
   return (
-    <div style={{
-      minHeight: '100svh', background: '#FFF8F3',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 'clamp(10px,2vw,28px)',
-      fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
-      WebkitFontSmoothing: 'antialiased',
-    }}>
-      <div style={{
-        background: '#fff', borderRadius: 16, overflow: 'hidden',
-        width: '100%', maxWidth: 'clamp(320px,36vw,460px)',
-        boxShadow: '0 2px 20px rgba(0,0,0,.06)',
-      }}>
-        {/* Orange header */}
-        <div style={{ padding: 'clamp(20px,2.8vw,32px) clamp(20px,2.8vw,36px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-          <img src={LOGO_LARGE} style={{ height: 'clamp(48px,7vw,72px)', width: 'auto', filter: 'brightness(0) invert(1)' }} alt="Inventure Academy" />
-          <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.75)', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>PTM Booker</div>
+    <div style={{ minHeight: '100vh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(10px,2vw,28px)', fontFamily: 'system-ui,sans-serif' }}>
+      <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', width: '100%', maxWidth: 'clamp(320px,36vw,460px)', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
+
+        <div style={{ padding: 'clamp(14px,2vw,26px) clamp(16px,2.5vw,32px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(4px,.6vw,8px)' }}>
+          <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
+          <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.9)', fontWeight: 600, letterSpacing: '.02em' }}>PTM Scheduler</div>
         </div>
 
-        {/* Form */}
-        <div style={{ padding: 'clamp(24px,3vw,36px) clamp(24px,3vw,40px) clamp(28px,3.5vw,40px)', display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)' }}>
-          <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em' }}>Sign in to your account</div>
+        <div style={{ padding: 'clamp(16px,2.2vw,28px) clamp(20px,2.8vw,36px)', display: 'flex', flexDirection: 'column', gap: 'clamp(12px,1.6vw,20px)' }}>
+          <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Sign in to your account</div>
 
           <div>
-            <label style={{ fontSize: 'clamp(11px,1.2vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 6 }}>Email</label>
-            <input
-              type="email" placeholder="you@inventureacademy.in"
-              value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
-              onFocus={e => e.target.style.borderColor = '#F47920'}
-              onBlur={e => e.target.style.borderColor = '#F4C099'}
-              style={{ width: '100%', padding: 'clamp(10px,1.3vw,14px) clamp(12px,1.6vw,16px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box', transition: 'border-color .15s' }}
-            />
+            <label style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }}>Email</label>
+            <input type="email" placeholder="you@inventureacademy.in" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
+              onFocus={e => { e.target.style.borderColor = '#F47920'; e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.12)' }}
+              onBlur={e => { e.target.style.borderColor = '#F4C099'; e.target.style.boxShadow = 'none' }}
+              style={inp} />
           </div>
 
           <div>
-            <label style={{ fontSize: 'clamp(11px,1.2vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 6 }}>Password</label>
-            <input
-              type="password" placeholder="Your password"
-              value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
-              onFocus={e => e.target.style.borderColor = '#F47920'}
-              onBlur={e => e.target.style.borderColor = '#F4C099'}
-              style={{ width: '100%', padding: 'clamp(10px,1.3vw,14px) clamp(12px,1.6vw,16px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box', transition: 'border-color .15s' }}
-            />
+            <label style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }}>Password</label>
+            <input type="password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
+              onFocus={e => { e.target.style.borderColor = '#F47920'; e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.12)' }}
+              onBlur={e => { e.target.style.borderColor = '#F4C099'; e.target.style.boxShadow = 'none' }}
+              style={inp} />
           </div>
 
-          {error && (
-            <div style={{ fontSize: 'clamp(12px,1.3vw,14px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>
-          )}
+          <div>
+            <label style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }}>I am a</label>
+            <div style={{ display: 'flex', gap: 'clamp(6px,1vw,10px)' }}>
+              {['Parent','Teacher','Admin'].map(r => (
+                <button key={r} onClick={() => setRole(r.toLowerCase())} style={{ flex: 1, padding: 'clamp(8px,1vw,12px)', fontSize: 'clamp(12px,1.3vw,14px)', fontWeight: 600, border: `1.5px solid ${role === r.toLowerCase() ? '#F47920' : '#F4C099'}`, borderRadius: 10, background: role === r.toLowerCase() ? '#FFF0E6' : '#fff', color: role === r.toLowerCase() ? '#C45A0A' : '#9CA3AF', cursor: 'pointer', transition: 'all .12s', fontFamily: 'inherit' }}>{r}</button>
+              ))}
+            </div>
+          </div>
 
-          <button
-            onClick={handleSubmit} disabled={loading}
-            style={{ width: '100%', padding: 'clamp(13px,1.6vw,17px)', fontSize: 'clamp(15px,1.7vw,18px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 50, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .6 : 1, fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(244,121,32,.3)' }}>
+          {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
+
+          <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
             {loading ? 'Signing in…' : 'Log in'}
           </button>
         </div>
