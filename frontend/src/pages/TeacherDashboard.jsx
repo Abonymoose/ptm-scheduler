@@ -306,7 +306,7 @@ export default function TeacherDashboard() {
               {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} parent{n>1?'s':''}</option>)}
             </select>
           </div>
-          <button onClick={createNewSlot} disabled={creating} style={{ background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, padding: 'clamp(10px,1.5vw,14px)', fontSize: 'clamp(13px,1.5vw,16px)', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? .7 : 1, fontFamily: 'inherit', marginTop: 4 }}>
+          <button onClick={createNewSlot} disabled={creating} style={{ background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 10, padding: 'clamp(10px,1.5vw,14px)', fontSize: 'clamp(13px,1.5vw,16px)', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? .7 : 1, fontFamily: 'inherit', marginTop: 4 }}>
             {creating ? 'Creating…' : 'Create Slot'}
           </button>
         </div>

@@ -68,7 +68,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
-            <button onClick={() => showToast('Add teacher flow')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#F47920', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
+            <button onClick={() => showToast('Add teacher flow')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
             <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
         </div>
@@ -151,14 +151,14 @@ export default function AdminDashboard() {
                   <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF', marginBottom: 4 }}>Share with parents and teachers to join</div>
                   <div style={{ fontSize: 'clamp(16px,2.2vw,26px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '.08em' }}>INVENT-2026</div>
                 </div>
-                <button onClick={() => { navigator.clipboard?.writeText('INVENT-2026'); showToast('Copied!') }} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#F47920', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Copy</button>
+                <button onClick={() => { navigator.clipboard?.writeText('INVENT-2026'); showToast('Copied!') }} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Copy</button>
               </div>
               <div style={{ background: '#1B3F7A', borderRadius: 'clamp(8px,1.2vw,14px)', padding: 'clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'clamp(8px,1.2vw,14px)' }}>
                 <div>
                   <div style={{ fontSize: 'clamp(11px,1.4vw,16px)', fontWeight: 700, color: '#fff' }}>Venue Status Board</div>
                   <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: 'rgba(255,255,255,.7)', marginTop: 3 }}>Open on school TV — no login required</div>
                 </div>
-                <button onClick={() => showToast('Opening venue board...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#F47920', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Open venue board →</button>
+                <button onClick={() => showToast('Opening venue board...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Open venue board →</button>
               </div>
             </div>
           </div>
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
         {/* BOTTOM BAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
           <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · 09 Apr 2026</span>
-          <button onClick={() => showToast('Exporting report...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#F47920', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Export report</button>
+          <button onClick={() => showToast('Exporting report...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Export report</button>
         </div>
       </div>
 

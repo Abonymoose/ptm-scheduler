@@ -157,7 +157,7 @@ export default function ParentDashboard() {
                 Dhriti (Gr 4)
               </div>
 
-              <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#F47920', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(244,121,32,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
+              <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
             </div>
 
             {/* Grid */}
@@ -226,7 +226,7 @@ export default function ParentDashboard() {
             {/* Bottom bar */}
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{bookedCount > 0 ? `${bookedCount} teacher${bookedCount !== 1 ? 's' : ''} booked` : 'Tap a slot to book'}</span>
-              <button onClick={() => showToast('Bookings confirmed!')} disabled={bookedCount === 0} style={{ fontSize: 'clamp(13px,1.8vw,18px)', fontWeight: 700, padding: 'clamp(10px,1.4vw,16px) clamp(16px,3vw,36px)', borderRadius: 50, background: '#F47920', color: '#fff', border: 'none', cursor: bookedCount === 0 ? 'not-allowed' : 'pointer', opacity: bookedCount === 0 ? .4 : 1, boxShadow: '0 2px 12px rgba(244,121,32,.3)', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>Confirm bookings</button>
+              <button onClick={() => showToast('Bookings confirmed!')} disabled={bookedCount === 0} style={{ fontSize: 'clamp(13px,1.8vw,18px)', fontWeight: 700, padding: 'clamp(10px,1.4vw,16px) clamp(16px,3vw,36px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: bookedCount === 0 ? 'not-allowed' : 'pointer', opacity: bookedCount === 0 ? .4 : 1, boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>Confirm bookings</button>
             </div>
           </div>
         )}
@@ -308,7 +308,7 @@ export default function ParentDashboard() {
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel your meeting with {cancelModal.teacher}?</div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
-              <button onClick={handleCancel} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleCancel} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function ParentDashboard() {
               </div>
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4', display: 'flex', gap: 10 }}>
                 <button onClick={() => setAutoModal(false)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: '#F3F4F6', color: '#6B7280', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-                <button onClick={handleAutoSchedule} disabled={selectedTeachers.size === 0 || autoScheduling} style={{ flex: 2, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: selectedTeachers.size === 0 || autoScheduling ? '#F4C099' : '#F47920', color: '#fff', border: 'none', borderRadius: 9, cursor: selectedTeachers.size === 0 || autoScheduling ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={handleAutoSchedule} disabled={selectedTeachers.size === 0 || autoScheduling} style={{ flex: 2, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: selectedTeachers.size === 0 || autoScheduling ? '#F4C099' : '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: selectedTeachers.size === 0 || autoScheduling ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                   {autoScheduling ? 'Scheduling…' : `Schedule ${selectedTeachers.size > 0 ? selectedTeachers.size : ''} meeting${selectedTeachers.size !== 1 ? 's' : ''}`}
                 </button>
               </div>
@@ -371,7 +371,7 @@ export default function ParentDashboard() {
                 )}
               </div>
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4' }}>
-                <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+                <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
               </div>
             </>)}
           </div>

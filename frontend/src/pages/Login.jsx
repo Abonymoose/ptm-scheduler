@@ -9,7 +9,6 @@ export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('parent')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -62,18 +61,9 @@ export default function Login() {
               style={inp} />
           </div>
 
-          <div>
-            <label style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }}>I am a</label>
-            <div style={{ display: 'flex', gap: 'clamp(6px,1vw,10px)' }}>
-              {['Parent','Teacher','Admin'].map(r => (
-                <button key={r} onClick={() => setRole(r.toLowerCase())} style={{ flex: 1, padding: 'clamp(8px,1vw,12px)', fontSize: 'clamp(12px,1.3vw,14px)', fontWeight: 600, border: `1.5px solid ${role === r.toLowerCase() ? '#F47920' : '#F4C099'}`, borderRadius: 10, background: role === r.toLowerCase() ? '#FFF0E6' : '#fff', color: role === r.toLowerCase() ? '#C45A0A' : '#9CA3AF', cursor: 'pointer', transition: 'all .12s', fontFamily: 'inherit' }}>{r}</button>
-              ))}
-            </div>
-          </div>
-
           {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
 
-          <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
+          <button onClick={handleSubmit} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
             {loading ? 'Signing in…' : 'Log in'}
           </button>
         </div>

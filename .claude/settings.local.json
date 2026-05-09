@@ -12,7 +12,13 @@
       "Bash(venv\\\\Scripts\\\\python.exe seed.py)",
       "Bash(py --version)",
       "Bash(python3 seed.py)",
-      "Bash(\"/c/Users/Parshv Mehta/AppData/Local/Programs/Python/Python314/python.exe\" seed.py)"
+      "Bash(\"/c/Users/Parshv Mehta/AppData/Local/Programs/Python/Python314/python.exe\" seed.py)",
+      "Bash(Parent)",
+      "Bash(Teacher)",
+      "Bash(Admin)",
+      "Bash(logos\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Parshv Mehta\\\\Downloads\\\\\" | Where-Object { $_.Name -match \"Login|Parent|Teacher|Admin|logos\" })",
+      "PowerShell(Copy-Item *)"
     ]
   }
 }
