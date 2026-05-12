@@ -82,7 +82,8 @@ export default function TeacherDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,900px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column' }}>
+      <style>{`.no-scroll::-webkit-scrollbar { display: none }`}</style>
+      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,900px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
         <div style={{ background: '#F47920', padding: 'clamp(10px,1.8vw,20px) clamp(14px,2.5vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0, gap: 8 }}>
@@ -193,7 +194,7 @@ export default function TeacherDashboard() {
 
         {/* MANAGE SLOTS */}
         {tab === 'm' && (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Summary bar */}
             <div style={{ padding: '10px 20px', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
@@ -203,12 +204,13 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Horizontal scrolling grid */}
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {loading
               ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : bands.length === 0
               ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
               : (
-                <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0 }}>
+                <div className="no-scroll" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                   {bands.map((band, bi) => {
                     const bandBooked = band.slots.filter(s => s.booked_count > 0).length
                     return (
@@ -263,6 +265,7 @@ export default function TeacherDashboard() {
                   </div>
                 )
             }
+            </div>
 
             {/* Drawer */}
             <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '14px 20px', flexShrink: 0 }}>
@@ -285,7 +288,7 @@ export default function TeacherDashboard() {
               <span style={{ fontSize: 14, color: '#C45A0A', fontWeight: 600 }}>{bookedSlots.length} of {slots.length} booked</span>
               <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
             </div>
-          </>
+          </div>
         )}
       </div>
 
