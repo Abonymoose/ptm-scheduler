@@ -71,7 +71,7 @@ export default function ParentDashboard() {
   const currentTeachers = activeChild === 'p' ? PARSHV_TEACHERS : DHRITI_TEACHERS
   const teacherGroups = groupByTeacher(currentTeachers)
   const teachers = Object.keys(teacherGroups)
-  const allTimes = [...new Set(slots.map(s => s.start_time))].sort()
+  const allTimes = [...new Set(Object.values(teacherGroups).flat().map(s => s.start_time))].sort()
 
   const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name }))
 
