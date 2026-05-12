@@ -203,17 +203,16 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Horizontal scrolling grid */}
-            <div style={{ overflowX: 'auto', minHeight: 120, flexShrink: 0 }}>
-              {loading
-                ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
-                : bands.length === 0
-                ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
-                : (
-                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: '16px 20px', width: 'max-content' }}>
-                    {bands.map((band, bi) => {
-                      const bandBooked = band.slots.filter(s => s.booked_count > 0).length
-                      return (
-                        <div key={bi} style={{ width: 160, flexShrink: 0 }}>
+            {loading
+              ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              : bands.length === 0
+              ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
+              : (
+                <div style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0 }}>
+                  {bands.map((band, bi) => {
+                    const bandBooked = band.slots.filter(s => s.booked_count > 0).length
+                    return (
+                      <div key={bi} style={{ minWidth: 160, flexShrink: 0 }}>
                           {/* Column header */}
                           <div style={{ paddingBottom: 8, marginBottom: 10, borderBottom: '2px solid #F4C099' }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: '#1B3F7A' }}>{band.label}</div>
@@ -263,8 +262,7 @@ export default function TeacherDashboard() {
                     })}
                   </div>
                 )
-              }
-            </div>
+            }
 
             {/* Drawer */}
             <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '14px 20px', flexShrink: 0 }}>
