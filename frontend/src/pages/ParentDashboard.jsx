@@ -114,7 +114,7 @@ export default function ParentDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100vh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,960px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,960px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
         <div style={{ padding: 'clamp(12px,1.8vw,20px) clamp(16px,2.5vw,28px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
@@ -140,7 +140,7 @@ export default function ParentDashboard() {
 
         {/* BOOK TAB */}
         {tab === 'grid' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Child selector bar */}
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to select:</span>
@@ -161,7 +161,7 @@ export default function ParentDashboard() {
             </div>
 
             {/* Grid */}
-            <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 300px)' }}>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
@@ -246,7 +246,7 @@ export default function ParentDashboard() {
                 </label>
               </div>
             </div>
-            <div style={{ overflowY: 'auto', maxHeight: 'calc(100svh - 260px)' }}>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {activeBookings.length === 0 ? (
                 <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>
                   <div style={{ fontSize: 'clamp(36px,5vw,56px)', marginBottom: 10, opacity: .5 }}>📅</div>
@@ -291,7 +291,7 @@ export default function ParentDashboard() {
 
         {/* PAST TAB */}
         {tab === 'past' && (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>Past meetings</span>
             </div>

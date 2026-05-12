@@ -123,7 +123,7 @@ export default function TeacherDashboard() {
 
         {/* MY SCHEDULE */}
         {tab === 's' && (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, minHeight: 'clamp(44px,5.5vw,58px)' }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{doneCount} of {upcomingSlots.length} done</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -139,7 +139,7 @@ export default function TeacherDashboard() {
                 <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(12px,1.6vw,18px)', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
               </div>
             </div>
-            <div style={{ overflowY: 'auto', maxHeight: 'calc(100svh - 260px)' }}>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : upcomingSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No meetings yet</div>
               : upcomingSlots.map((slot, i) => {
@@ -177,19 +177,19 @@ export default function TeacherDashboard() {
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{doneCount} done</span>
             </div>
-          </>
+          </div>
         )}
 
         {/* PAST MEETINGS */}
         {tab === 'p' && (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{pastSlots.length} past meetings</span>
             </div>
-            <div style={{ overflowY: 'auto', maxHeight: 'calc(100svh - 260px)' }}>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {pastSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No past meetings yet</div> : null}
             </div>
-          </>
+          </div>
         )}
 
         {/* MANAGE SLOTS */}

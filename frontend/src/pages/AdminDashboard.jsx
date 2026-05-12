@@ -56,7 +56,7 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', height: '100%', fontFamily: 'system-ui,sans-serif' }}>
-      <div style={{ background: '#fff', border: '1px solid #F4C099', borderRadius: 'clamp(10px,1.5vw,18px)', overflow: 'hidden', width: 'min(96vw,860px)', margin: 'clamp(10px,2vw,24px) auto', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,48px))' }}>
+      <div style={{ background: '#fff', border: '1px solid #F4C099', borderRadius: 'clamp(10px,1.5vw,18px)', overflow: 'hidden', width: 'min(96vw,860px)', margin: 'clamp(10px,2vw,24px) auto', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,16px) clamp(12px,2vw,24px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
