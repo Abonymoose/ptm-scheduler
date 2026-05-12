@@ -203,7 +203,7 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Horizontal scrolling grid */}
-            <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100svh - 430px)', minHeight: 120, flexShrink: 0 }}>
+            <div style={{ overflowX: 'auto', minHeight: 120, flexShrink: 0 }}>
               {loading
                 ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
                 : bands.length === 0
