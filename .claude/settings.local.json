@@ -18,7 +18,8 @@
       "Bash(Admin)",
       "Bash(logos\")",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Parshv Mehta\\\\Downloads\\\\\" | Where-Object { $_.Name -match \"Login|Parent|Teacher|Admin|logos\" })",
-      "PowerShell(Copy-Item *)"
+      "PowerShell(Copy-Item *)",
+      "Bash(\"venv/Scripts/python.exe\" seed.py)"
     ]
   }
 }

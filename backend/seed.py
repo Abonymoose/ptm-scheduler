@@ -44,7 +44,7 @@ DHRITI_TEACHERS = [
 
 PTM_DATE = datetime(2026, 4, 9, 8, 10)   # 08:10 on PTM day
 SLOT_DURATION = timedelta(minutes=7)
-NUM_SLOTS = 15
+NUM_SLOTS = 45
 TEACHER_PASSWORD = "teacher123"
 
 
