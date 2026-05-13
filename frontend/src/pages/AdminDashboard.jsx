@@ -21,8 +21,18 @@ export default function AdminDashboard() {
   const [toast, setToast] = useState('')
   const [openTeacher, setOpenTeacher] = useState(null)
   const [openBooking, setOpenBooking] = useState(null)
+  const [termLog, setTermLog] = useState([{ type: 'info', text: 'PTM Admin Terminal v1.0 — type "help" for commands' }])
+  const [termInput, setTermInput] = useState('')
 
   useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    if (!document.getElementById('custom-scroll-style')) {
+      const s = document.createElement('style')
+      s.id = 'custom-scroll-style'
+      s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
+      document.head.appendChild(s)
+    }
+  }, [])
 
   const fetchData = async () => {
     try { const [b, s] = await Promise.all([getAllBookings(), getAllSlots()]); setBookings(b); setSlots(s) }
@@ -50,6 +60,37 @@ export default function AdminDashboard() {
   })
 
   const getInit = name => name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()
+
+  const runTermCmd = (raw) => {
+    const line = raw.trim()
+    if (!line) return
+    setTermLog(l => [...l, { type: 'info', text: `> ${line}` }])
+    const parts = line.split(' ')
+    const cmd = parts[0].toLowerCase()
+    if (cmd === 'help') {
+      setTermLog(l => [...l,
+        { type: 'info', text: 'add teacher [name] [email]  — add a teacher' },
+        { type: 'info', text: 'remove teacher [email]      — remove a teacher' },
+        { type: 'info', text: 'add slots [email] [count]   — add slots to teacher' },
+        { type: 'info', text: 'help                        — list commands' },
+      ])
+    } else if (cmd === 'add' && parts[1] === 'teacher') {
+      const name = parts.slice(2, parts.length - 1).join(' ')
+      const email = parts[parts.length - 1]
+      if (!name || !email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add teacher [name] [email]' }]); return }
+      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher added: ${name} <${email}>` }])
+    } else if (cmd === 'remove' && parts[1] === 'teacher') {
+      const email = parts[2]
+      if (!email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: remove teacher [email]' }]); return }
+      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher removed: ${email}` }])
+    } else if (cmd === 'add' && parts[1] === 'slots') {
+      const email = parts[2]; const count = parseInt(parts[3])
+      if (!email || !email.includes('@') || isNaN(count) || count < 1) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add slots [email] [count]' }]); return }
+      setTermLog(l => [...l, { type: 'success', text: `✓ ${count} slots added for ${email}` }])
+    } else {
+      setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }])
+    }
+  }
 
   const parentBookings = {}
   bookings.forEach(b => { if (!parentBookings[b.parent_name]) parentBookings[b.parent_name] = []; parentBookings[b.parent_name].push(b) })
@@ -85,14 +126,14 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings']].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['t','Terminal']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
 
         {/* OVERVIEW */}
         {tab === 'o' && (
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', flex: 1 }}>
               <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', marginBottom: 'clamp(6px,1vw,10px)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Teachers &amp; fill rate</div>
               {loading ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>Loading…</div>
@@ -173,7 +214,7 @@ export default function AdminDashboard() {
                 onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
               <button onClick={() => {}} style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 600, padding: 'clamp(5px,.8vw,9px) clamp(10px,1.5vw,16px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#fff', color: '#F47920', border: '1px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Filter</button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
               {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : filteredBookings.length === 0 ? <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 'clamp(13px,1.6vw,17px)', marginTop: 40 }}>{search ? 'No results.' : 'No bookings yet.'}</div>
               : filteredBookings.map((bk, i) => {
@@ -229,6 +270,27 @@ export default function AdminDashboard() {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* TERMINAL */}
+        {tab === 't' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#1B3F7A' }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(12px,1.8vw,20px) clamp(14px,2vw,22px)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {termLog.map((entry, i) => (
+                <div key={i} style={{ fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', lineHeight: 1.6, color: entry.type === 'success' ? '#F47920' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry.text}</div>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,.12)', padding: 'clamp(10px,1.4vw,16px) clamp(14px,2vw,22px)', display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,.2)', flexShrink: 0 }}>
+              <span style={{ fontFamily: "'Courier New',Courier,monospace", color: '#F47920', fontSize: 'clamp(12px,1.5vw,15px)', flexShrink: 0 }}>$</span>
+              <input
+                value={termInput}
+                onChange={e => setTermInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { runTermCmd(termInput); setTermInput('') } }}
+                placeholder="Type a command..."
+                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', color: '#fff', caretColor: '#F47920' }}
+              />
             </div>
           </div>
         )}

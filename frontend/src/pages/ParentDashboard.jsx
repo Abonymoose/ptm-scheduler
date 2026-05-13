@@ -44,6 +44,15 @@ export default function ParentDashboard() {
   const [welcomeModal, setWelcomeModal] = useState(false)
 
   useEffect(() => { fetchData() }, [])
+  useEffect(() => { setWelcomeModal(true) }, [])
+  useEffect(() => {
+    if (!document.getElementById('custom-scroll-style')) {
+      const s = document.createElement('style')
+      s.id = 'custom-scroll-style'
+      s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
+      document.head.appendChild(s)
+    }
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -142,7 +151,7 @@ export default function ParentDashboard() {
         {tab === 'grid' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Child selector bar */}
-            <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0 }}>
+            <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to select:</span>
 
               {/* Parshv */}
@@ -161,7 +170,7 @@ export default function ParentDashboard() {
             </div>
 
             {/* Grid */}
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
@@ -246,7 +255,7 @@ export default function ParentDashboard() {
                 </label>
               </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {activeBookings.length === 0 ? (
                 <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>
                   <div style={{ fontSize: 'clamp(36px,5vw,56px)', marginBottom: 10, opacity: .5 }}>📅</div>
@@ -327,7 +336,7 @@ export default function ParentDashboard() {
                 <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF' }}>{selectedTeachers.size} of {teacherOptions.length} selected</span>
                 <button onClick={() => setSelectedTeachers(selectedTeachers.size === teacherOptions.length ? new Set() : new Set(teacherOptions.map(t => t.id)))} style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#F47920', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>{selectedTeachers.size === teacherOptions.length ? 'Deselect all' : 'Select all'}</button>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1 }}>
+              <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1 }}>
                 {teacherOptions.map((t, i) => {
                   const checked = selectedTeachers.has(t.id)
                   return (
@@ -352,7 +361,7 @@ export default function ParentDashboard() {
                 <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 800, color: '#1B3F7A' }}>{autoResult.booked.length > 0 ? `Scheduled ${autoResult.booked.length} meeting${autoResult.booked.length !== 1 ? 's' : ''}` : 'No slots available'}</div>
                 {autoResult.conflicts.length > 0 && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 4 }}>{autoResult.conflicts.length} teacher{autoResult.conflicts.length !== 1 ? 's' : ''} couldn't be scheduled</div>}
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, padding: 'clamp(12px,1.8vw,18px) clamp(20px,2.8vw,28px)' }}>
+              <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1, padding: 'clamp(12px,1.8vw,18px) clamp(20px,2.8vw,28px)' }}>
                 {autoResult.booked.map((b, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < autoResult.booked.length - 1 ? '1px solid #FDE9D4' : 'none' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F47920', flexShrink: 0 }} />
@@ -374,6 +383,21 @@ export default function ParentDashboard() {
                 <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
               </div>
             </>)}
+          </div>
+        </div>
+      )}
+
+      {/* WELCOME MODAL */}
+      {welcomeModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(3px)' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 'clamp(28px,4vw,44px)', width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 16px 60px rgba(0,0,0,.18)' }}>
+            <div style={{ fontSize: 'clamp(22px,3vw,32px)', marginBottom: 10 }}>👋</div>
+            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome, Paras!</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(24px,3.5vw,36px)', lineHeight: 1.6 }}>PTM is on 09 Apr 2026. Want us to auto-schedule all your meetings?</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => { setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
+              <button onClick={() => { setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
+            </div>
           </div>
         </div>
       )}

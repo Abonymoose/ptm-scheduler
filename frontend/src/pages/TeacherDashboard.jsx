@@ -41,6 +41,14 @@ export default function TeacherDashboard() {
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
+  useEffect(() => {
+    if (!document.getElementById('custom-scroll-style')) {
+      const s = document.createElement('style')
+      s.id = 'custom-scroll-style'
+      s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
+      document.head.appendChild(s)
+    }
+  }, [])
 
   const fetchData = async () => {
     setLoading(true)
@@ -82,7 +90,6 @@ export default function TeacherDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      <style>{`.no-scroll::-webkit-scrollbar { display: none }`}</style>
       <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,900px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
@@ -139,7 +146,7 @@ export default function TeacherDashboard() {
                 <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(12px,1.6vw,18px)', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
               </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : upcomingSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No meetings yet</div>
               : upcomingSlots.map((slot, i) => {
@@ -186,7 +193,7 @@ export default function TeacherDashboard() {
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{pastSlots.length} past meetings</span>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {pastSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No past meetings yet</div> : null}
             </div>
           </div>
@@ -204,13 +211,13 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Horizontal scrolling grid */}
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {loading
               ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : bands.length === 0
               ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
               : (
-                <div className="no-scroll" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0, WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+                <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0 }}>
                   {bands.map((band, bi) => {
                     const bandBooked = band.slots.filter(s => s.booked_count > 0).length
                     return (
