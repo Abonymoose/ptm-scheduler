@@ -44,7 +44,7 @@ export default function ParentDashboard() {
   const [welcomeModal, setWelcomeModal] = useState(false)
 
   useEffect(() => { fetchData() }, [])
-  useEffect(() => { setWelcomeModal(true) }, [])
+  useEffect(() => { if (!localStorage.getItem('welcomeSeen')) setWelcomeModal(true) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
       const s = document.createElement('style')
@@ -82,7 +82,7 @@ export default function ParentDashboard() {
   const teachers = Object.keys(teacherGroups)
   const allTimes = [...new Set(Object.values(teacherGroups).flat().map(s => s.start_time))].sort()
 
-  const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name }))
+  const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name })).filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
 
   const handleBook = async slot_id => {
     try { await createBooking(slot_id); showToast('Booking confirmed!'); fetchData() }
@@ -130,7 +130,7 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)' }}>
             <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div>
-              <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Paras Mehta'}</div>
+              <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Parent'}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Inventure Academy · PTM 09 Apr 2026</div>
             </div>
           </div>
@@ -235,7 +235,6 @@ export default function ParentDashboard() {
             {/* Bottom bar */}
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{bookedCount > 0 ? `${bookedCount} teacher${bookedCount !== 1 ? 's' : ''} booked` : 'Tap a slot to book'}</span>
-              <button onClick={() => showToast('Bookings confirmed!')} disabled={bookedCount === 0} style={{ fontSize: 'clamp(13px,1.8vw,18px)', fontWeight: 700, padding: 'clamp(10px,1.4vw,16px) clamp(16px,3vw,36px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: bookedCount === 0 ? 'not-allowed' : 'pointer', opacity: bookedCount === 0 ? .4 : 1, boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>Confirm bookings</button>
             </div>
           </div>
         )}
@@ -316,8 +315,8 @@ export default function ParentDashboard() {
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8, letterSpacing: '-.02em' }}>Cancel this meeting?</div>
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel your meeting with {cancelModal.teacher}?</div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
-              <button onClick={handleCancel} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Keep it</button>
+              <button onClick={handleCancel} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Cancel meeting</button>
             </div>
           </div>
         </div>
@@ -325,7 +324,7 @@ export default function ParentDashboard() {
 
       {/* AUTO MODAL */}
       {autoModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+        <div onClick={() => setAutoModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
             {autoResult === null ? (<>
               <div style={{ padding: 'clamp(18px,2.5vw,28px) clamp(20px,2.8vw,28px) clamp(12px,1.8vw,18px)', borderBottom: '1px solid #F4C099' }}>
@@ -392,11 +391,11 @@ export default function ParentDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(3px)' }}>
           <div style={{ background: '#fff', borderRadius: 20, padding: 'clamp(28px,4vw,44px)', width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 16px 60px rgba(0,0,0,.18)' }}>
             <div style={{ fontSize: 'clamp(22px,3vw,32px)', marginBottom: 10 }}>👋</div>
-            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome, Paras!</div>
+            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome, {user?.name?.split(' ')[0]}!</div>
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(24px,3.5vw,36px)', lineHeight: 1.6 }}>PTM is on 09 Apr 2026. Want us to auto-schedule all your meetings?</div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => { setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
-              <button onClick={() => { setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
+              <button onClick={() => { localStorage.setItem('welcomeSeen','1'); setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
+              <button onClick={() => { localStorage.setItem('welcomeSeen','1'); setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
             </div>
           </div>
         </div>

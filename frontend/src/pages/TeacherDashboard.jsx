@@ -65,7 +65,7 @@ export default function TeacherDashboard() {
   const freeSlots = slots.filter(s => s.booked_count === 0 && !s.is_break && s.type !== 'break')
   const doneCount = Object.values(done).filter(Boolean).length
 
-  const upcomingSlots = slots.filter(s => s.booked_count > 0)
+  const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
   const pastSlots = []
 
   // band grouping for manage tab
@@ -107,6 +107,7 @@ export default function TeacherDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
             <div style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
+            <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
           </div>
         </div>
@@ -293,7 +294,10 @@ export default function TeacherDashboard() {
             {/* Bottom bar */}
             <div style={{ padding: '12px 20px', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 14, color: '#C45A0A', fontWeight: 600 }}>{bookedSlots.length} of {slots.length} booked</span>
-              <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setAddOpen(true)} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Add slot</button>
+                <button onClick={() => showToast('Exporting PDF...')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Export PDF</button>
+              </div>
             </div>
           </div>
         )}

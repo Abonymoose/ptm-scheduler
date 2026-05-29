@@ -19,7 +19,10 @@
       "Bash(logos\")",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Parshv Mehta\\\\Downloads\\\\\" | Where-Object { $_.Name -match \"Login|Parent|Teacher|Admin|logos\" })",
       "PowerShell(Copy-Item *)",
-      "Bash(\"venv/Scripts/python.exe\" seed.py)"
+      "Bash(\"venv/Scripts/python.exe\" seed.py)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   const [openBooking, setOpenBooking] = useState(null)
   const [termLog, setTermLog] = useState([{ type: 'info', text: 'PTM Admin Terminal v1.0 — type "help" for commands' }])
   const [termInput, setTermInput] = useState('')
+  const terminalRef = useRef(null)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -61,10 +62,12 @@ export default function AdminDashboard() {
 
   const getInit = name => name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()
 
-  const runTermCmd = (raw) => {
+  const termScroll = () => setTimeout(() => terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight, behavior: 'smooth' }), 0)
+
+  const runTermCmd = async (raw) => {
     const line = raw.trim()
     if (!line) return
-    setTermLog(l => [...l, { type: 'info', text: `> ${line}` }])
+    setTermLog(l => [...l, { type: 'info', text: `> ${line}` }]); termScroll()
     const parts = line.split(' ')
     const cmd = parts[0].toLowerCase()
     if (cmd === 'help') {
@@ -73,22 +76,28 @@ export default function AdminDashboard() {
         { type: 'info', text: 'remove teacher [email]      — remove a teacher' },
         { type: 'info', text: 'add slots [email] [count]   — add slots to teacher' },
         { type: 'info', text: 'help                        — list commands' },
-      ])
+      ]); termScroll()
     } else if (cmd === 'add' && parts[1] === 'teacher') {
       const name = parts.slice(2, parts.length - 1).join(' ')
       const email = parts[parts.length - 1]
-      if (!name || !email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add teacher [name] [email]' }]); return }
-      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher added: ${name} <${email}>` }])
+      if (!name || !email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add teacher [name] [email]' }]); termScroll(); return }
+      try {
+        await api.post('/auth/register', { name, email, password: 'teacher123', role: 'teacher' })
+        setTermLog(l => [...l, { type: 'success', text: `✓ Teacher added: ${name} <${email}>` }])
+      } catch (err) {
+        setTermLog(l => [...l, { type: 'error', text: `Error: ${err.response?.data?.detail || err.message}` }])
+      }
+      termScroll()
     } else if (cmd === 'remove' && parts[1] === 'teacher') {
       const email = parts[2]
-      if (!email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: remove teacher [email]' }]); return }
-      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher removed: ${email}` }])
+      if (!email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: remove teacher [email]' }]); termScroll(); return }
+      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher removed: ${email}` }]); termScroll()
     } else if (cmd === 'add' && parts[1] === 'slots') {
       const email = parts[2]; const count = parseInt(parts[3])
-      if (!email || !email.includes('@') || isNaN(count) || count < 1) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add slots [email] [count]' }]); return }
-      setTermLog(l => [...l, { type: 'success', text: `✓ ${count} slots added for ${email}` }])
+      if (!email || !email.includes('@') || isNaN(count) || count < 1) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add slots [email] [count]' }]); termScroll(); return }
+      setTermLog(l => [...l, { type: 'success', text: `✓ ${count} slots added for ${email}` }]); termScroll()
     } else {
-      setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }])
+      setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }]); termScroll()
     }
   }
 
@@ -96,7 +105,7 @@ export default function AdminDashboard() {
   bookings.forEach(b => { if (!parentBookings[b.parent_name]) parentBookings[b.parent_name] = []; parentBookings[b.parent_name].push(b) })
 
   return (
-    <div style={{ background: '#FFF8F3', height: '100%', fontFamily: 'system-ui,sans-serif' }}>
+    <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: 'system-ui,sans-serif' }}>
       <div style={{ background: '#fff', border: '1px solid #F4C099', borderRadius: 'clamp(10px,1.5vw,18px)', overflow: 'hidden', width: 'min(96vw,860px)', margin: 'clamp(10px,2vw,24px) auto', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
@@ -110,6 +119,7 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
             <button onClick={() => showToast('Add teacher flow')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
+            <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
         </div>
@@ -212,7 +222,7 @@ export default function AdminDashboard() {
               <input type="text" placeholder="Search parent or teacher..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ flex: 1, padding: 'clamp(7px,1vw,12px) clamp(10px,1.5vw,16px)', fontSize: 'clamp(11px,1.4vw,15px)', border: '1.5px solid #F4C099', borderRadius: 'clamp(8px,1vw,12px)', outline: 'none', fontFamily: 'system-ui,sans-serif', color: '#1B3F7A', boxSizing: 'border-box' }}
                 onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
-              <button onClick={() => {}} style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 600, padding: 'clamp(5px,.8vw,9px) clamp(10px,1.5vw,16px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#fff', color: '#F47920', border: '1px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Filter</button>
+              <button onClick={() => setSearch('')} style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 600, padding: 'clamp(5px,.8vw,9px) clamp(10px,1.5vw,16px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#fff', color: '#F47920', border: '1px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Filter</button>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
               {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
@@ -277,9 +287,9 @@ export default function AdminDashboard() {
         {/* TERMINAL */}
         {tab === 't' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#1B3F7A' }}>
-            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(12px,1.8vw,20px) clamp(14px,2vw,22px)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div ref={terminalRef} className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(12px,1.8vw,20px) clamp(14px,2vw,22px)', display: 'flex', flexDirection: 'column', gap: 4 }}>
               {termLog.map((entry, i) => (
-                <div key={i} style={{ fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', lineHeight: 1.6, color: entry.type === 'success' ? '#F47920' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry.text}</div>
+                <div key={i} style={{ fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', lineHeight: 1.6, color: entry.type === 'success' ? '#4ADE80' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry.text}</div>
               ))}
             </div>
             <div style={{ borderTop: '1px solid rgba(255,255,255,.12)', padding: 'clamp(10px,1.4vw,16px) clamp(14px,2vw,22px)', display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,.2)', flexShrink: 0 }}>
