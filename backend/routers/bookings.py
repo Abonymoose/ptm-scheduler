@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
@@ -111,16 +112,21 @@ async def auto_schedule(
                 conflicts.append(a["teacher_name"])
                 continue
             booking_id = str(uuid.uuid4())
-            await db.execute(
-                text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-                {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
-            )
-            booked.append({
-                "teacher_name": a["teacher_name"],
-                "slot_id": a["slot_id"],
-                "start_time": a["start_time"].isoformat(),
-                "end_time": a["end_time"].isoformat(),
-            })
+            try:
+                await db.execute(
+                    text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
+                    {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
+                )
+                booked.append({
+                    "teacher_name": a["teacher_name"],
+                    "slot_id": a["slot_id"],
+                    "start_time": a["start_time"].isoformat(),
+                    "end_time": a["end_time"].isoformat(),
+                })
+            except IntegrityError:
+                await db.rollback()
+                conflicts.append(a["teacher_name"])
+                continue
         await db.commit()
 
     return {"booked": booked, "conflicts": conflicts}
