@@ -22,7 +22,10 @@
       "Bash(\"venv/Scripts/python.exe\" seed.py)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(head *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(pip install *)"
     ]
   }
 }

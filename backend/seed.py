@@ -13,33 +13,33 @@ RAW_URL = os.getenv("DATABASE_URL")
 DATABASE_URL = RAW_URL.replace("postgresql+asyncpg://", "postgresql://").split("?")[0]
 
 PARENTS = [
-    ("Paras Mehta", "paras.mehta@gmail.com"),
+    ("Paras Mehta", "parasmehta64@gmail.com"),
 ]
 PARENT_PASSWORD = "parent123"
 
 ADMINS = [
-    ("Admin User", "admin@inventure.edu"),
+    ("Admin User", "admin@inventureacademy.com"),
 ]
 ADMIN_PASSWORD = "admin123"
 
 TEACHERS = [
-    ("Sandhya Chhetri", "sandhya.chhetri@inventure.edu"),
-    ("Anwesha Basu",    "anwesha.basu@inventure.edu"),
-    ("Shubha S",        "shubha.s@inventure.edu"),
-    ("Anthony Samuel",  "anthony.samuel@inventure.edu"),
-    ("Priya Naidu",     "priya.naidu@inventure.edu"),
-    ("Sunaina Naugain", "sunaina.naugain@inventure.edu"),
-    ("Helen Gilbert",   "helen.gilbert@inventure.edu"),
-    ("Muneezah Mattu",  "muneezah.mattu@inventure.edu"),
+    ("Sandhya Chhetri", "sandhya.chhetri@inventureacademy.com"),
+    ("Anwesha Basu",    "anwesha.basu@inventureacademy.com"),
+    ("Shubha S",        "shubha.s@inventureacademy.com"),
+    ("Anthony Samuel",  "anthony.samuel@inventureacademy.com"),
+    ("Priya Naidu",     "priya.naidu@inventureacademy.com"),
+    ("Sunaina Naugain", "sunaina.naugain@inventureacademy.com"),
+    ("Helen Gilbert",   "helen.gilbert@inventureacademy.com"),
+    ("Muneezah Mattu",  "muneezah.mattu@inventureacademy.com"),
 ]
 
 DHRITI_TEACHERS = [
-    ("Ms. Kavya Sharma",  "kavya.sharma@inventure.edu"),
-    ("Ms. Rina Patel",    "rina.patel@inventure.edu"),
-    ("Ms. Deepa Nair",    "deepa.nair@inventure.edu"),
-    ("Ms. Preethi Rao",   "preethi.rao@inventure.edu"),
-    ("Ms. Anjali Menon",  "anjali.menon@inventure.edu"),
-    ("Ms. Swati Joshi",   "swati.joshi@inventure.edu"),
+    ("Ms. Kavya Sharma",  "kavya.sharma@inventureacademy.com"),
+    ("Ms. Rina Patel",    "rina.patel@inventureacademy.com"),
+    ("Ms. Deepa Nair",    "deepa.nair@inventureacademy.com"),
+    ("Ms. Preethi Rao",   "preethi.rao@inventureacademy.com"),
+    ("Ms. Anjali Menon",  "anjali.menon@inventureacademy.com"),
+    ("Ms. Swati Joshi",   "swati.joshi@inventureacademy.com"),
 ]
 
 PTM_DATE = datetime(2026, 4, 9, 8, 10)   # 08:10 on PTM day
@@ -92,22 +92,22 @@ async def main():
 
     # --- Also get Susan Christi who was seeded earlier ---
     susan = await conn.fetchrow(
-        "SELECT id FROM users WHERE email = 'susan.christi@inventure.edu' AND school_id = $1",
+        "SELECT id FROM users WHERE email = 'susan.christi@inventureacademy.com' AND school_id = $1",
         school_id
     )
     if susan:
-        teacher_ids["susan.christi@inventure.edu"] = susan["id"]
+        teacher_ids["susan.christi@inventureacademy.com"] = susan["id"]
         print(f"  [found]  Susan Christi — already exists")
     else:
         uid = str(uuid.uuid4())
         await conn.execute(
             """
             INSERT INTO users (id, school_id, name, email, hashed_password, role)
-            VALUES ($1, $2, 'Susan Christi', 'susan.christi@inventure.edu', $3, 'teacher')
+            VALUES ($1, $2, 'Susan Christi', 'susan.christi@inventureacademy.com', $3, 'teacher')
             """,
             uid, school_id, hashed
         )
-        teacher_ids["susan.christi@inventure.edu"] = uid
+        teacher_ids["susan.christi@inventureacademy.com"] = uid
         print(f"  [added]  Susan Christi")
 
     # --- Upsert parents ---
@@ -155,8 +155,8 @@ async def main():
 
     # --- Reset parent passwords ---
     new_hash = bcrypt.hashpw("parent123".encode(), bcrypt.gensalt()).decode()
-    await conn.execute("UPDATE users SET hashed_password = $1 WHERE email = $2", new_hash, "paras.mehta@gmail.com")
-    print(f"  [reset]  paras.mehta@gmail.com password -> parent123")
+    await conn.execute("UPDATE users SET hashed_password = $1 WHERE email = $2", new_hash, "parasmehta64@gmail.com")
+    print(f"  [reset]  parasmehta64@gmail.com password -> parent123")
 
     # --- Upsert Dhriti's teachers ---
     print("\nSeeding Dhriti's teachers...")
@@ -181,16 +181,16 @@ async def main():
             dhriti_teacher_ids[email] = uid
             print(f"  [added]  {name} ({email})")
 
-    # --- Cancel all bookings for paras.mehta@gmail.com ---
-    print("\nCancelling bookings for paras.mehta@gmail.com...")
+    # --- Cancel all bookings for parasmehta64@gmail.com ---
+    print("\nCancelling bookings for parasmehta64@gmail.com...")
     cancelled = await conn.execute(
-        "UPDATE bookings SET status = 'cancelled' WHERE parent_id = (SELECT id FROM users WHERE email = 'paras.mehta@gmail.com')"
+        "UPDATE bookings SET status = 'cancelled' WHERE parent_id = (SELECT id FROM users WHERE email = 'parasmehta64@gmail.com')"
     )
     print(f"  {cancelled}")
 
     print(f"\nSeeding slots ({NUM_SLOTS} per teacher, starting {PTM_DATE.strftime('%H:%M')}, 7-min intervals)...\n")
 
-    all_emails = [email for _, email in TEACHERS] + ["susan.christi@inventure.edu"]
+    all_emails = [email for _, email in TEACHERS] + ["susan.christi@inventureacademy.com"]
 
     for email in all_emails:
         teacher_id = teacher_ids[email]
