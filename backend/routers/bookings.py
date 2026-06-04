@@ -124,7 +124,6 @@ async def auto_schedule(
                     "end_time": a["end_time"].isoformat(),
                 })
             except IntegrityError:
-                await db.rollback()
                 conflicts.append(a["teacher_name"])
                 continue
         await db.commit()
