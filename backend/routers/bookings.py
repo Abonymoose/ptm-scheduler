@@ -113,17 +113,20 @@ async def auto_schedule(
                 continue
             booking_id = str(uuid.uuid4())
             try:
+                await db.execute(text("SAVEPOINT sp1"))
                 await db.execute(
                     text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
                     {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
                 )
+                await db.execute(text("RELEASE SAVEPOINT sp1"))
                 booked.append({
                     "teacher_name": a["teacher_name"],
                     "slot_id": a["slot_id"],
                     "start_time": a["start_time"].isoformat(),
                     "end_time": a["end_time"].isoformat(),
                 })
-            except IntegrityError:
+            except Exception:
+                await db.execute(text("ROLLBACK TO SAVEPOINT sp1"))
                 conflicts.append(a["teacher_name"])
                 continue
         await db.commit()
