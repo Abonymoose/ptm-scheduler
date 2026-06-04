@@ -135,36 +135,36 @@ async def create_booking(
     if current_user["role"] != "parent":
         raise HTTPException(status_code=403, detail="Only parents can book slots")
 
-    async with db.begin():
-        result = await db.execute(
-            text("SELECT id, capacity FROM slots WHERE id = :sid FOR UPDATE"),
-            {"sid": body.slot_id}
-        )
-        slot = result.fetchone()
-        if not slot:
-            raise HTTPException(status_code=404, detail="Slot not found")
+    result = await db.execute(
+        text("SELECT id, capacity FROM slots WHERE id = :sid FOR UPDATE"),
+        {"sid": body.slot_id}
+    )
+    slot = result.fetchone()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Slot not found")
 
-        result = await db.execute(
-            text("SELECT COUNT(*) FROM bookings WHERE slot_id = :sid AND status != 'cancelled'"),
-            {"sid": body.slot_id}
-        )
-        booked_count = result.scalar()
+    result = await db.execute(
+        text("SELECT COUNT(*) FROM bookings WHERE slot_id = :sid AND status != 'cancelled'"),
+        {"sid": body.slot_id}
+    )
+    booked_count = result.scalar()
 
-        if booked_count >= slot.capacity:
-            raise HTTPException(status_code=400, detail="Slot is full")
+    if booked_count >= slot.capacity:
+        raise HTTPException(status_code=400, detail="Slot is full")
 
-        result = await db.execute(
-            text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status != 'cancelled'"),
-            {"sid": body.slot_id, "pid": current_user["sub"]}
-        )
-        if result.fetchone():
-            raise HTTPException(status_code=400, detail="Already booked this slot")
+    result = await db.execute(
+        text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status != 'cancelled'"),
+        {"sid": body.slot_id, "pid": current_user["sub"]}
+    )
+    if result.fetchone():
+        raise HTTPException(status_code=400, detail="Already booked this slot")
 
-        booking_id = str(uuid.uuid4())
-        await db.execute(
-            text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-            {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"]}
-        )
+    booking_id = str(uuid.uuid4())
+    await db.execute(
+        text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
+        {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"]}
+    )
+    await db.commit()
 
     return {"booking_id": booking_id, "message": "Booking confirmed"}
 
