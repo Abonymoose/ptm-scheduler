@@ -47,7 +47,7 @@ export default function Login() {
 
           <div>
             <label style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }}>Email</label>
-            <input type="email" placeholder="you@inventureacademy.in" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
+            <input type="email" placeholder="you@inventureacademy.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
               onFocus={e => { e.target.style.borderColor = '#F47920'; e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.12)' }}
               onBlur={e => { e.target.style.borderColor = '#F4C099'; e.target.style.boxShadow = 'none' }}
               style={inp} />

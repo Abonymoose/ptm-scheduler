@@ -67,6 +67,7 @@ export default function ParentDashboard() {
   const bookedSlotIds = new Set(bookings.filter(b => b.status !== 'cancelled').map(b => b.slot_id))
   const slotToBookingId = Object.fromEntries(bookings.filter(b => b.status !== 'cancelled').map(b => [b.slot_id, b.id]))
   const activeBookings = bookings.filter(b => b.status !== 'cancelled')
+  const bookedTimes = new Set(activeBookings.map(b => b.start_time))
 
   const groupByTeacher = (teacherList) => {
     const map = {}
@@ -101,7 +102,7 @@ export default function ParentDashboard() {
 
   const handleAutoSchedule = async () => {
     setAutoScheduling(true)
-    try { const result = await autoSchedule([...selectedTeachers]); setAutoResult(result); fetchData() }
+    try { const result = await autoSchedule([...selectedTeachers]); setAutoResult(result); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Auto-schedule failed') }
     setAutoScheduling(false)
   }
@@ -114,7 +115,8 @@ export default function ParentDashboard() {
   const slotClass = (slot) => {
     const isBooked = bookedSlotIds.has(slot.id)
     const isFull = slot.booked_count >= slot.capacity && !isBooked
-    if (isFull) return 'taken'
+    const isTimeConflict = !isBooked && bookedTimes.has(slot.start_time)
+    if (isFull || isTimeConflict) return 'taken'
     if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
     return 'free'
   }
