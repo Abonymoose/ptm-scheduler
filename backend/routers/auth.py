@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 from database import get_db
 from auth import hash_password, verify_password, create_access_token
 import uuid
+import asyncio
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -61,11 +62,20 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/login")
 async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        text("SELECT id, hashed_password, role, school_id, name FROM users WHERE email = :email"),
-        {"email": body.email}
-    )
-    user = result.fetchone()
+    user = None
+    for attempt in range(3):
+        try:
+            result = await db.execute(
+                text("SELECT id, hashed_password, role, school_id, name FROM users WHERE email = :email"),
+                {"email": body.email}
+            )
+            user = result.fetchone()
+            break
+        except Exception:
+            if attempt < 2:
+                await asyncio.sleep(1)
+                continue
+            raise
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
