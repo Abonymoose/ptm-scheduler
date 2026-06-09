@@ -72,7 +72,8 @@ async def auto_schedule(
     for row in rows:
         teacher_slots[str(row.teacher_id)].append(row)
 
-    assigned: list[dict] = [{"start_time": eb.start_time, "end_time": eb.end_time} for eb in existing_bookings]
+    blocked_times: list[dict] = [{"start_time": eb.start_time, "end_time": eb.end_time} for eb in existing_bookings]
+    assigned: list[dict] = []
     conflicts: list[str] = []
 
     for teacher_id in body.teacher_ids:
@@ -82,7 +83,7 @@ async def auto_schedule(
         for slot in available:
             if not any(
                 slot.start_time < a["end_time"] and slot.end_time > a["start_time"]
-                for a in assigned
+                for a in assigned + blocked_times
             ):
                 chosen = slot
                 break
