@@ -57,11 +57,22 @@ async def auto_schedule(
     )
     rows = slot_result.fetchall()
 
+    # Pre-load existing bookings so we don't overlap with other child's meetings
+    existing_result = await db.execute(
+        text(
+            "SELECT s.start_time, s.end_time FROM bookings b "
+            "JOIN slots s ON b.slot_id = s.id "
+            "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+        ),
+        {"pid": parent_id}
+    )
+    existing_bookings = existing_result.fetchall()
+
     teacher_slots: dict[str, list] = defaultdict(list)
     for row in rows:
         teacher_slots[str(row.teacher_id)].append(row)
 
-    assigned: list[dict] = []
+    assigned: list[dict] = [{"start_time": eb.start_time, "end_time": eb.end_time} for eb in existing_bookings]
     conflicts: list[str] = []
 
     for teacher_id in body.teacher_ids:
