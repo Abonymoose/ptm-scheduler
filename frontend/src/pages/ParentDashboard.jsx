@@ -68,6 +68,7 @@ export default function ParentDashboard() {
   const slotToBookingId = Object.fromEntries(bookings.filter(b => b.status !== 'cancelled').map(b => [b.slot_id, b.id]))
   const activeBookings = bookings.filter(b => b.status !== 'cancelled')
   const bookedTimes = new Set(activeBookings.map(b => b.start_time))
+  const bookedTeacherNames = new Set(activeBookings.map(b => b.teacher_name))
 
   const groupByTeacher = (teacherList) => {
     const map = {}
@@ -116,7 +117,8 @@ export default function ParentDashboard() {
     const isBooked = bookedSlotIds.has(slot.id)
     const isFull = slot.booked_count >= slot.capacity && !isBooked
     const isTimeConflict = !isBooked && bookedTimes.has(slot.start_time)
-    if (isFull || isTimeConflict) return 'taken'
+    const isTeacherBooked = !isBooked && bookedTeacherNames.has(slot.teacher_name)
+    if (isFull || isTimeConflict || isTeacherBooked) return 'taken'
     if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
     return 'free'
   }

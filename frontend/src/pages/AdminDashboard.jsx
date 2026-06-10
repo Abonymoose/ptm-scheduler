@@ -193,25 +193,6 @@ export default function AdminDashboard() {
                 )
               })}
             </div>
-
-            {/* Invite code + venue board */}
-            <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099' }}>
-              <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', marginBottom: 'clamp(6px,1vw,10px)', textTransform: 'uppercase', letterSpacing: '.04em' }}>School invite code</div>
-              <div style={{ background: '#FFF0E6', border: '1px solid #F4C099', borderRadius: 'clamp(8px,1.2vw,14px)', padding: 'clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF', marginBottom: 4 }}>Share with parents and teachers to join</div>
-                  <div style={{ fontSize: 'clamp(16px,2.2vw,26px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '.08em' }}>INVENT-2026</div>
-                </div>
-                <button onClick={() => { navigator.clipboard?.writeText('INVENT-2026'); showToast('Copied!') }} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Copy</button>
-              </div>
-              <div style={{ background: '#1B3F7A', borderRadius: 'clamp(8px,1.2vw,14px)', padding: 'clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'clamp(8px,1.2vw,14px)' }}>
-                <div>
-                  <div style={{ fontSize: 'clamp(11px,1.4vw,16px)', fontWeight: 700, color: '#fff' }}>Venue Status Board</div>
-                  <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: 'rgba(255,255,255,.7)', marginTop: 3 }}>Open on school TV — no login required</div>
-                </div>
-                <button onClick={() => showToast('Opening venue board...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Open venue board →</button>
-              </div>
-            </div>
           </div>
         )}
 

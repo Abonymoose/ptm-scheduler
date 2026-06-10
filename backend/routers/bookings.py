@@ -60,7 +60,7 @@ async def auto_schedule(
     # Pre-load existing bookings so we don't overlap with other child's meetings
     existing_result = await db.execute(
         text(
-            "SELECT s.start_time, s.end_time FROM bookings b "
+            "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
             "JOIN slots s ON b.slot_id = s.id "
             "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
         ),
@@ -72,12 +72,16 @@ async def auto_schedule(
     for row in rows:
         teacher_slots[str(row.teacher_id)].append(row)
 
+    already_booked_teacher_ids = {str(eb.teacher_id) for eb in existing_bookings}
     blocked_times: list[dict] = [{"start_time": eb.start_time, "end_time": eb.end_time} for eb in existing_bookings]
     assigned: list[dict] = []
     conflicts: list[str] = []
 
     for teacher_id in body.teacher_ids:
         teacher_name = teacher_names.get(teacher_id, teacher_id)
+        if teacher_id in already_booked_teacher_ids:
+            conflicts.append(teacher_name)
+            continue
         available = teacher_slots.get(teacher_id, [])
         chosen = None
         for slot in available:
@@ -123,13 +127,25 @@ async def auto_schedule(
             if res.fetchone():
                 conflicts.append(a["teacher_name"])
                 continue
-            booking_id = str(uuid.uuid4())
             try:
                 await db.execute(text(f"SAVEPOINT sp_{i}"))
-                await db.execute(
-                    text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-                    {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
+                res_can = await db.execute(
+                    text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status = 'cancelled'"),
+                    {"sid": a["slot_id"], "pid": parent_id}
                 )
+                cancelled = res_can.fetchone()
+                if cancelled:
+                    booking_id = str(cancelled.id)
+                    await db.execute(
+                        text("UPDATE bookings SET status = 'confirmed' WHERE id = :bid"),
+                        {"bid": booking_id}
+                    )
+                else:
+                    booking_id = str(uuid.uuid4())
+                    await db.execute(
+                        text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
+                        {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
+                    )
                 await db.execute(text(f"RELEASE SAVEPOINT sp_{i}"))
                 booked.append({
                     "teacher_name": a["teacher_name"],
@@ -156,7 +172,7 @@ async def create_booking(
         raise HTTPException(status_code=403, detail="Only parents can book slots")
 
     result = await db.execute(
-        text("SELECT id, capacity FROM slots WHERE id = :sid FOR UPDATE"),
+        text("SELECT id, capacity, start_time, end_time FROM slots WHERE id = :sid FOR UPDATE"),
         {"sid": body.slot_id}
     )
     slot = result.fetchone()
@@ -179,11 +195,36 @@ async def create_booking(
     if result.fetchone():
         raise HTTPException(status_code=400, detail="Already booked this slot")
 
-    booking_id = str(uuid.uuid4())
-    await db.execute(
-        text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-        {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"]}
+    result = await db.execute(
+        text(
+            "SELECT COUNT(*) FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+            " AND s.start_time < :end_time AND s.end_time > :start_time"
+        ),
+        {"pid": current_user["sub"], "start_time": slot.start_time, "end_time": slot.end_time}
     )
+    if result.scalar() > 0:
+        raise HTTPException(status_code=400, detail="You already have a meeting at this time")
+
+    result = await db.execute(
+        text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status = 'cancelled'"),
+        {"sid": body.slot_id, "pid": current_user["sub"]}
+    )
+    cancelled = result.fetchone()
+
+    if cancelled:
+        booking_id = str(cancelled.id)
+        await db.execute(
+            text("UPDATE bookings SET status = 'confirmed' WHERE id = :bid"),
+            {"bid": booking_id}
+        )
+    else:
+        booking_id = str(uuid.uuid4())
+        await db.execute(
+            text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
+            {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"]}
+        )
     await db.commit()
 
     return {"booking_id": booking_id, "message": "Booking confirmed"}
