@@ -9,6 +9,7 @@ const getMySlots = () => api.get('/slots/mine').then(r => r.data)
 const createSlot = body => api.post('/slots/', body).then(r => r.data)
 const getMe = () => api.get('/auth/me').then(r => r.data)
 const patchVenue = venue => api.patch('/auth/venue', { venue }).then(r => r.data)
+const deleteBooking = id => api.delete(`/bookings/${id}`).then(r => r.data)
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
 const clock = () => { const n = new Date(); let h = n.getHours(); const m = n.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m < 10 ? '0' : ''}${m} ${ap}` }
@@ -60,6 +61,12 @@ export default function TeacherDashboard() {
   }
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  const handleCancelBooking = async booking_id => {
+    if (!booking_id) { showToast('No booking to cancel'); return }
+    try { await deleteBooking(booking_id); showToast('Meeting cancelled'); fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to cancel') }
+  }
 
   const userInitials = user?.name ? user.name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase() : 'T'
   const breakSlots = slots.filter(s => s.is_break || s.type === 'break')
@@ -175,7 +182,7 @@ export default function TeacherDashboard() {
                           {isDone && DONE_TICK}
                         </div>
                       </div>
-                      {bk && <button onClick={() => setCancelModal({ id: slot.id, name: bk.parent_name })}
+                      {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.id, name: bk.parent_name })}
                         onMouseEnter={e => e.currentTarget.style.color = '#F47920'}
                         onMouseLeave={e => e.currentTarget.style.color = '#C4B5A5'}
                         style={{ width: 'clamp(28px,3.5vw,38px)', height: 'clamp(28px,3.5vw,38px)', borderRadius: 8, background: '#fff', border: 'none', color: '#C4B5A5', cursor: 'pointer', fontSize: 'clamp(18px,2.2vw,26px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1, padding: 0, transition: 'color .12s' }}>×</button>}
@@ -285,8 +292,7 @@ export default function TeacherDashboard() {
                     {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].parent_name}` : ''}
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { showToast('Booking cancelled'); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
-                    <button onClick={() => { showToast('Slot blocked'); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Block slot</button>
+                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { handleCancelBooking(selectedSlot.bookings[0].id); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
                     <button onClick={() => setSelectedSlot(null)} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Dismiss</button>
                   </div>
                 </>
@@ -330,7 +336,7 @@ export default function TeacherDashboard() {
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel meeting with {cancelModal.name}?</div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
-              <button onClick={() => { showToast('Meeting cancelled'); setCancelModal(null) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => { handleCancelBooking(cancelModal.booking_id); setCancelModal(null) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
             </div>
           </div>
         </div>

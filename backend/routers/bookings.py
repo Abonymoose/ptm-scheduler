@@ -236,18 +236,26 @@ async def cancel_booking(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    if current_user["role"] != "parent":
-        raise HTTPException(status_code=403, detail="Only parents can cancel bookings")
+    if current_user["role"] not in ("parent", "teacher"):
+        raise HTTPException(status_code=403, detail="Only parents or teachers can cancel bookings")
 
     result = await db.execute(
-        text("SELECT id, parent_id, status FROM bookings WHERE id = :bid"),
+        text(
+            "SELECT b.id, b.parent_id, b.status, s.teacher_id"
+            " FROM bookings b JOIN slots s ON b.slot_id = s.id"
+            " WHERE b.id = :bid"
+        ),
         {"bid": booking_id}
     )
     booking = result.fetchone()
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
-    if str(booking.parent_id) != current_user["sub"]:
-        raise HTTPException(status_code=403, detail="Not your booking")
+    if current_user["role"] == "teacher":
+        if str(booking.teacher_id) != current_user["sub"]:
+            raise HTTPException(status_code=403, detail="Not your slot")
+    else:
+        if str(booking.parent_id) != current_user["sub"]:
+            raise HTTPException(status_code=403, detail="Not your booking")
     if booking.status == "cancelled":
         raise HTTPException(status_code=400, detail="Already cancelled")
 
