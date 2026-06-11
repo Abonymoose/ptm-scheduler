@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { getSlots } from '../api/slots'
 import { createBooking, getMyBookings, cancelBooking, autoSchedule } from '../api/bookings'
 import { LOGO_LARGE } from '../assets/logos'
+import { titleName } from '../utils/teacherTitle'
 
 const PARSHV_TEACHERS = ['Sandhya Chhetri','Helen Gilbert','Priya Naidu','Susan Christi','Anwesha Basu','Anthony Samuel','Sunaina Naugain','Shubha S','Muneezah Mattu']
 const DHRITI_TEACHERS = ['Kavya Sharma','Rina Patel','Deepa Nair','Preethi Rao','Anjali Menon','Swati Joshi']
@@ -182,7 +183,7 @@ export default function ParentDashboard() {
                     {teachers.map(t => (
                       <th key={t} style={{ textAlign: 'center', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', minWidth: 'clamp(80px,9vw,110px)', position: 'sticky', top: 0, zIndex: 5, padding: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%', padding: '8px 4px' }}>
-                          <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.2, width: '100%' }}>{t.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ')[0]}</span>
+                          <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.2, width: '100%' }}>{titleName(t).split(' ').slice(0, 2).join(' ')}</span>
                           <span style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#9CA3AF', textAlign: 'center', lineHeight: 1.1 }}>{CHILD_SUBJECTS[t.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim()] || ''}</span>
                         </div>
                       </th>
@@ -275,7 +276,7 @@ export default function ParentDashboard() {
                     </div>
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: barColor }} />
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
-                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk.teacher_name}</div>
+                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{titleName(bk.teacher_name)}</div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
                       {colorByChild && <span style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, padding: '2px clamp(8px,1.2vw,12px)', borderRadius: 20, marginTop: 4, display: 'inline-block', background: isParshvTeacher ? '#FFF0E6' : '#EFF6FF', color: isParshvTeacher ? '#C45A0A' : '#1D4ED8' }}>{isParshvTeacher ? 'Parshv' : 'Dhriti'}</span>}
                     </div>
@@ -317,7 +318,7 @@ export default function ParentDashboard() {
         <div onClick={() => setCancelModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8, letterSpacing: '-.02em' }}>Cancel this meeting?</div>
-            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel your meeting with {cancelModal.teacher}?</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel your meeting with {titleName(cancelModal.teacher)}?</div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Keep it</button>
               <button onClick={handleCancel} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Cancel meeting</button>
@@ -349,7 +350,7 @@ export default function ParentDashboard() {
                         {checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
                       </div>
                       <div>
-                        <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{t.name}</div>
+                        <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(t.name)}</div>
                         {subject && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>{subject}</div>}
                       </div>
                     </div>
@@ -373,7 +374,7 @@ export default function ParentDashboard() {
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < autoResult.booked.length - 1 ? '1px solid #FDE9D4' : 'none' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F47920', flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{b.teacher_name}</div>
+                      <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{titleName(b.teacher_name)}</div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 1 }}>{fmt(b.start_time)} – {fmt(b.end_time)}</div>
                     </div>
                     <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#C45A0A', background: '#FFF0E6', padding: '2px 8px', borderRadius: 20 }}>Confirmed</div>

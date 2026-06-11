@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
+import { titleName } from '../utils/teacherTitle'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -106,7 +107,7 @@ export default function TeacherDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.5vw,16px)', flex: 1, minWidth: 0 }}>
             <div style={{ width: 'clamp(34px,4.5vw,48px)', height: 'clamp(34px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Teacher'}</div>
+              <div style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM 09 Apr 2026</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span id="venue-text">{venueText}</span>

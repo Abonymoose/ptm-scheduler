@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
+import { titleName } from '../utils/teacherTitle'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -160,7 +161,7 @@ export default function AdminDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1vw,10px)' }}>
                         <div style={{ width: 'clamp(22px,2.8vw,34px)', height: 'clamp(22px,2.8vw,34px)', borderRadius: '50%', background: '#FFF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(8px,1vw,12px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>{getInit(t.name)}</div>
                         <div>
-                          <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 600, color: '#1B3F7A' }}>{t.name}</div>
+                          <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(t.name)}</div>
                           <div style={{ fontSize: 'clamp(8px,1vw,12px)', color: '#9CA3AF' }}>{t.sub && `${t.sub} · `}{t.slots.length} slots</div>
                         </div>
                       </div>
@@ -222,7 +223,7 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                           <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.parent_name}</div>
-                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>with {bk.teacher_name}</div>
+                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>with {titleName(bk.teacher_name)}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -251,7 +252,7 @@ export default function AdminDashboard() {
                           {ph.map((b, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(4px,.7vw,8px) 0', borderBottom: i < ph.length-1 ? '1px solid #FDE9D4' : 'none', fontSize: 'clamp(10px,1.2vw,14px)' }}>
                               <div style={{ color: '#9CA3AF', minWidth: 'clamp(80px,10vw,120px)' }}>{b.start_time ? fmtDate(b.start_time) : '—'}</div>
-                              <div style={{ color: '#1B3F7A', fontWeight: 600, flex: 1, padding: '0 clamp(6px,1vw,10px)' }}>{b.teacher_name}</div>
+                              <div style={{ color: '#1B3F7A', fontWeight: 600, flex: 1, padding: '0 clamp(6px,1vw,10px)' }}>{titleName(b.teacher_name)}</div>
                               <span style={{ fontSize: 'clamp(8px,1vw,11px)', fontWeight: 700, padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: b.status === 'cancelled' ? '#F3F4F6' : '#DCFCE7', color: b.status === 'cancelled' ? '#9CA3AF' : '#166534' }}>{b.status === 'cancelled' ? 'Cancelled' : 'Attended'}</span>
                             </div>
                           ))}
