@@ -182,7 +182,7 @@ export default function TeacherDashboard() {
                           {isDone && DONE_TICK}
                         </div>
                       </div>
-                      {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.id, name: bk.parent_name })}
+                      {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.parent_name })}
                         onMouseEnter={e => e.currentTarget.style.color = '#F47920'}
                         onMouseLeave={e => e.currentTarget.style.color = '#C4B5A5'}
                         style={{ width: 'clamp(28px,3.5vw,38px)', height: 'clamp(28px,3.5vw,38px)', borderRadius: 8, background: '#fff', border: 'none', color: '#C4B5A5', cursor: 'pointer', fontSize: 'clamp(18px,2.2vw,26px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1, padding: 0, transition: 'color .12s' }}>×</button>}
@@ -292,7 +292,7 @@ export default function TeacherDashboard() {
                     {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].parent_name}` : ''}
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { handleCancelBooking(selectedSlot.bookings[0].id); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
+                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { handleCancelBooking(selectedSlot.bookings[0].booking_id); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
                     <button onClick={() => setSelectedSlot(null)} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Dismiss</button>
                   </div>
                 </>
