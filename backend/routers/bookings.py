@@ -295,7 +295,7 @@ async def get_my_bookings(
         text(
             "SELECT b.id, b.slot_id, b.status, b.created_at,"
             " s.start_time, s.end_time,"
-            " u.name as teacher_name"
+            " u.name as teacher_name, u.venue as teacher_venue"
             " FROM bookings b"
             " JOIN slots s ON b.slot_id = s.id"
             " JOIN users u ON s.teacher_id = u.id"

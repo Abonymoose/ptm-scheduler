@@ -7,6 +7,8 @@ const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://loca
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
 const getMySlots = () => api.get('/slots/mine').then(r => r.data)
 const createSlot = body => api.post('/slots/', body).then(r => r.data)
+const getMe = () => api.get('/auth/me').then(r => r.data)
+const patchVenue = venue => api.patch('/auth/venue', { venue }).then(r => r.data)
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
 const clock = () => { const n = new Date(); let h = n.getHours(); const m = n.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m < 10 ? '0' : ''}${m} ${ap}` }
@@ -39,7 +41,7 @@ export default function TeacherDashboard() {
   const [creating, setCreating] = useState(false)
   const [hlNext, setHlNext] = useState(true)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue) }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
@@ -314,7 +316,7 @@ export default function TeacherDashboard() {
               onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setVenueModal(false)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
-              <button onClick={() => { if (venueInput.trim()) { setVenueText(venueInput.trim()); showToast('Venue updated') } setVenueModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Save</button>
+              <button onClick={async () => { if (venueInput.trim()) { const v = venueInput.trim(); setVenueText(v); try { await patchVenue(v); showToast('Venue updated') } catch { showToast('Venue saved locally') } } setVenueModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Save</button>
             </div>
           </div>
         </div>

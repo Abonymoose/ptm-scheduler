@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from auth import hash_password, verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token, get_current_user
 import uuid
 import asyncio
 
@@ -19,6 +19,9 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+class VenueRequest(BaseModel):
+    venue: str
 
 @router.post("/signup")
 async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
@@ -81,3 +84,27 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     token = create_access_token({"sub": str(user.id), "role": user.role, "school_id": str(user.school_id), "name": user.name})
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me")
+async def get_me(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    result = await db.execute(
+        text("SELECT id, name, email, role, venue FROM users WHERE id = :uid"),
+        {"uid": current_user["sub"]}
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+    return dict(row._mapping)
+
+
+@router.patch("/venue")
+async def update_venue(body: VenueRequest, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can update venue")
+    await db.execute(
+        text("UPDATE users SET venue = :venue WHERE id = :uid"),
+        {"venue": body.venue, "uid": current_user["sub"]}
+    )
+    await db.commit()
+    return {"venue": body.venue}

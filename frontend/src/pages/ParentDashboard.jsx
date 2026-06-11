@@ -276,7 +276,7 @@ export default function ParentDashboard() {
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: barColor }} />
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
                       <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk.teacher_name}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
                       {colorByChild && <span style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, padding: '2px clamp(8px,1.2vw,12px)', borderRadius: 20, marginTop: 4, display: 'inline-block', background: isParshvTeacher ? '#FFF0E6' : '#EFF6FF', color: isParshvTeacher ? '#C45A0A' : '#1D4ED8' }}>{isParshvTeacher ? 'Parshv' : 'Dhriti'}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
@@ -342,12 +342,16 @@ export default function ParentDashboard() {
               <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1 }}>
                 {teacherOptions.map((t, i) => {
                   const checked = selectedTeachers.has(t.id)
+                  const subject = CHILD_SUBJECTS[t.name?.replace(/^(Ms\.|Mr\.|Dr\.)\s*/,'').trim()] || ''
                   return (
                     <div key={t.id} onClick={() => toggleTeacher(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'clamp(10px,1.4vw,14px) clamp(20px,2.8vw,28px)', cursor: 'pointer', borderBottom: i < teacherOptions.length - 1 ? '1px solid #FDE9D4' : 'none', background: checked ? '#FFF8F3' : '#fff', transition: 'background .1s' }}>
                       <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: checked ? '2px solid #F47920' : '1.5px solid #F4C099', background: checked ? '#F47920' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .1s' }}>
                         {checked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
                       </div>
-                      <span style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{t.name}</span>
+                      <div>
+                        <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{t.name}</div>
+                        {subject && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>{subject}</div>}
+                      </div>
                     </div>
                   )
                 })}
