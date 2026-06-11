@@ -92,11 +92,11 @@ export default function AdminDashboard() {
     } else if (cmd === 'remove' && parts[1] === 'teacher') {
       const email = parts[2]
       if (!email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: remove teacher [email]' }]); termScroll(); return }
-      setTermLog(l => [...l, { type: 'success', text: `✓ Teacher removed: ${email}` }]); termScroll()
+      setTermLog(l => [...l, { type: 'info', text: 'Coming soon — not yet implemented' }]); termScroll()
     } else if (cmd === 'add' && parts[1] === 'slots') {
       const email = parts[2]; const count = parseInt(parts[3])
       if (!email || !email.includes('@') || isNaN(count) || count < 1) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add slots [email] [count]' }]); termScroll(); return }
-      setTermLog(l => [...l, { type: 'success', text: `✓ ${count} slots added for ${email}` }]); termScroll()
+      setTermLog(l => [...l, { type: 'info', text: 'Coming soon — not yet implemented' }]); termScroll()
     } else {
       setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }]); termScroll()
     }
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
-            <button onClick={() => showToast('Add teacher flow')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
+            <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
             <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
@@ -184,9 +184,9 @@ export default function AdminDashboard() {
                           ))}
                         </div>
                         <div style={{ display: 'flex', gap: 'clamp(5px,.8vw,9px)', flexWrap: 'wrap' }}>
-                          <button onClick={() => showToast('Viewing schedule')} style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'pointer', fontWeight: 600, border: '1px solid #F47920', background: '#FFF0E6', color: '#C45A0A', fontFamily: 'inherit' }}>View schedule</button>
-                          <button onClick={() => showToast('Editing')} style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'pointer', fontWeight: 600, border: '1px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Edit</button>
-                          <button onClick={() => showToast('Remove?')} style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'pointer', fontWeight: 600, border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontFamily: 'inherit' }}>Remove</button>
+                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #F47920', background: '#FFF0E6', color: '#C45A0A', fontFamily: 'inherit' }}>View schedule</button>
+                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Edit</button>
+                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontFamily: 'inherit' }}>Remove</button>
                         </div>
                       </div>
                     )}
@@ -290,7 +290,7 @@ export default function AdminDashboard() {
         {/* BOTTOM BAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
           <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · 09 Apr 2026</span>
-          <button onClick={() => showToast('Exporting report...')} style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Export report</button>
+          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit' }}>Export report</button>
         </div>
       </div>
 
