@@ -13,7 +13,7 @@ load_dotenv()
 app = FastAPI()
 
 _frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-_allowed_origins = list({_frontend_url, "http://localhost:5173"})
+_allowed_origins = list({_frontend_url, "https://ptmnow.com", "https://www.ptmnow.com", "http://localhost:5173"})
 
 app.add_middleware(
     CORSMiddleware,
