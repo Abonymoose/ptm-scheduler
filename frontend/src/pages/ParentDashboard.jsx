@@ -200,23 +200,28 @@ export default function ParentDashboard() {
                         const cls = slotClass(slot)
                         const hov = hoveredCancel === slot.id
                         const isBooked = cls === 'child1' || cls === 'child2'
+                        if (cls === 'taken') return (
+                          <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
+                            <div style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(10px,1.2vw,12px)', color: '#C4B5A5', fontWeight: 500, textAlign: 'center' }}>Unavailable</div>
+                          </td>
+                        )
                         return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
                             <button
-                              onClick={() => { if (isBooked) { setCancelModal({ booking_id: slotToBookingId[slot.id], teacher: t }); return }; if (cls !== 'taken') handleBook(slot.id) }}
+                              onClick={() => { if (isBooked) { setCancelModal({ booking_id: slotToBookingId[slot.id], teacher: t }); return }; handleBook(slot.id) }}
                               onMouseEnter={() => isBooked && setHoveredCancel(slot.id)}
                               onMouseLeave={() => setHoveredCancel(null)}
                               style={{
                                 width: '100%', height: '100%', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 border: cls === 'child1' ? '2px solid #F47920' : cls === 'child2' ? '2px solid #93C5FD' : 'none',
-                                cursor: cls === 'taken' ? 'not-allowed' : 'pointer',
-                                background: hov && isBooked ? '#FEE2E2' : cls === 'child1' ? '#FFF0E6' : cls === 'child2' ? '#EFF6FF' : cls === 'taken' ? '#F5F0EC' : 'transparent',
-                                color: hov && isBooked ? '#DC2626' : cls === 'child1' ? '#C45A0A' : cls === 'child2' ? '#1D4ED8' : cls === 'taken' ? '#C4B5A5' : '#E5D5C5',
-                                fontSize: cls === 'free' ? 'clamp(16px,2vw,22px)' : cls === 'taken' ? 'clamp(10px,1.2vw,13px)' : 'clamp(11px,1.3vw,14px)',
+                                cursor: 'pointer',
+                                background: hov && isBooked ? '#FEE2E2' : cls === 'child1' ? '#FFF0E6' : cls === 'child2' ? '#EFF6FF' : 'transparent',
+                                color: hov && isBooked ? '#DC2626' : cls === 'child1' ? '#C45A0A' : cls === 'child2' ? '#1D4ED8' : '#E5D5C5',
+                                fontSize: cls === 'free' ? 'clamp(16px,2vw,22px)' : 'clamp(11px,1.3vw,14px)',
                                 fontWeight: cls === 'free' ? 300 : 600,
                                 transition: 'all .12s', fontFamily: 'inherit',
                               }}>
-                              {isBooked ? (hov ? '×' : '✓') : cls === 'taken' ? 'Taken' : '+'}
+                              {isBooked ? (hov ? '×' : '✓') : '+'}
                             </button>
                           </td>
                         )
