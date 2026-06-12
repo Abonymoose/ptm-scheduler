@@ -27,3 +27,6 @@ dist-ssr/
 .DS_Store
 *.suo
 *.sw?
+
+ptmnow-build-plan.md
+ptmnow-build-plan.txt
