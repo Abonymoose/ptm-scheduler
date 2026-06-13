@@ -32,9 +32,7 @@ export default function ParentDashboard() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState('')
-  const [activeChild, setActiveChild] = useState('p')
   const [tab, setTab] = useState('grid')
-  const [colorByChild, setColorByChild] = useState(false)
   const [done, setDone] = useState({})
   const [hoveredCancel, setHoveredCancel] = useState(null)
   const [cancelModal, setCancelModal] = useState(null)
@@ -84,6 +82,8 @@ export default function ParentDashboard() {
     return map
   }
 
+  // The logged-in account IS the student; pick teacher list by grade.
+  const activeChild = user?.grade === 4 ? 'd' : 'p'
   const currentTeachers = activeChild === 'p' ? PARSHV_TEACHERS : DHRITI_TEACHERS
   const teacherGroups = groupByTeacher(currentTeachers)
   const teachers = Object.keys(teacherGroups)
@@ -139,7 +139,7 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)' }}>
             <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div>
-              <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Parent'}</div>
+              <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Student'}{user?.section ? ` · ${user.section}` : ''}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Inventure Academy · PTM 09 Apr 2026</div>
             </div>
           </div>
@@ -159,22 +159,9 @@ export default function ParentDashboard() {
         {/* BOOK TAB */}
         {tab === 'grid' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            {/* Child selector bar */}
+            {/* Action bar */}
             <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
-              <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to select:</span>
-
-              {/* Parshv */}
-              <div onClick={() => setActiveChild('p')} style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(10px,1.4vw,16px)', borderRadius: 50, border: `2px solid ${activeChild === 'p' ? '#F47920' : '#F4C099'}`, background: activeChild === 'p' ? '#FFF0E6' : '#fff', color: activeChild === 'p' ? '#C45A0A' : '#C4B5A5', cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <span style={{ width: 14, height: 14, borderRadius: '50%', background: activeChild === 'p' ? '#F47920' : '#D1D5DB', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{activeChild === 'p' && TICK}</span>
-                Parshv (Gr 7)
-              </div>
-
-              {/* Dhriti */}
-              <div onClick={() => setActiveChild('d')} style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(10px,1.4vw,16px)', borderRadius: 50, border: `2px solid ${activeChild === 'd' ? '#93C5FD' : '#F4C099'}`, background: activeChild === 'd' ? '#EFF6FF' : '#fff', color: activeChild === 'd' ? '#1D4ED8' : '#C4B5A5', cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <span style={{ width: 14, height: 14, borderRadius: '50%', background: activeChild === 'd' ? '#2563EB' : '#D1D5DB', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{activeChild === 'd' && TICK}</span>
-                Dhriti (Gr 4)
-              </div>
-
+              <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap a teacher slot to book a meeting</span>
               <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
             </div>
 
@@ -239,7 +226,7 @@ export default function ParentDashboard() {
             {/* Legend */}
             <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', fontWeight: 600, marginRight: 4 }}>Legend:</span>
-              {[{ label: 'Parshv', bg: '#FFF0E6', border: '#F47920' }, { label: 'Dhriti', bg: '#EFF6FF', border: '#93C5FD' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
+              {[{ label: user?.name?.split(' ')[0] || 'Booked', bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#93C5FD' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
                 <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
                   <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px solid ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
                 </span>
@@ -258,15 +245,6 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{activeBookings.length} upcoming meetings</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#9CA3AF', fontWeight: 500 }}>
-                <span>Colour by child</span>
-                <label style={{ position: 'relative', width: 'clamp(36px,4.5vw,46px)', height: 'clamp(20px,2.5vw,26px)', flexShrink: 0, cursor: 'pointer' }}>
-                  <input type="checkbox" checked={colorByChild} onChange={e => setColorByChild(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-                  <span style={{ position: 'absolute', inset: 0, background: colorByChild ? '#F47920' : '#E5D5C5', borderRadius: 20, transition: '.2s', cursor: 'pointer' }}>
-                    <span style={{ position: 'absolute', content: '', height: 'calc(100% - 4px)', aspectRatio: 1, left: colorByChild ? 'calc(100% - 2px)' : 2, bottom: 2, background: '#fff', borderRadius: '50%', transition: '.2s', boxShadow: '0 1px 4px rgba(0,0,0,.15)', transform: colorByChild ? 'translateX(-100%)' : 'none' }} />
-                  </span>
-                </label>
-              </div>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {activeBookings.length === 0 ? (
@@ -276,8 +254,7 @@ export default function ParentDashboard() {
                 </div>
               ) : [...activeBookings].sort((a,b) => new Date(a.start_time) - new Date(b.start_time)).map(bk => {
                 const isDone = done[bk.id]
-                const isParshvTeacher = PARSHV_TEACHERS.some(t => bk.teacher_name?.includes(t))
-                const barColor = isDone ? '#E5E5E5' : colorByChild ? (isParshvTeacher ? '#F47920' : '#93C5FD') : '#F4C099'
+                const barColor = isDone ? '#E5E5E5' : '#F4C099'
                 return (
                   <div key={bk.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(62px,8vw,80px)', background: isDone ? '#FAFAFA' : '#fff', transition: 'background .12s' }}>
                     <div style={{ width: 'clamp(60px,8vw,80px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
@@ -287,7 +264,6 @@ export default function ParentDashboard() {
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
                       <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{titleName(bk.teacher_name)}</div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
-                      {colorByChild && <span style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, padding: '2px clamp(8px,1.2vw,12px)', borderRadius: 20, marginTop: 4, display: 'inline-block', background: isParshvTeacher ? '#FFF0E6' : '#EFF6FF', color: isParshvTeacher ? '#C45A0A' : '#1D4ED8' }}>{isParshvTeacher ? 'Parshv' : 'Dhriti'}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
                       <div onClick={() => setDone(p => ({ ...p, [bk.id]: !p[bk.id] }))} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
