@@ -278,7 +278,7 @@ async def get_all_bookings(
     result = await db.execute(
         text(
             "SELECT b.id, b.status, b.created_at,"
-            " p.name as parent_name,"
+            " p.name as student_name, p.section as section, p.parent_name as parent_name,"
             " t.name as teacher_name,"
             " s.start_time, s.end_time"
             " FROM bookings b"

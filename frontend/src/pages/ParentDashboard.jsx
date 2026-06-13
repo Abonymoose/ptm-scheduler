@@ -140,7 +140,8 @@ export default function ParentDashboard() {
             <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div>
               <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Student'}{user?.section ? ` · ${user.section}` : ''}</div>
-              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Inventure Academy · PTM 09 Apr 2026</div>
+              {user?.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Parent: {user.parent_name}</div>}
+              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.65)', marginTop: 2 }}>Inventure Academy · PTM 09 Apr 2026</div>
             </div>
           </div>
           <img src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
@@ -385,7 +386,7 @@ export default function ParentDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(3px)' }}>
           <div style={{ background: '#fff', borderRadius: 20, padding: 'clamp(28px,4vw,44px)', width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 16px 60px rgba(0,0,0,.18)' }}>
             <div style={{ fontSize: 'clamp(22px,3vw,32px)', marginBottom: 10 }}>👋</div>
-            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome, {user?.name?.split(' ')[0]}!</div>
+            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome!</div>
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(24px,3.5vw,36px)', lineHeight: 1.6 }}>PTM is on 09 Apr 2026. Want us to auto-schedule all your meetings?</div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => { setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>

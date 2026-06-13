@@ -69,7 +69,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     for attempt in range(3):
         try:
             result = await db.execute(
-                text("SELECT id, hashed_password, role, school_id, name, section, grade, family_id FROM users WHERE email = :email"),
+                text("SELECT id, hashed_password, role, school_id, name, section, grade, family_id, parent_name FROM users WHERE email = :email"),
                 {"email": body.email}
             )
             user = result.fetchone()
@@ -84,7 +84,8 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     token = create_access_token({
         "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
-        "name": user.name, "section": user.section, "grade": user.grade, "family_id": user.family_id,
+        "name": user.name, "section": user.section, "grade": user.grade,
+        "family_id": user.family_id, "parent_name": user.parent_name,
     })
     return {"access_token": token, "token_type": "bearer"}
 
@@ -92,7 +93,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me")
 async def get_me(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
     result = await db.execute(
-        text("SELECT id, name, email, role, venue, section, grade, family_id FROM users WHERE id = :uid"),
+        text("SELECT id, name, email, role, venue, section, grade, family_id, parent_name FROM users WHERE id = :uid"),
         {"uid": current_user["sub"]}
     )
     row = result.fetchone()

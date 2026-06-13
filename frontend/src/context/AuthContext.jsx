@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-      setUser({ id: payload.sub, role: payload.role, school_id: payload.school_id, name: payload.name, section: payload.section, grade: payload.grade, family_id: payload.family_id })
+      setUser({ id: payload.sub, role: payload.role, school_id: payload.school_id, name: payload.name, section: payload.section, grade: payload.grade, family_id: payload.family_id, parent_name: payload.parent_name })
     }
   }, [token])
 

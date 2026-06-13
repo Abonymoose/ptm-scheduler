@@ -58,7 +58,7 @@ export default function AdminDashboard() {
 
   const filteredBookings = bookings.filter(b => {
     const q = search.toLowerCase()
-    return b.parent_name?.toLowerCase().includes(q) || b.teacher_name?.toLowerCase().includes(q)
+    return b.student_name?.toLowerCase().includes(q) || b.parent_name?.toLowerCase().includes(q) || b.teacher_name?.toLowerCase().includes(q)
   })
 
   const getInit = name => name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
   }
 
   const parentBookings = {}
-  bookings.forEach(b => { if (!parentBookings[b.parent_name]) parentBookings[b.parent_name] = []; parentBookings[b.parent_name].push(b) })
+  bookings.forEach(b => { if (!parentBookings[b.student_name]) parentBookings[b.student_name] = []; parentBookings[b.student_name].push(b) })
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: 'system-ui,sans-serif' }}>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
         {tab === 'b' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div style={{ padding: 'clamp(8px,1.2vw,14px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 8, flexShrink: 0 }}>
-              <input type="text" placeholder="Search parent or teacher..." value={search} onChange={e => setSearch(e.target.value)}
+              <input type="text" placeholder="Search student, parent or teacher..." value={search} onChange={e => setSearch(e.target.value)}
                 style={{ flex: 1, padding: 'clamp(7px,1vw,12px) clamp(10px,1.5vw,16px)', fontSize: 'clamp(11px,1.4vw,15px)', border: '1.5px solid #F4C099', borderRadius: 'clamp(8px,1vw,12px)', outline: 'none', fontFamily: 'system-ui,sans-serif', color: '#1B3F7A', boxSizing: 'border-box' }}
                 onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
               <button onClick={() => setSearch('')} style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 600, padding: 'clamp(5px,.8vw,9px) clamp(10px,1.5vw,16px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#fff', color: '#F47920', border: '1px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Filter</button>
@@ -212,7 +212,7 @@ export default function AdminDashboard() {
               : filteredBookings.map((bk, i) => {
                 const isCancelled = bk.status === 'cancelled'
                 const isOpen = openBooking === bk.id
-                const ph = parentBookings[bk.parent_name] || []
+                const ph = parentBookings[bk.student_name] || []
                 return (
                   <div key={bk.id || i}>
                     <div onClick={() => setOpenBooking(isOpen ? null : bk.id)}
@@ -222,8 +222,8 @@ export default function AdminDashboard() {
                           <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 800, color: isCancelled ? '#9CA3AF' : '#C45A0A', lineHeight: 1.1 }}>{bk.start_time ? fmt(bk.start_time) : '—'}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.parent_name}</div>
-                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>with {titleName(bk.teacher_name)}</div>
+                          <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.student_name}{bk.section ? ` · ${bk.section}` : ''}</div>
+                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>{bk.parent_name ? `${bk.parent_name} · ` : ''}with {titleName(bk.teacher_name)}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -235,8 +235,8 @@ export default function AdminDashboard() {
                       <div style={{ background: '#FFF8F3', border: '1px solid #F47920', borderTop: 'none', borderRadius: '0 0 clamp(5px,.8vw,8px) clamp(5px,.8vw,8px)', marginBottom: 3, overflow: 'hidden' }}>
                         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #FDE9D4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
-                            <div style={{ fontSize: 'clamp(13px,1.6vw,18px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.parent_name}</div>
-                            <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#9CA3AF', marginTop: 2 }}>Parent · {ph.length} booking{ph.length !== 1 ? 's' : ''}</div>
+                            <div style={{ fontSize: 'clamp(13px,1.6vw,18px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.student_name}{bk.section ? ` · ${bk.section}` : ''}</div>
+                            <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#9CA3AF', marginTop: 2 }}>{bk.parent_name ? `Parent: ${bk.parent_name} · ` : ''}{ph.length} booking{ph.length !== 1 ? 's' : ''}</div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', borderBottom: '1px solid #FDE9D4' }}>
