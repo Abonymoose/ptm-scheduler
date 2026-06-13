@@ -57,15 +57,29 @@ async def auto_schedule(
     )
     rows = slot_result.fetchall()
 
-    # Pre-load existing bookings so we don't overlap with other child's meetings
-    existing_result = await db.execute(
-        text(
-            "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
-            "JOIN slots s ON b.slot_id = s.id "
-            "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
-        ),
-        {"pid": parent_id}
-    )
+    # Pre-load existing bookings so we don't overlap with other meetings.
+    # Scope to the whole family (all siblings) — the same parent attends each
+    # child's PTM, so one child's slot blocks that time for the others too.
+    family_id = current_user.get("family_id")
+    if family_id:
+        existing_result = await db.execute(
+            text(
+                "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
+                "JOIN slots s ON b.slot_id = s.id "
+                "JOIN users u ON b.parent_id = u.id "
+                "WHERE u.family_id = :fam AND u.school_id = :sid AND b.status != 'cancelled'"
+            ),
+            {"fam": family_id, "sid": school_id}
+        )
+    else:
+        existing_result = await db.execute(
+            text(
+                "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
+                "JOIN slots s ON b.slot_id = s.id "
+                "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+            ),
+            {"pid": parent_id}
+        )
     existing_bookings = existing_result.fetchall()
 
     teacher_slots: dict[str, list] = defaultdict(list)
@@ -206,6 +220,26 @@ async def create_booking(
     )
     if result.scalar() > 0:
         raise HTTPException(status_code=400, detail="You already have a meeting at this time")
+
+    # Block overlaps across siblings — the same parent attends every child's PTM.
+    family_id = current_user.get("family_id")
+    if family_id:
+        result = await db.execute(
+            text(
+                "SELECT COUNT(*) FROM bookings b"
+                " JOIN slots s ON b.slot_id = s.id"
+                " JOIN users u ON b.parent_id = u.id"
+                " WHERE u.family_id = :fam AND u.id != :pid AND u.school_id = :sid"
+                " AND b.status != 'cancelled'"
+                " AND s.start_time < :end_time AND s.end_time > :start_time"
+            ),
+            {
+                "fam": family_id, "pid": current_user["sub"], "sid": current_user["school_id"],
+                "start_time": slot.start_time, "end_time": slot.end_time,
+            }
+        )
+        if result.scalar() > 0:
+            raise HTTPException(status_code=400, detail="A sibling already has a meeting at this time")
 
     result = await db.execute(
         text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status = 'cancelled'"),
