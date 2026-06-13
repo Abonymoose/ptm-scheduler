@@ -202,7 +202,7 @@ export default function ParentDashboard() {
                         const isBooked = cls === 'child1' || cls === 'child2'
                         if (cls === 'taken') return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
-                            <div style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(10px,1.2vw,12px)', color: '#C4B5A5', fontWeight: 500, textAlign: 'center' }}>Unavailable</div>
+                            <div style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'default' }} />
                           </td>
                         )
                         return (
