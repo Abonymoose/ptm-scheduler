@@ -43,9 +43,9 @@ export default function ParentDashboard() {
   const [autoResult, setAutoResult] = useState(null)
   const [selectedTeachers, setSelectedTeachers] = useState(new Set())
   const [welcomeModal, setWelcomeModal] = useState(false)
+  const [welcomeChecked, setWelcomeChecked] = useState(false)
 
   useEffect(() => { fetchData() }, [])
-  useEffect(() => { if (!localStorage.getItem('welcomeSeen')) setWelcomeModal(true) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
       const s = document.createElement('style')
@@ -59,6 +59,10 @@ export default function ParentDashboard() {
     try {
       const [s, b] = await Promise.all([getSlots(), getMyBookings()])
       setSlots(s); setBookings(b)
+      if (!welcomeChecked) {
+        if (b.filter(x => x.status !== 'cancelled').length === 0) setWelcomeModal(true)
+        setWelcomeChecked(true)
+      }
     } catch { showToast('Failed to load data') }
     setLoading(false)
   }
@@ -408,8 +412,8 @@ export default function ParentDashboard() {
             <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10, letterSpacing: '-.02em' }}>Welcome, {user?.name?.split(' ')[0]}!</div>
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(24px,3.5vw,36px)', lineHeight: 1.6 }}>PTM is on 09 Apr 2026. Want us to auto-schedule all your meetings?</div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => { localStorage.setItem('welcomeSeen','1'); setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
-              <button onClick={() => { localStorage.setItem('welcomeSeen','1'); setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
+              <button onClick={() => { setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
+              <button onClick={() => { setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
             </div>
           </div>
         </div>

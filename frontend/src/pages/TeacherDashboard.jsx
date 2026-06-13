@@ -78,14 +78,8 @@ export default function TeacherDashboard() {
   const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
   const pastSlots = []
 
-  // band grouping for manage tab
-  const bandLabel = h => { const h1=h%12||12; const h2=(h+1)%12||12; const s1=h<12?'am':'pm'; const s2=(h+1)<12?'am':'pm'; return s1===s2?`${h1}–${h2}${s1}`:`${h1}${s1}–${h2}${s2}` }
-  const bands = []
-  const hours = [...new Set(slots.map(s => new Date(s.start_time).getHours()))].sort((a,b)=>a-b)
-  hours.forEach(h => {
-    const group = slots.filter(s => new Date(s.start_time).getHours() === h)
-    bands.push({ label: bandLabel(h), slots: group })
-  })
+  // vertical list for manage tab — all slots sorted by start time
+  const sortedSlots = [...slots].sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
 
   const createNewSlot = async () => {
     if (!newDate || !newStart || !newEnd) { showToast('Fill in all fields'); return }
@@ -221,67 +215,48 @@ export default function TeacherDashboard() {
               <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>0 blocked</span>
             </div>
 
-            {/* Horizontal scrolling grid */}
+            {/* Vertical slot list */}
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {loading
               ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
-              : bands.length === 0
+              : sortedSlots.length === 0
               ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
-              : (
-                <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', gap: 12, padding: '16px 20px', minHeight: 120, flexShrink: 0 }}>
-                  {bands.map((band, bi) => {
-                    const bandBooked = band.slots.filter(s => s.booked_count > 0).length
-                    return (
-                      <div key={bi} style={{ minWidth: 160, flexShrink: 0 }}>
-                          {/* Column header */}
-                          <div style={{ paddingBottom: 8, marginBottom: 10, borderBottom: '2px solid #F4C099' }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: '#1B3F7A' }}>{band.label}</div>
-                            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{bandBooked} booked</div>
-                          </div>
-                          {/* Slot cards */}
-                          {[...band.slots]
-                            .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
-                            .map(slot => {
-                              const bk = slot.bookings?.[0] ?? null
-                              const isBooked = slot.booked_count > 0
-                              const isBreak = slot.is_break || slot.type === 'break'
-                              const isSel = selectedSlot?.id === slot.id
-                              return (
-                                <div
-                                  key={slot.id}
-                                  onClick={() => setSelectedSlot(isSel ? null : slot)}
-                                  style={{
-                                    borderRadius: 10,
-                                    padding: '10px 12px',
-                                    marginBottom: 8,
-                                    cursor: 'pointer',
-                                    background: isBreak ? '#FFE8D0' : isBooked ? '#FFF0E6' : '#F9FAFB',
-                                    border: isBreak ? '1.5px dashed #F47920' : isBooked ? '1.5px solid #F4C099' : '1.5px solid #E5E7EB',
-                                    outline: isSel ? '2px solid #1B3F7A' : '2px solid transparent',
-                                    outlineOffset: 1,
-                                    boxSizing: 'border-box',
-                                  }}
-                                >
-                                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{fmt(slot.start_time)}</div>
-                                  {isBooked ? (
-                                    <>
-                                      <div style={{ fontSize: 13, fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk?.parent_name || 'Booked'}</div>
-                                      {bk?.student_name && <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk.student_name}</div>}
-                                    </>
-                                  ) : isBreak ? (
-                                    <div style={{ fontSize: 12, color: '#C45A0A', fontWeight: 600 }}>Break</div>
-                                  ) : (
-                                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>Free</div>
-                                  )}
-                                </div>
-                              )
-                            })
-                          }
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
+              : sortedSlots.map(slot => {
+                  const bk = slot.bookings?.[0] ?? null
+                  const isBooked = slot.booked_count > 0
+                  const isBreak = slot.is_break || slot.type === 'break'
+                  const isSel = selectedSlot?.id === slot.id
+                  return (
+                    <div
+                      key={slot.id}
+                      onClick={() => setSelectedSlot(isSel ? null : slot)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.4vw,14px)',
+                        padding: 'clamp(12px,1.6vw,16px) clamp(16px,2.5vw,24px)',
+                        borderBottom: '1px solid #F4EDE4',
+                        cursor: 'pointer',
+                        background: isSel ? '#FFFAF7' : '#fff',
+                        borderLeft: isSel ? '3px solid #1B3F7A' : isBooked ? '3px solid #F4C099' : '3px solid transparent',
+                        transition: 'background .12s',
+                      }}
+                    >
+                      <div style={{ width: 'clamp(64px,9vw,86px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, color: '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {isBooked ? (
+                          <>
+                            <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk?.parent_name || 'Booked'}</div>
+                            {bk?.student_name && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk.student_name}</div>}
+                          </>
+                        ) : isBreak ? (
+                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#C45A0A', fontWeight: 600 }}>Break</div>
+                        ) : (
+                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 500 }}>Free</div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(8px,1.2vw,12px)', borderRadius: 20, background: isBreak ? '#FFE8D0' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBreak ? '#C45A0A' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBreak ? 'Break' : isBooked ? 'Booked' : 'Free'}</div>
+                    </div>
+                  )
+                })
             }
             </div>
 
