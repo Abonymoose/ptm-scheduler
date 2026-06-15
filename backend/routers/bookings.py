@@ -12,9 +12,13 @@ router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 class BookingCreate(BaseModel):
     slot_id: str
+    student_name: str | None = None
+    section: str | None = None
 
 class AutoScheduleRequest(BaseModel):
     teacher_ids: list[str]
+    student_name: str | None = None
+    section: str | None = None
 
 @router.post("/auto-schedule")
 async def auto_schedule(
@@ -57,29 +61,16 @@ async def auto_schedule(
     )
     rows = slot_result.fetchall()
 
-    # Pre-load existing bookings so we don't overlap with other meetings.
-    # Scope to the whole family (all siblings) — the same parent attends each
-    # child's PTM, so one child's slot blocks that time for the others too.
-    family_id = current_user.get("family_id")
-    if family_id:
-        existing_result = await db.execute(
-            text(
-                "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
-                "JOIN slots s ON b.slot_id = s.id "
-                "JOIN users u ON b.parent_id = u.id "
-                "WHERE u.family_id = :fam AND u.school_id = :sid AND b.status != 'cancelled'"
-            ),
-            {"fam": family_id, "sid": school_id}
-        )
-    else:
-        existing_result = await db.execute(
-            text(
-                "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
-                "JOIN slots s ON b.slot_id = s.id "
-                "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
-            ),
-            {"pid": parent_id}
-        )
+    # Pre-load this parent's existing bookings so we don't overlap with meetings
+    # already on the calendar (one parent can't be in two rooms at once).
+    existing_result = await db.execute(
+        text(
+            "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
+            "JOIN slots s ON b.slot_id = s.id "
+            "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+        ),
+        {"pid": parent_id}
+    )
     existing_bookings = existing_result.fetchall()
 
     teacher_slots: dict[str, list] = defaultdict(list)
@@ -151,14 +142,14 @@ async def auto_schedule(
                 if cancelled:
                     booking_id = str(cancelled.id)
                     await db.execute(
-                        text("UPDATE bookings SET status = 'confirmed' WHERE id = :bid"),
-                        {"bid": booking_id}
+                        text("UPDATE bookings SET status = 'confirmed', student_name = :sn, section = :sec WHERE id = :bid"),
+                        {"bid": booking_id, "sn": body.student_name, "sec": body.section}
                     )
                 else:
                     booking_id = str(uuid.uuid4())
                     await db.execute(
-                        text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-                        {"id": booking_id, "sid": a["slot_id"], "pid": parent_id}
+                        text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section) VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
+                        {"id": booking_id, "sid": a["slot_id"], "pid": parent_id, "sn": body.student_name, "sec": body.section}
                     )
                 await db.execute(text(f"RELEASE SAVEPOINT sp_{i}"))
                 booked.append({
@@ -221,26 +212,6 @@ async def create_booking(
     if result.scalar() > 0:
         raise HTTPException(status_code=400, detail="You already have a meeting at this time")
 
-    # Block overlaps across siblings — the same parent attends every child's PTM.
-    family_id = current_user.get("family_id")
-    if family_id:
-        result = await db.execute(
-            text(
-                "SELECT COUNT(*) FROM bookings b"
-                " JOIN slots s ON b.slot_id = s.id"
-                " JOIN users u ON b.parent_id = u.id"
-                " WHERE u.family_id = :fam AND u.id != :pid AND u.school_id = :sid"
-                " AND b.status != 'cancelled'"
-                " AND s.start_time < :end_time AND s.end_time > :start_time"
-            ),
-            {
-                "fam": family_id, "pid": current_user["sub"], "sid": current_user["school_id"],
-                "start_time": slot.start_time, "end_time": slot.end_time,
-            }
-        )
-        if result.scalar() > 0:
-            raise HTTPException(status_code=400, detail="A sibling already has a meeting at this time")
-
     result = await db.execute(
         text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status = 'cancelled'"),
         {"sid": body.slot_id, "pid": current_user["sub"]}
@@ -250,14 +221,14 @@ async def create_booking(
     if cancelled:
         booking_id = str(cancelled.id)
         await db.execute(
-            text("UPDATE bookings SET status = 'confirmed' WHERE id = :bid"),
-            {"bid": booking_id}
+            text("UPDATE bookings SET status = 'confirmed', student_name = :sn, section = :sec WHERE id = :bid"),
+            {"bid": booking_id, "sn": body.student_name, "sec": body.section}
         )
     else:
         booking_id = str(uuid.uuid4())
         await db.execute(
-            text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, :pid, 'confirmed')"),
-            {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"]}
+            text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section) VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
+            {"id": booking_id, "sid": body.slot_id, "pid": current_user["sub"], "sn": body.student_name, "sec": body.section}
         )
     await db.commit()
 
@@ -312,7 +283,7 @@ async def get_all_bookings(
     result = await db.execute(
         text(
             "SELECT b.id, b.status, b.created_at,"
-            " p.name as student_name, p.section as section, p.parent_name as parent_name,"
+            " b.student_name as student_name, b.section as section, p.parent_name as parent_name,"
             " t.name as teacher_name,"
             " s.start_time, s.end_time"
             " FROM bookings b"

@@ -6,8 +6,8 @@ const authHeader = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
 })
 
-export const createBooking = async (slot_id) => {
-  const res = await axios.post(`${BASE_URL}/bookings/`, { slot_id }, authHeader())
+export const createBooking = async (slot_id, child = {}) => {
+  const res = await axios.post(`${BASE_URL}/bookings/`, { slot_id, student_name: child.student_name, section: child.section }, authHeader())
   return res.data
 }
 
@@ -26,7 +26,7 @@ export const getAllBookings = async () => {
   return res.data
 }
 
-export const autoSchedule = async (teacherIds) => {
-  const res = await axios.post(`${BASE_URL}/bookings/auto-schedule`, { teacher_ids: teacherIds }, authHeader())
+export const autoSchedule = async (teacherIds, child = {}) => {
+  const res = await axios.post(`${BASE_URL}/bookings/auto-schedule`, { teacher_ids: teacherIds, student_name: child.student_name, section: child.section }, authHeader())
   return res.data
 }

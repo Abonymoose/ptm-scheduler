@@ -8,6 +8,11 @@ import { titleName } from '../utils/teacherTitle'
 const PARSHV_TEACHERS = ['Sandhya Chhetri','Helen Gilbert','Priya Naidu','Susan Christi','Anwesha Basu','Anthony Samuel','Sunaina Naugain','Shubha S','Muneezah Mattu']
 const DHRITI_TEACHERS = ['Kavya Sharma','Rina Patel','Deepa Nair','Preethi Rao','Anjali Menon','Swati Joshi']
 
+const CHILDREN = {
+  p: { label: 'Parshv', student_name: 'Parshv Mehta', section: '7C', teachers: PARSHV_TEACHERS },
+  d: { label: 'Dhriti', student_name: 'Dhriti Mehta', section: '4A', teachers: DHRITI_TEACHERS },
+}
+
 const CHILD_SUBJECTS = {
   'Sandhya Chhetri':'Chemistry','Helen Gilbert':'Computers','Priya Naidu':'History/Civics',
   'Susan Christi':'English','Anwesha Basu':'Physics','Anthony Samuel':'Biology',
@@ -42,6 +47,7 @@ export default function ParentDashboard() {
   const [selectedTeachers, setSelectedTeachers] = useState(new Set())
   const [welcomeModal, setWelcomeModal] = useState(false)
   const [welcomeChecked, setWelcomeChecked] = useState(false)
+  const [activeChild, setActiveChild] = useState('p')
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -82,9 +88,9 @@ export default function ParentDashboard() {
     return map
   }
 
-  // The logged-in account IS the student; pick teacher list by grade.
-  const activeChild = user?.grade === 4 ? 'd' : 'p'
-  const currentTeachers = activeChild === 'p' ? PARSHV_TEACHERS : DHRITI_TEACHERS
+  // One parent account; toggle which child we're booking for.
+  const child = CHILDREN[activeChild]
+  const currentTeachers = child.teachers
   const teacherGroups = groupByTeacher(currentTeachers)
   const teachers = Object.keys(teacherGroups)
   const allTimes = [...new Set(Object.values(teacherGroups).flat().map(s => s.start_time))].sort()
@@ -92,7 +98,7 @@ export default function ParentDashboard() {
   const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name })).filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
 
   const handleBook = async slot_id => {
-    try { await createBooking(slot_id); showToast('Booking confirmed!'); fetchData() }
+    try { await createBooking(slot_id, { student_name: child.student_name, section: child.section }); showToast('Booking confirmed!'); fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Booking failed') }
   }
 
@@ -108,7 +114,7 @@ export default function ParentDashboard() {
 
   const handleAutoSchedule = async () => {
     setAutoScheduling(true)
-    try { const result = await autoSchedule([...selectedTeachers]); setAutoResult(result); await fetchData() }
+    try { const result = await autoSchedule([...selectedTeachers], { student_name: child.student_name, section: child.section }); setAutoResult(result); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Auto-schedule failed') }
     setAutoScheduling(false)
   }
@@ -162,6 +168,11 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Action bar */}
             <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 4, background: '#FDEBDA', borderRadius: 50, padding: 3, flexShrink: 0 }}>
+                {Object.entries(CHILDREN).map(([key, c]) => (
+                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? '#F47920' : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
+                ))}
+              </div>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap a teacher slot to book a meeting</span>
               <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
             </div>
@@ -227,7 +238,7 @@ export default function ParentDashboard() {
             {/* Legend */}
             <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', fontWeight: 600, marginRight: 4 }}>Legend:</span>
-              {[{ label: user?.name?.split(' ')[0] || 'Booked', bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#93C5FD' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
+              {[{ label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#93C5FD' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
                 <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
                   <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px solid ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
                 </span>
