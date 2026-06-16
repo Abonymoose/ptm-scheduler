@@ -29,7 +29,7 @@ const childKey = bk => {
   if (sec.startsWith('4')) return 'd'
   return null
 }
-const CHILD_ACCENT = { p: '#F47920', d: '#93C5FD' }
+const CHILD_ACCENT = { p: '#F47920', d: '#2563EB' }
 const CHILD_PILL = { p: { bg: '#FFF0E6', text: '#C45A0A' }, d: { bg: '#EFF6FF', text: '#1D4ED8' } }
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
@@ -182,7 +182,7 @@ export default function ParentDashboard() {
             <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 4, background: '#FDEBDA', borderRadius: 50, padding: 3, flexShrink: 0 }}>
                 {Object.entries(CHILDREN).map(([key, c]) => (
-                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? (key === 'p' ? '#F47920' : '#93C5FD') : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
+                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? (key === 'p' ? '#F47920' : '#2563EB') : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
                 ))}
               </div>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap a teacher slot to book a meeting</span>
@@ -228,7 +228,7 @@ export default function ParentDashboard() {
                               onMouseLeave={() => setHoveredCancel(null)}
                               style={{
                                 width: '100%', height: '100%', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: cls === 'child1' ? '2px solid #F47920' : cls === 'child2' ? '2px solid #93C5FD' : 'none',
+                                border: cls === 'child1' ? '2px solid #F47920' : cls === 'child2' ? '2px solid #2563EB' : 'none',
                                 cursor: 'pointer',
                                 background: hov && isBooked ? '#FEE2E2' : cls === 'child1' ? '#FFF0E6' : cls === 'child2' ? '#EFF6FF' : 'transparent',
                                 color: hov && isBooked ? '#DC2626' : cls === 'child1' ? '#C45A0A' : cls === 'child2' ? '#1D4ED8' : '#E5D5C5',
@@ -250,7 +250,7 @@ export default function ParentDashboard() {
             {/* Legend */}
             <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', fontWeight: 600, marginRight: 4 }}>Legend:</span>
-              {[{ label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#93C5FD' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
+              {[{ label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#2563EB' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
                 <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
                   <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px solid ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
                 </span>
