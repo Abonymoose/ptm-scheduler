@@ -21,6 +21,17 @@ const CHILD_SUBJECTS = {
   'Preethi Rao':'English','Anjali Menon':'Kannada','Swati Joshi':'Computers',
 }
 
+// Which child a booking is for, from its own section (NOT teacher_name).
+// '7…' → Parshv ('p'), '4…' → Dhriti ('d'), unknown → null.
+const childKey = bk => {
+  const sec = bk?.section || ''
+  if (sec.startsWith('7')) return 'p'
+  if (sec.startsWith('4')) return 'd'
+  return null
+}
+const CHILD_ACCENT = { p: '#F47920', d: '#93C5FD' }
+const CHILD_PILL = { p: { bg: '#FFF0E6', text: '#C45A0A' }, d: { bg: '#EFF6FF', text: '#1D4ED8' } }
+
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
 const initials = name => { if (!name) return '??'; const p = name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean); return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase() }
 
@@ -48,6 +59,7 @@ export default function ParentDashboard() {
   const [welcomeModal, setWelcomeModal] = useState(false)
   const [welcomeChecked, setWelcomeChecked] = useState(false)
   const [activeChild, setActiveChild] = useState('p')
+  const [colourByChild, setColourByChild] = useState(false)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -170,7 +182,7 @@ export default function ParentDashboard() {
             <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 4, background: '#FDEBDA', borderRadius: 50, padding: 3, flexShrink: 0 }}>
                 {Object.entries(CHILDREN).map(([key, c]) => (
-                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? '#F47920' : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
+                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? (key === 'p' ? '#F47920' : '#93C5FD') : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
                 ))}
               </div>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap a teacher slot to book a meeting</span>
@@ -257,6 +269,12 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{activeBookings.length} upcoming meetings</span>
+              <div onClick={() => setColourByChild(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: colourByChild ? '#C45A0A' : '#9CA3AF', fontWeight: 600 }}>Colour by child</span>
+                <div style={{ width: 38, height: 22, borderRadius: 22, background: colourByChild ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: colourByChild ? 18 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
+                </div>
+              </div>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {activeBookings.length === 0 ? (
@@ -266,20 +284,26 @@ export default function ParentDashboard() {
                 </div>
               ) : [...activeBookings].sort((a,b) => new Date(a.start_time) - new Date(b.start_time)).map(bk => {
                 const isDone = done[bk.id]
-                const barColor = isDone ? '#E5E5E5' : '#F4C099'
+                const kid = colourByChild ? childKey(bk) : null
+                const accent = kid ? CHILD_ACCENT[kid] : null
+                const childName = kid ? ((bk.student_name || '').split(' ')[0] || CHILDREN[kid].label) : null
+                const barColor = isDone ? '#E5E5E5' : accent || '#F4C099'
                 return (
                   <div key={bk.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(62px,8vw,80px)', background: isDone ? '#FAFAFA' : '#fff', transition: 'background .12s' }}>
                     <div style={{ width: 'clamp(60px,8vw,80px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
-                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.02em' }}>{fmt(bk.start_time)}</div>
+                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : accent || '#1B3F7A', letterSpacing: '-.02em' }}>{fmt(bk.start_time)}</div>
                     </div>
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: barColor }} />
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
-                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{titleName(bk.teacher_name)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none', minWidth: 0 }}>{titleName(bk.teacher_name)}</div>
+                        {kid && <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px clamp(6px,.9vw,9px)', borderRadius: 20, background: CHILD_PILL[kid].bg, color: CHILD_PILL[kid].text }}>{childName}</span>}
+                      </div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
                       <div onClick={() => setDone(p => ({ ...p, [bk.id]: !p[bk.id] }))} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
-                        <div style={{ width: 'clamp(22px,2.8vw,30px)', height: 'clamp(22px,2.8vw,30px)', borderRadius: 6, border: `2px solid ${isDone ? '#F47920' : '#F4C099'}`, background: isDone ? '#FFF0E6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
+                        <div style={{ width: 'clamp(22px,2.8vw,30px)', height: 'clamp(22px,2.8vw,30px)', borderRadius: 6, border: `2px solid ${isDone ? '#F47920' : accent || '#F4C099'}`, background: isDone ? '#FFF0E6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
                           {isDone && DONE_TICK}
                         </div>
                       </div>

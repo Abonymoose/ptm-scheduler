@@ -307,6 +307,7 @@ async def get_my_bookings(
     result = await db.execute(
         text(
             "SELECT b.id, b.slot_id, b.status, b.created_at,"
+            " b.student_name, b.section,"
             " s.start_time, s.end_time,"
             " u.name as teacher_name, u.venue as teacher_venue"
             " FROM bookings b"
