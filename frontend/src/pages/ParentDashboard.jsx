@@ -320,7 +320,6 @@ export default function ParentDashboard() {
             </div>
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{doneCount} done</span>
-              <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(13px,1.8vw,18px)', fontWeight: 700, padding: 'clamp(10px,1.4vw,16px) clamp(16px,3vw,36px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'not-allowed', opacity: .45, boxShadow: '0 2px 10px rgba(27,63,122,.25)', fontFamily: 'inherit' }}>Export to calendar</button>
             </div>
           </div>
         )}

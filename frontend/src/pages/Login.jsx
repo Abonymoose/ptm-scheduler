@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { requestOtp, verifyOtp, adminLogin } from '../api/auth'
@@ -10,10 +10,12 @@ export default function Login() {
   const [step, setStep] = useState(1)        // 1 = email/(password), 2 = OTP
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
+  const [digits, setDigits] = useState(() => Array(6).fill(''))
+  const [shake, setShake] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)  // reveal password field for admins
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const inputsRef = useRef([])
 
   const redirectByRole = (token) => {
     loginUser(token)
@@ -47,22 +49,69 @@ export default function Login() {
     setLoading(false)
   }
 
-  const handleVerify = async () => {
+  const submitOtp = async (codeStr) => {
     setError('')
-    if (!code || code.length < 6) { setError('Enter the 6-digit code.'); return }
     setLoading(true)
     try {
-      const data = await verifyOtp(email, code)
-      redirectByRole(data.access_token)
+      const data = await verifyOtp(email, codeStr)
+      redirectByRole(data.access_token)  // navigates away on success
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid or expired code.')
+      setShake(true)
+      setTimeout(() => setShake(false), 450)
+      setDigits(Array(6).fill(''))
+      setLoading(false)
+      setTimeout(() => inputsRef.current[0]?.focus(), 0)
     }
-    setLoading(false)
   }
 
-  const backToEmail = () => { setStep(1); setCode(''); setError('') }
+  const handleDigit = (i, raw) => {
+    const d = raw.replace(/\D/g, '')
+    const n = [...digits]
+    if (!d) { n[i] = ''; setDigits(n); return }
+    n[i] = d[d.length - 1]
+    setDigits(n)
+    if (i < 5) inputsRef.current[i + 1]?.focus()
+    if (!n.includes('')) submitOtp(n.join(''))
+  }
 
-  const onKey = e => { if (e.key === 'Enter') (step === 1 ? handleSendOtp() : handleVerify()) }
+  const handleOtpKey = (i, e) => {
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      const n = [...digits]
+      if (n[i]) { n[i] = ''; setDigits(n) }
+      else if (i > 0) { n[i - 1] = ''; setDigits(n); inputsRef.current[i - 1]?.focus() }
+    } else if (e.key === 'ArrowLeft' && i > 0) {
+      inputsRef.current[i - 1]?.focus()
+    } else if (e.key === 'ArrowRight' && i < 5) {
+      inputsRef.current[i + 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e) => {
+    const txt = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6)
+    if (!txt) return
+    e.preventDefault()
+    const n = Array(6).fill('')
+    for (let k = 0; k < txt.length; k++) n[k] = txt[k]
+    setDigits(n)
+    inputsRef.current[txt.length >= 6 ? 5 : txt.length]?.focus()
+    if (txt.length === 6) submitOtp(txt)
+  }
+
+  const backToEmail = () => { setStep(1); setDigits(Array(6).fill('')); setError(''); setShake(false) }
+
+  const onKey = e => { if (e.key === 'Enter') handleSendOtp() }
+
+  useEffect(() => {
+    if (!document.getElementById('otp-shake-style')) {
+      const s = document.createElement('style')
+      s.id = 'otp-shake-style'
+      s.textContent = '@keyframes otp-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}'
+      document.head.appendChild(s)
+    }
+  }, [])
+  useEffect(() => { if (step === 2) setTimeout(() => inputsRef.current[0]?.focus(), 0) }, [step])
 
   const inp = { width: '100%', padding: 'clamp(10px,1.3vw,14px) clamp(12px,1.6vw,16px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', transition: 'border-color .15s, box-shadow .15s', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box' }
   const focusOn = e => { e.target.style.borderColor = '#F47920'; e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.12)' }
@@ -102,34 +151,38 @@ export default function Login() {
             <button onClick={handleSendOtp} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
               {loading ? 'Sending…' : 'Send OTP'}
             </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1, height: 1, background: '#F4C099' }} />
-              <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#C4B5A5', fontWeight: 500 }}>or</span>
-              <div style={{ flex: 1, height: 1, background: '#F4C099' }} />
-            </div>
-
-            <button disabled title="Coming soon" style={{ width: '100%', height: 44, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, cursor: 'not-allowed', opacity: .5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontWeight: 500, color: '#000', fontFamily: 'inherit' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-              Sign in with Google
-            </button>
           </>) : (<>
             <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Enter your code</div>
             <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#9CA3AF', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
 
-            <div>
-              <label style={label}>6-digit code</label>
-              <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000" value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} onKeyDown={onKey}
-                onFocus={focusOn} onBlur={focusOff}
-                style={{ ...inp, textAlign: 'center', letterSpacing: '.5em', fontSize: 'clamp(18px,2.4vw,24px)', fontWeight: 700 }} />
+            <div style={{ display: 'flex', gap: 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
+              {digits.map((dgt, i) => (
+                <input
+                  key={i}
+                  ref={el => { inputsRef.current[i] = el }}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                  maxLength={1}
+                  value={dgt}
+                  disabled={loading}
+                  onChange={e => handleDigit(i, e.target.value)}
+                  onKeyDown={e => handleOtpKey(i, e)}
+                  onPaste={handleOtpPaste}
+                  onFocus={e => { e.target.select(); e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.2)' }}
+                  onBlur={e => { e.target.style.boxShadow = 'none' }}
+                  style={{
+                    width: 'clamp(40px,13vw,52px)', height: 'clamp(46px,14vw,56px)', textAlign: 'center',
+                    fontSize: 'clamp(20px,5vw,26px)', fontWeight: 700, color: '#1B3F7A',
+                    border: `2px solid ${shake ? '#DC2626' : '#F4C099'}`, borderRadius: 12, outline: 'none',
+                    background: '#fff', fontFamily: 'inherit', boxSizing: 'border-box', padding: 0,
+                    transition: 'border-color .15s, box-shadow .15s',
+                  }}
+                />
+              ))}
             </div>
 
             {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
-
-            <button onClick={handleVerify} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
-              {loading ? 'Verifying…' : 'Verify'}
-            </button>
 
             <button onClick={backToEmail} style={{ background: 'none', border: 'none', color: '#C45A0A', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'center' }}>← Back</button>
           </>)}

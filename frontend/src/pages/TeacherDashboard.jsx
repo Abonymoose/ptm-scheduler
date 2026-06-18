@@ -158,7 +158,6 @@ export default function TeacherDashboard() {
                     </span>
                   </label>
                 </div>
-                <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 600, padding: 'clamp(6px,.9vw,10px) clamp(12px,1.6vw,18px)', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit' }}>Export PDF</button>
               </div>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
@@ -293,7 +292,6 @@ export default function TeacherDashboard() {
               <span style={{ fontSize: 14, color: '#C45A0A', fontWeight: 600 }}>{bookedSlots.length} of {slots.length} booked</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setAddOpen(true)} style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Add slot</button>
-                <button onClick={() => {}} title="Coming soon" style={{ fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 50, background: '#fff', color: '#F47920', border: '1.5px solid #F4C099', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit' }}>Export PDF</button>
               </div>
             </div>
           </div>

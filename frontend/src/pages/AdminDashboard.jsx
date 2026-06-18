@@ -80,30 +80,9 @@ export default function AdminDashboard() {
     const cmd = parts[0].toLowerCase()
     if (cmd === 'help') {
       setTermLog(l => [...l,
-        { type: 'info', text: 'add teacher [name] [email]  — add a teacher' },
-        { type: 'info', text: 'remove teacher [email]      — remove a teacher' },
-        { type: 'info', text: 'add slots [email] [count]   — add slots to teacher' },
-        { type: 'info', text: 'help                        — list commands' },
+        { type: 'info', text: 'help  — list commands' },
+        { type: 'info', text: 'Teacher management is available via the Manage button on the Overview tab.' },
       ]); termScroll()
-    } else if (cmd === 'add' && parts[1] === 'teacher') {
-      const name = parts.slice(2, parts.length - 1).join(' ')
-      const email = parts[parts.length - 1]
-      if (!name || !email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add teacher [name] [email]' }]); termScroll(); return }
-      try {
-        await api.post('/auth/register', { name, email, password: 'teacher123', role: 'teacher' })
-        setTermLog(l => [...l, { type: 'success', text: `✓ Teacher added: ${name} <${email}>` }])
-      } catch (err) {
-        setTermLog(l => [...l, { type: 'error', text: `Error: ${err.response?.data?.detail || err.message}` }])
-      }
-      termScroll()
-    } else if (cmd === 'remove' && parts[1] === 'teacher') {
-      const email = parts[2]
-      if (!email || !email.includes('@')) { setTermLog(l => [...l, { type: 'error', text: 'Usage: remove teacher [email]' }]); termScroll(); return }
-      setTermLog(l => [...l, { type: 'info', text: 'Coming soon — not yet implemented' }]); termScroll()
-    } else if (cmd === 'add' && parts[1] === 'slots') {
-      const email = parts[2]; const count = parseInt(parts[3])
-      if (!email || !email.includes('@') || isNaN(count) || count < 1) { setTermLog(l => [...l, { type: 'error', text: 'Usage: add slots [email] [count]' }]); termScroll(); return }
-      setTermLog(l => [...l, { type: 'info', text: 'Coming soon — not yet implemented' }]); termScroll()
     } else {
       setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }]); termScroll()
     }
@@ -156,7 +135,6 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
-            <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit', border: '1px solid rgba(255,255,255,.3)' }}>+ Add teacher</button>
             <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
@@ -325,7 +303,6 @@ export default function AdminDashboard() {
         {/* BOTTOM BAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
           <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · 09 Apr 2026</span>
-          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit' }}>Export report</button>
         </div>
       </div>
 
