@@ -217,7 +217,9 @@ export default function ParentDashboard() {
                         const isBooked = cls === 'child1' || cls === 'child2'
                         if (cls === 'taken') return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
-                            <div style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'default' }} />
+                            <div title={slot.is_blocked ? 'Blocked — unavailable' : 'Unavailable'} style={{ width: '100%', height: '100%', borderRadius: 8, background: '#E7E0D8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed', color: '#A89F94', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, lineHeight: 1 }}>
+                              {slot.is_blocked ? '✕' : '–'}
+                            </div>
                           </td>
                         )
                         return (
