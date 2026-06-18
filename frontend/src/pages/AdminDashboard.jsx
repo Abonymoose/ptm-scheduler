@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot } from '../api/admin'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -25,6 +26,12 @@ export default function AdminDashboard() {
   const [termLog, setTermLog] = useState([{ type: 'info', text: 'PTM Admin Terminal v1.0 — type "help" for commands' }])
   const [termInput, setTermInput] = useState('')
   const terminalRef = useRef(null)
+  const [manageTeacher, setManageTeacher] = useState(null)
+  const [manageForm, setManageForm] = useState({ name: '', email: '', subject: '' })
+  const [manageSlots, setManageSlots] = useState([])
+  const [loadingMSlots, setLoadingMSlots] = useState(false)
+  const [savingTeacher, setSavingTeacher] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(null)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function AdminDashboard() {
   const teacherMap = {}
   slots.forEach(s => {
     const key = s.teacher_name
-    if (!teacherMap[key]) teacherMap[key] = { name: key, email: s.teacher_email || '', venue: s.venue || '', sub: s.subject || '', slots: [], booked: 0 }
+    if (!teacherMap[key]) teacherMap[key] = { id: s.teacher_id, name: key, email: s.teacher_email || '', venue: s.venue || '', sub: s.subject || '', slots: [], booked: 0 }
     teacherMap[key].slots.push(s)
     if (s.booked_count > 0) teacherMap[key].booked += s.booked_count
   })
@@ -104,6 +111,36 @@ export default function AdminDashboard() {
 
   const parentBookings = {}
   bookings.forEach(b => { if (!parentBookings[b.student_name]) parentBookings[b.student_name] = []; parentBookings[b.student_name].push(b) })
+
+  const openManage = async (t) => {
+    setManageTeacher(t)
+    setManageForm({ name: t.name || '', email: t.email || '', subject: t.sub || '' })
+    setConfirmCancel(null)
+    setLoadingMSlots(true)
+    try { setManageSlots(await getTeacherSlots(t.id)) } catch { showToast('Failed to load slots') }
+    setLoadingMSlots(false)
+  }
+  const reloadManageSlots = async () => {
+    if (!manageTeacher) return
+    try { setManageSlots(await getTeacherSlots(manageTeacher.id)) } catch { /* keep stale */ }
+  }
+  const saveTeacher = async () => {
+    if (!manageForm.name || !manageForm.email) { showToast('Name and email are required'); return }
+    setSavingTeacher(true)
+    try { await updateTeacher(manageTeacher.id, manageForm); showToast('Teacher updated'); await fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to save') }
+    setSavingTeacher(false)
+  }
+  const doCancelSlot = async (slot) => {
+    setConfirmCancel(null)
+    try { const r = await cancelSlot(slot.id); showToast(r.cancelled_booking ? 'Meeting cancelled & slot removed' : 'Slot removed'); await reloadManageSlots(); await fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to cancel slot') }
+  }
+  const onCancelSlotClick = (slot) => { slot.state === 'booked' ? setConfirmCancel(slot) : doCancelSlot(slot) }
+  const toggleBlock = async (slot) => {
+    try { await (slot.state === 'blocked' ? unblockSlot(slot.id) : blockSlot(slot.id)); await reloadManageSlots(); await fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed') }
+  }
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: 'system-ui,sans-serif' }}>
@@ -184,9 +221,7 @@ export default function AdminDashboard() {
                           ))}
                         </div>
                         <div style={{ display: 'flex', gap: 'clamp(5px,.8vw,9px)', flexWrap: 'wrap' }}>
-                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #F47920', background: '#FFF0E6', color: '#C45A0A', fontFamily: 'inherit' }}>View schedule</button>
-                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Edit</button>
-                          <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'not-allowed', opacity: .45, fontWeight: 600, border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontFamily: 'inherit' }}>Remove</button>
+                          <button onClick={(e) => { e.stopPropagation(); openManage(t) }} style={{ fontSize: 'clamp(9px,1.1vw,13px)', padding: 'clamp(3px,.5vw,6px) clamp(10px,1.4vw,16px)', borderRadius: 'clamp(5px,.8vw,8px)', cursor: 'pointer', fontWeight: 700, border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Manage</button>
                         </div>
                       </div>
                     )}
@@ -293,6 +328,66 @@ export default function AdminDashboard() {
           <button onClick={() => {}} title="Coming soon" style={{ fontSize: 'clamp(11px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(6px,1vw,11px) clamp(12px,1.8vw,20px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'not-allowed', opacity: .45, fontFamily: 'inherit' }}>Export report</button>
         </div>
       </div>
+
+      {/* MANAGE TEACHER MODAL */}
+      {manageTeacher && (
+        <div onClick={() => setManageTeacher(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 'min(520px,calc(100vw - 24px))', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
+            <div style={{ padding: 'clamp(16px,2.2vw,22px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 800, color: '#fff' }}>Manage teacher</div>
+              <button onClick={() => setManageTeacher(null)} style={{ background: 'rgba(255,255,255,.2)', border: 'none', color: '#fff', width: 30, height: 30, borderRadius: '50%', fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+
+            <div className="custom-scroll" style={{ overflowY: 'auto', padding: 'clamp(16px,2.2vw,24px)', display: 'flex', flexDirection: 'column', gap: 'clamp(14px,2vw,20px)' }}>
+              {/* Editable details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject']].map(([lbl, key]) => (
+                  <div key={key}>
+                    <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>{lbl}</label>
+                    <input value={manageForm[key]} onChange={e => setManageForm(f => ({ ...f, [key]: e.target.value }))}
+                      style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', boxSizing: 'border-box' }}
+                      onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+                  </div>
+                ))}
+                <button onClick={saveTeacher} disabled={savingTeacher} style={{ alignSelf: 'flex-start', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(8px,1.1vw,12px) clamp(18px,2.4vw,28px)', borderRadius: 10, background: '#1B3F7A', color: '#fff', border: 'none', cursor: savingTeacher ? 'not-allowed' : 'pointer', opacity: savingTeacher ? .6 : 1, fontFamily: 'inherit' }}>{savingTeacher ? 'Saving…' : 'Save'}</button>
+              </div>
+
+              {/* Slot list */}
+              <div>
+                <div style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>Slots</div>
+                {loadingMSlots ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+                : manageSlots.length === 0 ? <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>No slots</div>
+                : manageSlots.map(s => (
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 'clamp(8px,1.1vw,11px) 0', borderBottom: '1px solid #F4EDE4' }}>
+                    <div style={{ width: 'clamp(58px,8vw,74px)', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
+                    </div>
+                    {s.state !== 'booked' && (
+                      <button onClick={() => toggleBlock(s)} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${s.state === 'blocked' ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: s.state === 'blocked' ? '#6B7280' : '#C45A0A', flexShrink: 0 }}>{s.state === 'blocked' ? 'Unblock' : 'Block'}</button>
+                    )}
+                    <button onClick={() => onCancelSlotClick(s)} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Booked-slot cancel confirm */}
+          {confirmCancel && (
+            <div onClick={e => { e.stopPropagation(); setConfirmCancel(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
+                <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel this meeting?</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={() => setConfirmCancel(null)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+                  <button onClick={() => doCancelSlot(confirmCancel)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Continue</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* TOAST */}
       <div style={{ position: 'fixed', bottom: 'clamp(16px,2.5vw,28px)', left: '50%', transform: 'translateX(-50%)', background: '#FFF0E6', border: '1px solid #F4C099', color: '#C45A0A', fontSize: 'clamp(11px,1.4vw,15px)', padding: 'clamp(6px,1vw,10px) clamp(14px,2vw,20px)', borderRadius: 20, fontWeight: 500, opacity: toast ? 1 : 0, transition: 'opacity .3s', pointerEvents: 'none', zIndex: 999, whiteSpace: 'nowrap' }}>{toast}</div>

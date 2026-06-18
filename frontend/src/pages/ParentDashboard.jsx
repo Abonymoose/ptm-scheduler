@@ -138,10 +138,11 @@ export default function ParentDashboard() {
   // Slot color for current child
   const slotClass = (slot) => {
     const isBooked = bookedSlotIds.has(slot.id)
+    const isBlocked = slot.is_blocked && !isBooked
     const isFull = slot.booked_count >= slot.capacity && !isBooked
     const isTimeConflict = !isBooked && bookedTimes.has(slot.start_time)
     const isTeacherBooked = !isBooked && bookedTeacherNames.has(slot.teacher_name)
-    if (isFull || isTimeConflict || isTeacherBooked) return 'taken'
+    if (isBlocked || isFull || isTimeConflict || isTeacherBooked) return 'taken'
     if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
     return 'free'
   }

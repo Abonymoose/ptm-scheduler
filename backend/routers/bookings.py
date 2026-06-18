@@ -53,8 +53,11 @@ async def auto_schedule(
             f"     SELECT slot_id FROM bookings"
             f"     WHERE parent_id = :pid AND status != 'cancelled'"
             f"   )"
+            f"   AND s.id NOT IN ("
+            f"     SELECT slot_id FROM bookings WHERE status = 'blocked'"
+            f"   )"
             f" GROUP BY s.id"
-            f" HAVING COUNT(b.id) < s.capacity"
+            f" HAVING COUNT(b.id) FILTER (WHERE b.status = 'confirmed') < s.capacity"
             f" ORDER BY s.start_time"
         ),
         {**base_params, "sid": school_id, "pid": parent_id}
@@ -67,7 +70,7 @@ async def auto_schedule(
         text(
             "SELECT s.start_time, s.end_time, s.teacher_id FROM bookings b "
             "JOIN slots s ON b.slot_id = s.id "
-            "WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+            "WHERE b.parent_id = :pid AND b.status = 'confirmed'"
         ),
         {"pid": parent_id}
     )
@@ -184,6 +187,14 @@ async def create_booking(
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
+    # A blocked slot (teacher break) is never bookable, regardless of capacity.
+    result = await db.execute(
+        text("SELECT 1 FROM bookings WHERE slot_id = :sid AND status = 'blocked'"),
+        {"sid": body.slot_id}
+    )
+    if result.fetchone():
+        raise HTTPException(status_code=400, detail="This slot is unavailable")
+
     result = await db.execute(
         text("SELECT COUNT(*) FROM bookings WHERE slot_id = :sid AND status != 'cancelled'"),
         {"sid": body.slot_id}
@@ -204,7 +215,7 @@ async def create_booking(
         text(
             "SELECT COUNT(*) FROM bookings b"
             " JOIN slots s ON b.slot_id = s.id"
-            " WHERE b.parent_id = :pid AND b.status != 'cancelled'"
+            " WHERE b.parent_id = :pid AND b.status = 'confirmed'"
             " AND s.start_time < :end_time AND s.end_time > :start_time"
         ),
         {"pid": current_user["sub"], "start_time": slot.start_time, "end_time": slot.end_time}
@@ -290,7 +301,7 @@ async def get_all_bookings(
             " JOIN slots s ON b.slot_id = s.id"
             " JOIN users p ON b.parent_id = p.id"
             " JOIN users t ON s.teacher_id = t.id"
-            " WHERE s.school_id = :sid"
+            " WHERE s.school_id = :sid AND b.status != 'blocked'"
             " ORDER BY s.start_time"
         ),
         {"sid": current_user["school_id"]}
@@ -313,7 +324,7 @@ async def get_my_bookings(
             " FROM bookings b"
             " JOIN slots s ON b.slot_id = s.id"
             " JOIN users u ON s.teacher_id = u.id"
-            " WHERE b.parent_id = :pid"
+            " WHERE b.parent_id = :pid AND b.status != 'blocked'"
             " ORDER BY s.start_time"
         ),
         {"pid": current_user["sub"]}

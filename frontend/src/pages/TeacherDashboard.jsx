@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
+import { blockSlot, unblockSlot } from '../api/admin'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -69,10 +70,19 @@ export default function TeacherDashboard() {
     catch (err) { showToast(err.response?.data?.detail || 'Failed to cancel') }
   }
 
+  const handleBlock = async slot_id => {
+    try { await blockSlot(slot_id); showToast('Slot blocked'); fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to block') }
+  }
+  const handleUnblock = async slot_id => {
+    try { await unblockSlot(slot_id); showToast('Slot unblocked'); fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to unblock') }
+  }
+
   const userInitials = user?.name ? user.name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase() : 'T'
-  const breakSlots = slots.filter(s => s.is_break || s.type === 'break')
+  const blockedSlots = slots.filter(s => s.is_blocked)
   const bookedSlots = slots.filter(s => s.booked_count > 0)
-  const freeSlots = slots.filter(s => s.booked_count === 0 && !s.is_break && s.type !== 'break')
+  const freeSlots = slots.filter(s => s.booked_count === 0 && !s.is_blocked)
   const doneCount = Object.values(done).filter(Boolean).length
 
   const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
@@ -211,8 +221,7 @@ export default function TeacherDashboard() {
             <div style={{ padding: '10px 20px', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{freeSlots.length} free</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{breakSlots.length} break</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>0 blocked</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{blockedSlots.length} blocked</span>
             </div>
 
             {/* Vertical slot list */}
@@ -224,7 +233,7 @@ export default function TeacherDashboard() {
               : sortedSlots.map(slot => {
                   const bk = slot.bookings?.[0] ?? null
                   const isBooked = slot.booked_count > 0
-                  const isBreak = slot.is_break || slot.type === 'break'
+                  const isBlocked = slot.is_blocked
                   const isSel = selectedSlot?.id === slot.id
                   return (
                     <div
@@ -235,25 +244,29 @@ export default function TeacherDashboard() {
                         padding: 'clamp(12px,1.6vw,16px) clamp(16px,2.5vw,24px)',
                         borderBottom: '1px solid #F4EDE4',
                         cursor: 'pointer',
-                        background: isSel ? '#FFFAF7' : '#fff',
+                        background: isBlocked ? '#F5F5F4' : isSel ? '#FFFAF7' : '#fff',
                         borderLeft: isSel ? '3px solid #1B3F7A' : isBooked ? '3px solid #F4C099' : '3px solid transparent',
                         transition: 'background .12s',
                       }}
                     >
-                      <div style={{ width: 'clamp(64px,9vw,86px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, color: '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                      <div style={{ width: 'clamp(64px,9vw,86px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        {isBooked ? (
+                        {isBlocked ? (
+                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 600 }}>Blocked — unavailable</div>
+                        ) : isBooked ? (
                           <>
                             <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
                             {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
                           </>
-                        ) : isBreak ? (
-                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#C45A0A', fontWeight: 600 }}>Break</div>
                         ) : (
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 500 }}>Free</div>
                         )}
                       </div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(8px,1.2vw,12px)', borderRadius: 20, background: isBreak ? '#FFE8D0' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBreak ? '#C45A0A' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBreak ? 'Break' : isBooked ? 'Booked' : 'Free'}</div>
+                      {!isBooked && (
+                        <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
+                          style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
+                      )}
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(8px,1.2vw,12px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>
                     </div>
                   )
                 })
