@@ -9,6 +9,9 @@ import asyncio
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# OTP is hardcoded until SES is wired up. Replace with a random code + email send.
+HARDCODED_OTP = "000000"
+
 class SignupRequest(BaseModel):
     name: str
     email: str
@@ -17,6 +20,17 @@ class SignupRequest(BaseModel):
     invite_code: str
 
 class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RequestOtpRequest(BaseModel):
+    email: str
+
+class VerifyOtpRequest(BaseModel):
+    email: str
+    code: str
+
+class AdminLoginRequest(BaseModel):
     email: str
     password: str
 
@@ -79,6 +93,10 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
                 await asyncio.sleep(1)
                 continue
             raise
+    # Parents and teachers log in via OTP; only admins use password login here.
+    if user and user.role in ("parent", "teacher"):
+        raise HTTPException(status_code=400, detail="Please use OTP login")
+
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -88,6 +106,93 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
         "family_id": user.family_id, "parent_name": user.parent_name,
     })
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/request-otp")
+async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        text("SELECT id, role FROM users WHERE email = :email"),
+        {"email": body.email}
+    )
+    user = result.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="No account found for this email")
+    if user.role == "admin":
+        raise HTTPException(status_code=400, detail="Admins use password login")
+
+    code = HARDCODED_OTP
+    await db.execute(
+        text(
+            "INSERT INTO otps (email, code, expires_at, used)"
+            " VALUES (:email, :code, NOW() + INTERVAL '10 minutes', false)"
+        ),
+        {"email": body.email, "code": code}
+    )
+    await db.commit()
+    print(f"OTP for {body.email}: {code}")  # TODO: send via SES instead of logging
+    return {"message": "OTP sent"}
+
+
+@router.post("/verify-otp")
+async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        text(
+            "SELECT id, code FROM otps"
+            " WHERE email = :email AND used = false AND expires_at > NOW()"
+            " ORDER BY created_at DESC LIMIT 1"
+        ),
+        {"email": body.email}
+    )
+    otp = result.fetchone()
+    if not otp or otp.code != body.code:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    await db.execute(
+        text("UPDATE otps SET used = true WHERE id = :id"),
+        {"id": str(otp.id)}
+    )
+
+    result = await db.execute(
+        text("SELECT id, role, school_id, name, section, grade, family_id, parent_name FROM users WHERE email = :email"),
+        {"email": body.email}
+    )
+    user = result.fetchone()
+    if not user:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="No account found for this email")
+    await db.commit()
+
+    token = create_access_token({
+        "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
+        "name": user.name, "section": user.section, "grade": user.grade,
+        "family_id": user.family_id, "parent_name": user.parent_name,
+    })
+    return {"access_token": token, "token_type": "bearer", "role": user.role, "name": user.name}
+
+
+@router.post("/admin-login")
+async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        text("SELECT id, hashed_password, role FROM users WHERE email = :email"),
+        {"email": body.email}
+    )
+    user = result.fetchone()
+    if not user or not verify_password(body.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if user.role != "admin":
+        raise HTTPException(status_code=400, detail="Not an admin account")
+
+    code = HARDCODED_OTP
+    await db.execute(
+        text(
+            "INSERT INTO otps (email, code, expires_at, used)"
+            " VALUES (:email, :code, NOW() + INTERVAL '10 minutes', false)"
+        ),
+        {"email": body.email, "code": code}
+    )
+    await db.commit()
+    print(f"OTP for {body.email}: {code}")  # TODO: send via SES instead of logging
+    return {"message": "OTP sent to admin email"}
 
 
 @router.get("/me")

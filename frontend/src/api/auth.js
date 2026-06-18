@@ -7,6 +7,21 @@ export const login = async (email, password) => {
   return res.data
 }
 
+export const requestOtp = async (email) => {
+  const res = await axios.post(`${BASE_URL}/auth/request-otp`, { email })
+  return res.data
+}
+
+export const verifyOtp = async (email, code) => {
+  const res = await axios.post(`${BASE_URL}/auth/verify-otp`, { email, code })
+  return res.data
+}
+
+export const adminLogin = async (email, password) => {
+  const res = await axios.post(`${BASE_URL}/auth/admin-login`, { email, password })
+  return res.data
+}
+
 export const signup = async (name, email, password, role, invite_code) => {
   const res = await axios.post(`${BASE_URL}/auth/signup`, { name, email, password, role, invite_code })
   return res.data

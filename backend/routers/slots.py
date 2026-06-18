@@ -76,7 +76,7 @@ async def get_my_slots(
             "SELECT s.id, s.start_time, s.end_time, s.capacity,"
             " COUNT(b.id) as booked_count,"
             " COALESCE(json_agg("
-            "   json_build_object('booking_id', b.id, 'student_name', u.name, 'section', u.section, 'parent_name', u.parent_name, 'status', b.status)"
+            "   json_build_object('booking_id', b.id, 'student_name', b.student_name, 'section', b.section, 'parent_name', u.parent_name, 'status', b.status)"
             "   ORDER BY b.created_at"
             " ) FILTER (WHERE b.id IS NOT NULL), '[]') as bookings"
             " FROM slots s"

@@ -121,7 +121,7 @@ export default function TeacherDashboard() {
           <div style={{ background: '#FFF0E6', borderBottom: '1px solid #F4C099', padding: 'clamp(8px,1.2vw,14px) clamp(16px,2.5vw,28px)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap' }}>Up next:</span>
             <span style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>
-              {upcomingSlots[0]?.bookings?.length > 0 ? `${upcomingSlots[0].bookings[0].student_name}${upcomingSlots[0].bookings[0].section ? ' · ' + upcomingSlots[0].bookings[0].section : ''}` : 'No upcoming'} at {fmt(upcomingSlots[0]?.start_time)}
+              {upcomingSlots[0]?.bookings?.length > 0 ? `${upcomingSlots[0].bookings[0].student_name || upcomingSlots[0].bookings[0].parent_name}${upcomingSlots[0].bookings[0].section ? ' · ' + upcomingSlots[0].bookings[0].section : ''}` : 'No upcoming'} at {fmt(upcomingSlots[0]?.start_time)}
             </span>
           </div>
         )}
@@ -165,9 +165,9 @@ export default function TeacherDashboard() {
                     </div>
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: isDone ? '#E5E5E5' : '#F4C099' }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.4vw,14px)', flex: 1, padding: 'clamp(10px,1.4vw,14px) clamp(14px,2vw,18px)', minWidth: 0 }}>
-                      <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.5vw,17px)', fontWeight: 700, flexShrink: 0, background: '#fff', border: '2px solid #F4C099', color: '#F47920', opacity: isDone ? .4 : 1 }}>{bk ? initials(bk.student_name) : '—'}</div>
+                      <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.5vw,17px)', fontWeight: 700, flexShrink: 0, background: '#fff', border: '2px solid #F4C099', color: '#F47920', opacity: isDone ? .4 : 1 }}>{bk ? initials(bk.student_name || bk.parent_name) : '—'}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
+                        <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
                         <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
                       </div>
                     </div>
@@ -177,7 +177,7 @@ export default function TeacherDashboard() {
                           {isDone && DONE_TICK}
                         </div>
                       </div>
-                      {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name })}
+                      {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name })}
                         onMouseEnter={e => e.currentTarget.style.color = '#F47920'}
                         onMouseLeave={e => e.currentTarget.style.color = '#C4B5A5'}
                         style={{ width: 'clamp(28px,3.5vw,38px)', height: 'clamp(28px,3.5vw,38px)', borderRadius: 8, background: '#fff', border: 'none', color: '#C4B5A5', cursor: 'pointer', fontSize: 'clamp(18px,2.2vw,26px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1, padding: 0, transition: 'color .12s' }}>×</button>}
@@ -244,7 +244,7 @@ export default function TeacherDashboard() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isBooked ? (
                           <>
-                            <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bk?.student_name ? `${bk.student_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
+                            <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
                             {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
                           </>
                         ) : isBreak ? (
@@ -265,7 +265,7 @@ export default function TeacherDashboard() {
               {selectedSlot ? (
                 <>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>
-                    {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].student_name}${selectedSlot.bookings[0].section ? ' · ' + selectedSlot.bookings[0].section : ''}` : ''}
+                    {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].student_name || selectedSlot.bookings[0].parent_name}${selectedSlot.bookings[0].section ? ' · ' + selectedSlot.bookings[0].section : ''}` : ''}
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {selectedSlot.bookings?.length > 0 && <button onClick={() => { handleCancelBooking(selectedSlot.bookings[0].booking_id); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
