@@ -26,6 +26,11 @@ export const getAllBookings = async () => {
   return res.data
 }
 
+export const setAttendance = async (bookingId, attendance) => {
+  const res = await axios.patch(`${BASE_URL}/bookings/${bookingId}/attendance`, { attendance }, authHeader())
+  return res.data
+}
+
 export const autoSchedule = async (teacherIds, child = {}) => {
   const res = await axios.post(`${BASE_URL}/bookings/auto-schedule`, { teacher_ids: teacherIds, student_name: child.student_name, section: child.section }, authHeader())
   return res.data

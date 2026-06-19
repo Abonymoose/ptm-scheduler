@@ -20,6 +20,11 @@ class AutoScheduleRequest(BaseModel):
     student_name: str | None = None
     section: str | None = None
 
+class AttendanceUpdate(BaseModel):
+    attendance: list[str]
+
+ALLOWED_ATTENDANCE = {"Mother", "Father", "Other"}
+
 @router.post("/auto-schedule")
 async def auto_schedule(
     body: AutoScheduleRequest,
@@ -283,6 +288,49 @@ async def cancel_booking(
     return {"message": "Booking cancelled"}
 
 
+@router.patch("/{booking_id}/attendance")
+async def set_attendance(
+    booking_id: str,
+    body: AttendanceUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    role = current_user["role"]
+    if role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Only teachers or admins can mark attendance")
+
+    invalid = [a for a in body.attendance if a not in ALLOWED_ATTENDANCE]
+    if invalid:
+        raise HTTPException(status_code=400, detail="Invalid attendance value")
+    # de-dupe while preserving order
+    attendance = list(dict.fromkeys(body.attendance))
+
+    result = await db.execute(
+        text(
+            "SELECT b.id, b.status, s.teacher_id, s.school_id"
+            " FROM bookings b JOIN slots s ON b.slot_id = s.id"
+            " WHERE b.id = :bid"
+        ),
+        {"bid": booking_id}
+    )
+    booking = result.fetchone()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if role == "teacher" and str(booking.teacher_id) != current_user["sub"]:
+        raise HTTPException(status_code=403, detail="Not your slot")
+    if role == "admin" and str(booking.school_id) != current_user["school_id"]:
+        raise HTTPException(status_code=403, detail="Not your school")
+    if booking.status != "confirmed":
+        raise HTTPException(status_code=400, detail="Attendance can only be set on confirmed bookings")
+
+    await db.execute(
+        text("UPDATE bookings SET attendance = CAST(:att AS text[]) WHERE id = :bid"),
+        {"att": attendance, "bid": booking_id}
+    )
+    await db.commit()
+    return {"booking_id": booking_id, "attendance": attendance}
+
+
 @router.get("/all")
 async def get_all_bookings(
     db: AsyncSession = Depends(get_db),
@@ -293,7 +341,7 @@ async def get_all_bookings(
 
     result = await db.execute(
         text(
-            "SELECT b.id, b.status, b.created_at,"
+            "SELECT b.id, b.status, b.created_at, b.attendance,"
             " b.student_name as student_name, b.section as section, p.parent_name as parent_name,"
             " t.name as teacher_name,"
             " s.start_time, s.end_time"

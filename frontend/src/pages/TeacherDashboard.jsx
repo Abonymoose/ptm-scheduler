@@ -4,6 +4,9 @@ import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import { blockSlot, unblockSlot } from '../api/admin'
+import { setAttendance as setAttendanceApi } from '../api/bookings'
+
+const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -30,7 +33,9 @@ export default function TeacherDashboard() {
   const [tab, setTab] = useState('s')
   const [toast, setToast] = useState('')
   const [time, setTime] = useState(clock())
-  const [done, setDone] = useState({})
+  const [attModal, setAttModal] = useState(null)
+  const [attSel, setAttSel] = useState([])
+  const [savingAtt, setSavingAtt] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [venueModal, setVenueModal] = useState(false)
   const [venueText, setVenueText] = useState('Room TBD')
@@ -79,11 +84,25 @@ export default function TeacherDashboard() {
     catch (err) { showToast(err.response?.data?.detail || 'Failed to unblock') }
   }
 
+  const openAttendance = bk => {
+    if (!bk?.booking_id) return
+    setAttModal({ booking_id: bk.booking_id, name: bk.student_name || bk.parent_name || 'this meeting' })
+    setAttSel(bk.attendance || [])
+  }
+  const toggleAtt = who => setAttSel(prev => prev.includes(who) ? prev.filter(x => x !== who) : [...prev, who])
+  const saveAttendance = async (clear = false) => {
+    if (!attModal) return
+    setSavingAtt(true)
+    try { await setAttendanceApi(attModal.booking_id, clear ? [] : attSel); showToast('Attendance saved'); setAttModal(null); fetchData() }
+    catch (err) { showToast(err.response?.data?.detail || 'Failed to save') }
+    setSavingAtt(false)
+  }
+
   const userInitials = user?.name ? user.name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase() : 'T'
   const blockedSlots = slots.filter(s => s.is_blocked)
   const bookedSlots = slots.filter(s => s.booked_count > 0)
   const freeSlots = slots.filter(s => s.booked_count === 0 && !s.is_blocked)
-  const doneCount = Object.values(done).filter(Boolean).length
+  const markedCount = bookedSlots.filter(s => (s.bookings?.[0]?.attendance?.length || 0) > 0).length
 
   const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
   const pastSlots = []
@@ -147,7 +166,7 @@ export default function TeacherDashboard() {
         {tab === 's' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, minHeight: 'clamp(44px,5.5vw,58px)' }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{doneCount} of {upcomingSlots.length} done</span>
+              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#9CA3AF', fontWeight: 500 }}>
                   <span>Highlight next</span>
@@ -165,8 +184,9 @@ export default function TeacherDashboard() {
               : upcomingSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No meetings yet</div>
               : upcomingSlots.map((slot, i) => {
                 const bk = slot.bookings?.length > 0 ? slot.bookings[0] : null
-                const isDone = done[slot.id]
-                const isCurrent = hlNext && !isDone && i === upcomingSlots.findIndex(s => !done[s.id])
+                const attendees = bk?.attendance || []
+                const isDone = attendees.length > 0
+                const isCurrent = hlNext && !isDone && i === upcomingSlots.findIndex(s => !(s.bookings?.[0]?.attendance?.length))
                 return (
                   <div key={slot.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(68px,9vw,88px)', background: isDone ? '#FAFAFA' : isCurrent ? '#FFFAF7' : '#fff', borderLeft: isCurrent ? '3px solid #F47920' : 'none', transition: 'background .12s' }}>
                     <div style={{ width: 'clamp(60px,8vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
@@ -178,10 +198,11 @@ export default function TeacherDashboard() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
                         <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
+                        {attendees.length > 0 && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#C45A0A', fontWeight: 600, marginTop: 2 }}>✓ {attendees.join(', ')}</div>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
-                      <div onClick={() => setDone(p => ({ ...p, [slot.id]: !p[slot.id] }))} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
+                      <div onClick={() => bk && openAttendance(bk)} title="Mark attendance" style={{ display: 'flex', alignItems: 'center', cursor: bk ? 'pointer' : 'default', userSelect: 'none' }}>
                         <div style={{ width: 'clamp(22px,2.8vw,30px)', height: 'clamp(22px,2.8vw,30px)', borderRadius: 6, border: `2px solid ${isDone ? '#F47920' : '#F4C099'}`, background: isDone ? '#FFF0E6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s', flexShrink: 0 }}>
                           {isDone && DONE_TICK}
                         </div>
@@ -196,7 +217,7 @@ export default function TeacherDashboard() {
               })}
             </div>
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{doneCount} done</span>
+              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{markedCount} marked</span>
             </div>
           </div>
         )}
@@ -310,6 +331,31 @@ export default function TeacherDashboard() {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setVenueModal(false)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
               <button onClick={async () => { if (venueInput.trim()) { const v = venueInput.trim(); setVenueText(v); try { await patchVenue(v); showToast('Venue updated') } catch { showToast('Venue saved locally') } } setVenueModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATTENDANCE MODAL */}
+      {attModal && (
+        <div onClick={() => setAttModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,36px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+            <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>Mark attendance</div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', color: '#9CA3AF', marginBottom: 'clamp(16px,2.2vw,22px)' }}>Who attended {attModal.name}'s meeting?</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 'clamp(18px,2.5vw,26px)' }}>
+              {ATTENDEE_OPTIONS.map(who => {
+                const on = attSel.includes(who)
+                return (
+                  <div key={who} onClick={() => toggleAtt(who)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${on ? '#F47920' : '#F4C099'}`, background: on ? '#FFF8F3' : '#fff' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, border: `2px solid ${on ? '#F47920' : '#F4C099'}`, background: on ? '#F47920' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 900 }}>{on ? '✓' : ''}</div>
+                    <span style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 600, color: '#1B3F7A' }}>{who}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => saveAttendance(true)} disabled={savingAtt} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Clear</button>
+              <button onClick={() => saveAttendance(false)} disabled={savingAtt} style={{ flex: 2, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: savingAtt ? 'not-allowed' : 'pointer', opacity: savingAtt ? .6 : 1, border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>{savingAtt ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         </div>

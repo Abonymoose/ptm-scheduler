@@ -78,7 +78,7 @@ async def get_my_slots(
             " COUNT(b.id) FILTER (WHERE b.status = 'confirmed') as booked_count,"
             " COALESCE(BOOL_OR(b.status = 'blocked'), false) as is_blocked,"
             " COALESCE(json_agg("
-            "   json_build_object('booking_id', b.id, 'student_name', b.student_name, 'section', b.section, 'parent_name', u.parent_name, 'status', b.status)"
+            "   json_build_object('booking_id', b.id, 'student_name', b.student_name, 'section', b.section, 'parent_name', u.parent_name, 'status', b.status, 'attendance', b.attendance)"
             "   ORDER BY b.created_at"
             " ) FILTER (WHERE b.status = 'confirmed'), '[]') as bookings"
             " FROM slots s"

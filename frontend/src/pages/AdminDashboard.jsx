@@ -237,6 +237,7 @@ export default function AdminDashboard() {
                         <div>
                           <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.student_name}{bk.section ? ` · ${bk.section}` : ''}</div>
                           <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>{bk.parent_name ? `${bk.parent_name} · ` : ''}with {titleName(bk.teacher_name)}</div>
+                          <div style={{ fontSize: 'clamp(8px,1vw,12px)', marginTop: 1, fontWeight: 600, color: bk.attendance?.length ? '#C45A0A' : '#C4B5A5' }}>{bk.attendance?.length ? `Attended: ${bk.attendance.join(', ')}` : 'Not shown'}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
