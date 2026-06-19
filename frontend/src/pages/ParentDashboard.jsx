@@ -60,6 +60,7 @@ export default function ParentDashboard() {
   const [welcomeChecked, setWelcomeChecked] = useState(false)
   const [activeChild, setActiveChild] = useState('p')
   const [colourByChild, setColourByChild] = useState(false)
+  const [slotInfoModal, setSlotInfoModal] = useState(null)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -110,8 +111,20 @@ export default function ParentDashboard() {
   const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name })).filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
 
   const handleBook = async slot_id => {
-    try { await createBooking(slot_id, { student_name: child.student_name, section: child.section }); showToast('Booking confirmed!'); fetchData() }
-    catch (err) { showToast(err.response?.data?.detail || 'Booking failed') }
+    try {
+      await createBooking(slot_id, { student_name: child.student_name, section: child.section })
+      showToast('Booking confirmed!')
+      fetchData()
+    } catch (err) {
+      const detail = err.response?.data?.detail || ''
+      const knownReject = ['This slot is unavailable', 'Slot is full', 'You already have a meeting at this time', 'Already booked this slot']
+      if (knownReject.some(r => detail.includes(r))) {
+        setSlotInfoModal({ message: 'Sorry, this slot was just taken. Please pick another time.' })
+        fetchData()
+      } else {
+        showToast(detail || 'Booking failed')
+      }
+    }
   }
 
   const handleCancel = async () => {
@@ -145,6 +158,14 @@ export default function ParentDashboard() {
     if (isBlocked || isFull || isTimeConflict || isTeacherBooked) return 'taken'
     if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
     return 'free'
+  }
+
+  const slotUnavailableReason = slot => {
+    const isBooked = bookedSlotIds.has(slot.id)
+    if (slot.is_blocked && !isBooked) return "This time is blocked by the teacher and can't be booked."
+    if (!isBooked && bookedTimes.has(slot.start_time)) return "You already have a meeting at this time."
+    if (!isBooked && bookedTeacherNames.has(slot.teacher_name)) return "You've already booked a meeting with this teacher."
+    return "This slot is already taken."
   }
 
   if (loading) return <div style={{ minHeight: '100vh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F47920', fontWeight: 600, fontFamily: 'system-ui,sans-serif' }}>Loading…</div>
@@ -217,12 +238,12 @@ export default function ParentDashboard() {
                         const isBooked = cls === 'child1' || cls === 'child2'
                         if (cls === 'taken' && slot.is_blocked) return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
-                            <div title="Blocked — unavailable" style={{ width: '100%', height: '100%', borderRadius: 8, background: '#E7E0D8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'not-allowed', color: '#A89F94', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, lineHeight: 1 }}>✕</div>
+                            <div onClick={() => setSlotInfoModal({ message: slotUnavailableReason(slot) })} style={{ width: '100%', height: '100%', borderRadius: 8, background: '#E7E0D8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#A89F94', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, lineHeight: 1 }}>✕</div>
                           </td>
                         )
                         if (cls === 'taken') return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
-                            <div style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'default' }} />
+                            <div onClick={() => setSlotInfoModal({ message: slotUnavailableReason(slot) })} style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'pointer' }} />
                           </td>
                         )
                         return (
@@ -431,6 +452,17 @@ export default function ParentDashboard() {
               <button onClick={() => { setWelcomeModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #E5E7EB', background: '#F3F4F6', color: '#6B7280', fontFamily: 'inherit' }}>I'll choose myself</button>
               <button onClick={() => { setWelcomeModal(false); openAutoModal() }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', boxShadow: '0 2px 12px rgba(27,63,122,.3)' }}>Auto-Schedule</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* SLOT INFO MODAL */}
+      {slotInfoModal && (
+        <div onClick={() => setSlotInfoModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(28px,4vw,44px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+            <div style={{ fontSize: 'clamp(32px,4vw,44px)', marginBottom: 14 }}>🚫</div>
+            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', lineHeight: 1.4, marginBottom: 'clamp(20px,3vw,30px)' }}>{slotInfoModal.message}</div>
+            <button onClick={() => setSlotInfoModal(null)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(15px,1.9vw,19px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>OK</button>
           </div>
         </div>
       )}
