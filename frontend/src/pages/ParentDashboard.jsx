@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getSlots } from '../api/slots'
-import { createBooking, getMyBookings, cancelBooking, autoSchedule } from '../api/bookings'
+import { batchBooking, getMyBookings, cancelBooking, autoSchedule } from '../api/bookings'
 import { LOGO_LARGE } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 
@@ -21,8 +21,6 @@ const CHILD_SUBJECTS = {
   'Preethi Rao':'English','Anjali Menon':'Kannada','Swati Joshi':'Computers',
 }
 
-// Which child a booking is for, from its own section (NOT teacher_name).
-// '7…' → Parshv ('p'), '4…' → Dhriti ('d'), unknown → null.
 const childKey = bk => {
   const sec = bk?.section || ''
   if (sec.startsWith('7')) return 'p'
@@ -32,10 +30,16 @@ const childKey = bk => {
 const CHILD_ACCENT = { p: '#F47920', d: '#2563EB' }
 const CHILD_PILL = { p: { bg: '#FFF0E6', text: '#C45A0A' }, d: { bg: '#EFF6FF', text: '#1D4ED8' } }
 
-const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-const initials = name => { if (!name) return '??'; const p = name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean); return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase() }
+const FAIL_REASON = {
+  blocked: 'blocked by teacher',
+  taken: 'just taken',
+  conflict: 'time conflict',
+  already_booked: 'already booked',
+  not_found: 'slot not found',
+}
 
-const TICK = <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><polyline points="2,5 4,7.5 8,2.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+
 const DONE_TICK = <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#F47920" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 
 function Toast({ msg }) {
@@ -61,6 +65,12 @@ export default function ParentDashboard() {
   const [activeChild, setActiveChild] = useState('p')
   const [colourByChild, setColourByChild] = useState(false)
   const [slotInfoModal, setSlotInfoModal] = useState(null)
+  const [cart, setCart] = useState([])
+  const [confirming, setConfirming] = useState(false)
+  const [batchResult, setBatchResult] = useState(null)
+
+  const rowRefs = useRef({})
+  const isFirstMount = useRef(true)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -71,6 +81,41 @@ export default function ParentDashboard() {
       document.head.appendChild(s)
     }
   }, [])
+
+  // Auto-scroll when parent switches the active child pill
+  useEffect(() => {
+    if (isFirstMount.current) { isFirstMount.current = false; return }
+    if (tab !== 'grid' || !slots.length) return
+
+    const c = CHILDREN[activeChild]
+    const prefix = activeChild === 'p' ? '7' : '4'
+    const childBookings = bookings
+      .filter(bk => bk.status !== 'cancelled' && (bk.section || '').startsWith(prefix))
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+
+    let targetTime = null
+    if (childBookings.length > 0) {
+      targetTime = childBookings[0].start_time
+    } else {
+      const childGroups = {}
+      slots.filter(s => c.teachers.some(t => s.teacher_name?.includes(t))).forEach(s => {
+        if (!childGroups[s.teacher_name]) childGroups[s.teacher_name] = []
+        childGroups[s.teacher_name].push(s)
+      })
+      const allCartTimes = new Set(cart.map(c => c.start_time))
+      const allBookedTimes = new Set(bookings.filter(b => b.status !== 'cancelled').map(b => b.start_time))
+      const freeSlot = Object.values(childGroups).flat()
+        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+        .find(s => !s.is_blocked && s.booked_count < s.capacity && !allBookedTimes.has(s.start_time) && !allCartTimes.has(s.start_time))
+      if (freeSlot) targetTime = freeSlot.start_time
+    }
+
+    if (targetTime) {
+      setTimeout(() => {
+        rowRefs.current[targetTime]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 50)
+    }
+  }, [activeChild])
 
   const fetchData = async () => {
     try {
@@ -92,6 +137,10 @@ export default function ParentDashboard() {
   const bookedTimes = new Set(activeBookings.map(b => b.start_time))
   const bookedTeacherNames = new Set(activeBookings.map(b => b.teacher_name))
 
+  const cartSlotIds = new Set(cart.map(c => c.slot_id))
+  const cartStartTimes = new Set(cart.map(c => c.start_time))
+  const cartTeacherNames = new Set(cart.map(c => c.teacher_name))
+
   const groupByTeacher = (teacherList) => {
     const map = {}
     slots.filter(s => teacherList.some(t => s.teacher_name?.includes(t))).forEach(s => {
@@ -101,30 +150,71 @@ export default function ParentDashboard() {
     return map
   }
 
-  // One parent account; toggle which child we're booking for.
   const child = CHILDREN[activeChild]
   const currentTeachers = child.teachers
   const teacherGroups = groupByTeacher(currentTeachers)
   const teachers = Object.keys(teacherGroups)
   const allTimes = [...new Set(Object.values(teacherGroups).flat().map(s => s.start_time))].sort()
 
-  const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()].map(([id, name]) => ({ id, name })).filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
+  const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()]
+    .map(([id, name]) => ({ id, name }))
+    .filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
 
-  const handleBook = async slot_id => {
-    try {
-      await createBooking(slot_id, { student_name: child.student_name, section: child.section })
-      showToast('Booking confirmed!')
-      fetchData()
-    } catch (err) {
-      const detail = err.response?.data?.detail || ''
-      const knownReject = ['This slot is unavailable', 'Slot is full', 'You already have a meeting at this time', 'Already booked this slot']
-      if (knownReject.some(r => detail.includes(r))) {
-        setSlotInfoModal({ message: 'Sorry, this slot was just taken. Please pick another time.' })
-        fetchData()
-      } else {
-        showToast(detail || 'Booking failed')
-      }
+  const slotClass = slot => {
+    const isBooked = bookedSlotIds.has(slot.id)
+    const isInCart = cartSlotIds.has(slot.id)
+    if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
+    if (isInCart) return 'cart'
+    if (slot.is_blocked) return 'taken'
+    if (slot.booked_count >= slot.capacity) return 'taken'
+    if (bookedTimes.has(slot.start_time) || cartStartTimes.has(slot.start_time)) return 'taken'
+    if (bookedTeacherNames.has(slot.teacher_name) || cartTeacherNames.has(slot.teacher_name)) return 'taken'
+    return 'free'
+  }
+
+  const slotUnavailableReason = slot => {
+    const isBooked = bookedSlotIds.has(slot.id)
+    if (slot.is_blocked && !isBooked) return "This time is blocked by the teacher and can't be booked."
+    if (!isBooked && (bookedTimes.has(slot.start_time) || cartStartTimes.has(slot.start_time)))
+      return "You already have a meeting (or a slot in your cart) at this time."
+    if (!isBooked && (bookedTeacherNames.has(slot.teacher_name) || cartTeacherNames.has(slot.teacher_name)))
+      return "You've already booked a meeting with this teacher."
+    return "This slot is already taken."
+  }
+
+  const handleCartToggle = slot => {
+    if (cartSlotIds.has(slot.id)) {
+      setCart(prev => prev.filter(c => c.slot_id !== slot.id))
+      return
     }
+    setCart(prev => [...prev, {
+      slot_id: slot.id,
+      student_name: child.student_name,
+      section: child.section,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      teacher_name: slot.teacher_name,
+    }])
+  }
+
+  const handleConfirm = async () => {
+    if (cart.length === 0 || confirming) return
+    setConfirming(true)
+    try {
+      const items = cart.map(c => ({ slot_id: c.slot_id, student_name: c.student_name, section: c.section }))
+      const result = await batchBooking(items)
+      const bookedIds = new Set(result.booked.map(b => b.slot_id))
+      setCart(prev => prev.filter(c => !bookedIds.has(c.slot_id)))
+      await fetchData()
+      if (result.failed.length > 0) {
+        setBatchResult(result)
+      } else {
+        showToast(`${result.booked.length} meeting${result.booked.length !== 1 ? 's' : ''} booked!`)
+      }
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Booking failed')
+    }
+    setConfirming(false)
   }
 
   const handleCancel = async () => {
@@ -139,34 +229,34 @@ export default function ParentDashboard() {
 
   const handleAutoSchedule = async () => {
     setAutoScheduling(true)
-    try { const result = await autoSchedule([...selectedTeachers], { student_name: child.student_name, section: child.section }); setAutoResult(result); await fetchData() }
-    catch (err) { showToast(err.response?.data?.detail || 'Auto-schedule failed') }
+    try {
+      const result = await autoSchedule([...selectedTeachers], { student_name: child.student_name, section: child.section }, true)
+      const picks = result.picks || []
+      setCart(prev => {
+        const existingSlotIds = new Set(prev.map(c => c.slot_id))
+        const existingStartTimes = new Set(prev.map(c => c.start_time))
+        const toAdd = picks
+          .filter(p => !existingSlotIds.has(p.slot_id) && !existingStartTimes.has(p.start_time))
+          .map(p => ({
+            slot_id: p.slot_id,
+            student_name: child.student_name,
+            section: child.section,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            teacher_name: p.teacher_name,
+          }))
+        return [...prev, ...toAdd]
+      })
+      setAutoResult({ picks, conflicts: result.conflicts || [] })
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Auto-schedule failed')
+    }
     setAutoScheduling(false)
   }
 
   const userInitials = user?.name ? user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'PM'
   const doneCount = Object.values(done).filter(Boolean).length
   const bookedCount = activeBookings.length
-
-  // Slot color for current child
-  const slotClass = (slot) => {
-    const isBooked = bookedSlotIds.has(slot.id)
-    const isBlocked = slot.is_blocked && !isBooked
-    const isFull = slot.booked_count >= slot.capacity && !isBooked
-    const isTimeConflict = !isBooked && bookedTimes.has(slot.start_time)
-    const isTeacherBooked = !isBooked && bookedTeacherNames.has(slot.teacher_name)
-    if (isBlocked || isFull || isTimeConflict || isTeacherBooked) return 'taken'
-    if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
-    return 'free'
-  }
-
-  const slotUnavailableReason = slot => {
-    const isBooked = bookedSlotIds.has(slot.id)
-    if (slot.is_blocked && !isBooked) return "This time is blocked by the teacher and can't be booked."
-    if (!isBooked && bookedTimes.has(slot.start_time)) return "You already have a meeting at this time."
-    if (!isBooked && bookedTeacherNames.has(slot.teacher_name)) return "You've already booked a meeting with this teacher."
-    return "This slot is already taken."
-  }
 
   if (loading) return <div style={{ minHeight: '100vh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F47920', fontWeight: 600, fontFamily: 'system-ui,sans-serif' }}>Loading…</div>
 
@@ -206,7 +296,7 @@ export default function ParentDashboard() {
                   <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? (key === 'p' ? '#F47920' : '#2563EB') : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
                 ))}
               </div>
-              <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap a teacher slot to book a meeting</span>
+              <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to add to cart, then Confirm</span>
               <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
             </div>
 
@@ -228,7 +318,7 @@ export default function ParentDashboard() {
                 </thead>
                 <tbody>
                   {allTimes.map(time => (
-                    <tr key={time}>
+                    <tr key={time} ref={el => { rowRefs.current[time] = el }}>
                       <td style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', paddingLeft: 'clamp(10px,1.5vw,18px)', background: '#FFF8F3', fontWeight: 600, borderRight: '2px solid #F4C099', border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>{fmt(time)}</td>
                       {teachers.map(t => {
                         const slot = teacherGroups[t]?.find(s => s.start_time === time)
@@ -236,6 +326,8 @@ export default function ParentDashboard() {
                         const cls = slotClass(slot)
                         const hov = hoveredCancel === slot.id
                         const isBooked = cls === 'child1' || cls === 'child2'
+                        const isCart = cls === 'cart'
+
                         if (cls === 'taken' && slot.is_blocked) return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
                             <div onClick={() => setSlotInfoModal({ message: slotUnavailableReason(slot) })} style={{ width: '100%', height: '100%', borderRadius: 8, background: '#E7E0D8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#A89F94', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, lineHeight: 1 }}>✕</div>
@@ -246,23 +338,38 @@ export default function ParentDashboard() {
                             <div onClick={() => setSlotInfoModal({ message: slotUnavailableReason(slot) })} style={{ width: '100%', height: '100%', borderRadius: 8, background: '#F5F0EC', cursor: 'pointer' }} />
                           </td>
                         )
+
                         return (
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
                             <button
-                              onClick={() => { if (isBooked) { setCancelModal({ booking_id: slotToBookingId[slot.id], teacher: t }); return }; handleBook(slot.id) }}
-                              onMouseEnter={() => isBooked && setHoveredCancel(slot.id)}
+                              onClick={() => {
+                                if (isBooked) { setCancelModal({ booking_id: slotToBookingId[slot.id], teacher: t }); return }
+                                handleCartToggle(slot)
+                              }}
+                              onMouseEnter={() => (isBooked || isCart) && setHoveredCancel(slot.id)}
                               onMouseLeave={() => setHoveredCancel(null)}
                               style={{
                                 width: '100%', height: '100%', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                border: cls === 'child1' ? '2px solid #F47920' : cls === 'child2' ? '2px solid #2563EB' : 'none',
+                                border: isBooked
+                                  ? (cls === 'child1' ? '2px solid #F47920' : '2px solid #2563EB')
+                                  : isCart
+                                  ? `2px dashed ${hov ? '#DC2626' : '#F47920'}`
+                                  : 'none',
                                 cursor: 'pointer',
-                                background: hov && isBooked ? '#FEE2E2' : cls === 'child1' ? '#FFF0E6' : cls === 'child2' ? '#EFF6FF' : 'transparent',
-                                color: hov && isBooked ? '#DC2626' : cls === 'child1' ? '#C45A0A' : cls === 'child2' ? '#1D4ED8' : '#E5D5C5',
-                                fontSize: cls === 'free' ? 'clamp(16px,2vw,22px)' : 'clamp(11px,1.3vw,14px)',
-                                fontWeight: cls === 'free' ? 300 : 600,
+                                background: hov && (isBooked || isCart) ? '#FEE2E2'
+                                  : cls === 'child1' ? '#FFF0E6'
+                                  : cls === 'child2' ? '#EFF6FF'
+                                  : isCart ? '#FFF8F3'
+                                  : 'transparent',
+                                color: hov && (isBooked || isCart) ? '#DC2626'
+                                  : cls === 'child1' ? '#C45A0A'
+                                  : cls === 'child2' ? '#1D4ED8'
+                                  : '#E5D5C5',
+                                fontSize: 'clamp(11px,1.3vw,14px)',
+                                fontWeight: 600,
                                 transition: 'all .12s', fontFamily: 'inherit',
                               }}>
-                              {isBooked ? (hov ? '×' : '✓') : '+'}
+                              {isBooked ? (hov ? '×' : '✓') : isCart ? (hov ? '×' : '') : <span style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 300 }}>+</span>}
                             </button>
                           </td>
                         )
@@ -276,16 +383,41 @@ export default function ParentDashboard() {
             {/* Legend */}
             <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', fontWeight: 600, marginRight: 4 }}>Legend:</span>
-              {[{ label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#2563EB' }, { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5' }].map(l => (
+              {[
+                { label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#2563EB', dashed: false },
+                { label: 'In cart', bg: '#FFF8F3', border: '#F47920', dashed: true },
+                { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5', dashed: false },
+              ].map(l => (
                 <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
-                  <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px solid ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
+                  <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px ${l.dashed ? 'dashed' : 'solid'} ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
                 </span>
               ))}
             </div>
 
             {/* Bottom bar */}
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{bookedCount > 0 ? `${bookedCount} teacher${bookedCount !== 1 ? 's' : ''} booked` : 'Tap a slot to book'}</span>
+              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>
+                {bookedCount > 0
+                  ? `${bookedCount} teacher${bookedCount !== 1 ? 's' : ''} booked`
+                  : cart.length > 0
+                  ? `${cart.length} slot${cart.length !== 1 ? 's' : ''} in cart`
+                  : 'Tap a slot to add to cart'}
+              </span>
+              <button
+                onClick={handleConfirm}
+                disabled={cart.length === 0 || confirming}
+                style={{
+                  fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700,
+                  padding: 'clamp(8px,1.1vw,13px) clamp(14px,2vw,24px)',
+                  borderRadius: 50, border: 'none',
+                  cursor: cart.length === 0 || confirming ? 'default' : 'pointer',
+                  background: cart.length === 0 || confirming ? '#F4C099' : '#F47920',
+                  color: '#fff', fontFamily: 'inherit',
+                  boxShadow: cart.length > 0 && !confirming ? '0 2px 12px rgba(244,121,32,.35)' : 'none',
+                  transition: 'all .15s',
+                }}>
+                {confirming ? 'Booking…' : `Confirm ${cart.length > 0 ? cart.length + ' ' : ''}slot${cart.length !== 1 ? 's' : ''}`}
+              </button>
             </div>
           </div>
         )}
@@ -373,14 +505,14 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* AUTO MODAL */}
+      {/* AUTO-SCHEDULE MODAL */}
       {autoModal && (
         <div onClick={() => setAutoModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
             {autoResult === null ? (<>
               <div style={{ padding: 'clamp(18px,2.5vw,28px) clamp(20px,2.8vw,28px) clamp(12px,1.8vw,18px)', borderBottom: '1px solid #F4C099' }}>
                 <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 800, color: '#1B3F7A' }}>✦ Auto-schedule</div>
-                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginTop: 4 }}>Pick teachers — we'll find a conflict-free schedule</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginTop: 4 }}>Pick teachers — we'll add a conflict-free schedule to your cart</div>
               </div>
               <div style={{ padding: 'clamp(8px,1.2vw,12px) clamp(20px,2.8vw,28px)', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF' }}>{selectedTeachers.size} of {teacherOptions.length} selected</span>
@@ -406,35 +538,35 @@ export default function ParentDashboard() {
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4', display: 'flex', gap: 10 }}>
                 <button onClick={() => setAutoModal(false)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: '#F3F4F6', color: '#6B7280', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
                 <button onClick={handleAutoSchedule} disabled={selectedTeachers.size === 0 || autoScheduling} style={{ flex: 2, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: selectedTeachers.size === 0 || autoScheduling ? '#F4C099' : '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: selectedTeachers.size === 0 || autoScheduling ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                  {autoScheduling ? 'Scheduling…' : `Schedule ${selectedTeachers.size > 0 ? selectedTeachers.size : ''} meeting${selectedTeachers.size !== 1 ? 's' : ''}`}
+                  {autoScheduling ? 'Finding slots…' : `Add ${selectedTeachers.size > 0 ? selectedTeachers.size : ''} to cart`}
                 </button>
               </div>
             </>) : (<>
               <div style={{ padding: 'clamp(24px,3vw,32px) clamp(20px,2.8vw,28px) clamp(16px,2vw,22px)', textAlign: 'center', borderBottom: '1px solid #FDE9D4' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 10px', background: autoResult.booked.length > 0 ? '#FFF0E6' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: autoResult.booked.length > 0 ? '#C45A0A' : '#9CA3AF' }}>{autoResult.booked.length > 0 ? '✓' : '—'}</div>
-                <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 800, color: '#1B3F7A' }}>{autoResult.booked.length > 0 ? `Scheduled ${autoResult.booked.length} meeting${autoResult.booked.length !== 1 ? 's' : ''}` : 'No slots available'}</div>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 10px', background: autoResult.picks.length > 0 ? '#FFF0E6' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: autoResult.picks.length > 0 ? '#C45A0A' : '#9CA3AF' }}>{autoResult.picks.length > 0 ? '✓' : '—'}</div>
+                <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 800, color: '#1B3F7A' }}>{autoResult.picks.length > 0 ? `Added ${autoResult.picks.length} slot${autoResult.picks.length !== 1 ? 's' : ''} to cart` : 'No slots available'}</div>
                 {autoResult.conflicts.length > 0 && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 4 }}>{autoResult.conflicts.length} teacher{autoResult.conflicts.length !== 1 ? 's' : ''} couldn't be scheduled</div>}
               </div>
               <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1, padding: 'clamp(12px,1.8vw,18px) clamp(20px,2.8vw,28px)' }}>
-                {autoResult.booked.map((b, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < autoResult.booked.length - 1 ? '1px solid #FDE9D4' : 'none' }}>
+                {autoResult.picks.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < autoResult.picks.length - 1 ? '1px solid #FDE9D4' : 'none' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F47920', flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{titleName(b.teacher_name)}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 1 }}>{fmt(b.start_time)} – {fmt(b.end_time)}</div>
+                      <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{titleName(p.teacher_name)}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 1 }}>{fmt(p.start_time)} – {fmt(p.end_time)}</div>
                     </div>
-                    <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#C45A0A', background: '#FFF0E6', padding: '2px 8px', borderRadius: 20 }}>Confirmed</div>
+                    <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#C45A0A', background: '#FFF0E6', padding: '2px 8px', borderRadius: 20, border: '1.5px dashed #F47920' }}>In cart</div>
                   </div>
                 ))}
                 {autoResult.conflicts.length > 0 && (
-                  <div style={{ marginTop: autoResult.booked.length > 0 ? 14 : 0, background: '#F9FAFB', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ marginTop: autoResult.picks.length > 0 ? 14 : 0, background: '#F9FAFB', borderRadius: 8, padding: '12px 14px' }}>
                     <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.5px' }}>Could not schedule</div>
                     {autoResult.conflicts.map((name, i) => <div key={i} style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', padding: '4px 0', borderBottom: i < autoResult.conflicts.length - 1 ? '1px solid #E5E7EB' : 'none' }}>{name}</div>)}
                   </div>
                 )}
               </div>
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4' }}>
-                <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+                <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done — review cart</button>
               </div>
             </>)}
           </div>
@@ -463,6 +595,39 @@ export default function ParentDashboard() {
             <div style={{ fontSize: 'clamp(32px,4vw,44px)', marginBottom: 14 }}>🚫</div>
             <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', lineHeight: 1.4, marginBottom: 'clamp(20px,3vw,30px)' }}>{slotInfoModal.message}</div>
             <button onClick={() => setSlotInfoModal(null)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(15px,1.9vw,19px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* BATCH RESULT MODAL — shown when some slots in a confirm failed */}
+      {batchResult && (
+        <div onClick={() => setBatchResult(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)', overflow: 'hidden' }}>
+            <div style={{ padding: 'clamp(20px,2.8vw,28px)', borderBottom: '1px solid #F4C099' }}>
+              <div style={{ fontSize: 'clamp(17px,2.2vw,22px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 4 }}>
+                {batchResult.booked.length > 0 ? `${batchResult.booked.length} booked, ${batchResult.failed.length} couldn't be booked` : "Couldn't book these slots"}
+              </div>
+              <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF' }}>They may have just been taken — please pick new times.</div>
+            </div>
+            <div className="custom-scroll" style={{ maxHeight: 240, overflowY: 'auto', padding: 'clamp(12px,1.8vw,18px) clamp(20px,2.8vw,28px)' }}>
+              {batchResult.failed.map((f, i) => {
+                const cartItem = cart.find(c => c.slot_id === f.slot_id) || {}
+                const teacherName = f.teacher_name || cartItem.teacher_name || 'Unknown teacher'
+                const reason = FAIL_REASON[f.reason] || f.reason || 'unavailable'
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < batchResult.failed.length - 1 ? '1px solid #F4EDE4' : 'none' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F87171', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(teacherName)}</div>
+                      <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1, textTransform: 'capitalize' }}>{reason}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #F4C099' }}>
+              <button onClick={() => setBatchResult(null)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>OK</button>
+            </div>
           </div>
         </div>
       )}

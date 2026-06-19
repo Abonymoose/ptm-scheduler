@@ -31,7 +31,12 @@ export const setAttendance = async (bookingId, attendance) => {
   return res.data
 }
 
-export const autoSchedule = async (teacherIds, child = {}) => {
-  const res = await axios.post(`${BASE_URL}/bookings/auto-schedule`, { teacher_ids: teacherIds, student_name: child.student_name, section: child.section }, authHeader())
+export const batchBooking = async (items) => {
+  const res = await axios.post(`${BASE_URL}/bookings/batch`, { items }, authHeader())
+  return res.data
+}
+
+export const autoSchedule = async (teacherIds, child = {}, dryRun = false) => {
+  const res = await axios.post(`${BASE_URL}/bookings/auto-schedule`, { teacher_ids: teacherIds, student_name: child.student_name, section: child.section, dry_run: dryRun }, authHeader())
   return res.data
 }

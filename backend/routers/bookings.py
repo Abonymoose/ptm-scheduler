@@ -19,6 +19,15 @@ class AutoScheduleRequest(BaseModel):
     teacher_ids: list[str]
     student_name: str | None = None
     section: str | None = None
+    dry_run: bool = False
+
+class BatchItem(BaseModel):
+    slot_id: str
+    student_name: str | None = None
+    section: str | None = None
+
+class BatchBookingRequest(BaseModel):
+    items: list[BatchItem]
 
 class AttendanceUpdate(BaseModel):
     attendance: list[str]
@@ -114,6 +123,20 @@ async def auto_schedule(
             })
         else:
             conflicts.append(teacher_name)
+
+    if body.dry_run:
+        return {
+            "picks": [
+                {
+                    "slot_id": a["slot_id"],
+                    "teacher_name": a["teacher_name"],
+                    "start_time": a["start_time"].isoformat(),
+                    "end_time": a["end_time"].isoformat(),
+                }
+                for a in assigned
+            ],
+            "conflicts": conflicts,
+        }
 
     booked: list[dict] = []
     if assigned:
@@ -249,6 +272,105 @@ async def create_booking(
     await db.commit()
 
     return {"booking_id": booking_id, "message": "Booking confirmed"}
+
+
+@router.post("/batch")
+async def batch_booking(
+    body: BatchBookingRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "parent":
+        raise HTTPException(status_code=403, detail="Only parents can book slots")
+
+    parent_id = current_user["sub"]
+
+    existing_result = await db.execute(
+        text(
+            "SELECT s.start_time, s.end_time FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " WHERE b.parent_id = :pid AND b.status = 'confirmed'"
+        ),
+        {"pid": parent_id}
+    )
+    committed = [(r.start_time, r.end_time) for r in existing_result.fetchall()]
+
+    booked: list[dict] = []
+    failed: list[dict] = []
+    batch_times: list[tuple] = []
+
+    for i, item in enumerate(body.items):
+        try:
+            await db.execute(text(f"SAVEPOINT bsp_{i}"))
+
+            res = await db.execute(
+                text(
+                    "SELECT s.id, s.capacity, s.start_time, s.end_time, u.name as teacher_name"
+                    " FROM slots s JOIN users u ON s.teacher_id = u.id"
+                    " WHERE s.id = :sid FOR UPDATE"
+                ),
+                {"sid": item.slot_id}
+            )
+            slot = res.fetchone()
+            if not slot:
+                await db.execute(text(f"RELEASE SAVEPOINT bsp_{i}"))
+                failed.append({"slot_id": item.slot_id, "reason": "not_found"})
+                continue
+
+            res = await db.execute(
+                text("SELECT 1 FROM bookings WHERE slot_id = :sid AND status = 'blocked'"),
+                {"sid": item.slot_id}
+            )
+            if res.fetchone():
+                await db.execute(text(f"RELEASE SAVEPOINT bsp_{i}"))
+                failed.append({"slot_id": item.slot_id, "teacher_name": slot.teacher_name, "reason": "blocked"})
+                continue
+
+            res = await db.execute(
+                text("SELECT COUNT(*) FROM bookings WHERE slot_id = :sid AND status != 'cancelled'"),
+                {"sid": item.slot_id}
+            )
+            if res.scalar() >= slot.capacity:
+                await db.execute(text(f"RELEASE SAVEPOINT bsp_{i}"))
+                failed.append({"slot_id": item.slot_id, "teacher_name": slot.teacher_name, "reason": "taken"})
+                continue
+
+            all_times = committed + batch_times
+            if any(slot.start_time < et and slot.end_time > st for st, et in all_times):
+                await db.execute(text(f"RELEASE SAVEPOINT bsp_{i}"))
+                failed.append({"slot_id": item.slot_id, "teacher_name": slot.teacher_name, "reason": "conflict"})
+                continue
+
+            res_can = await db.execute(
+                text("SELECT id FROM bookings WHERE slot_id = :sid AND parent_id = :pid AND status = 'cancelled'"),
+                {"sid": item.slot_id, "pid": parent_id}
+            )
+            cancelled = res_can.fetchone()
+            if cancelled:
+                booking_id = str(cancelled.id)
+                await db.execute(
+                    text("UPDATE bookings SET status = 'confirmed', student_name = :sn, section = :sec WHERE id = :bid"),
+                    {"bid": booking_id, "sn": item.student_name, "sec": item.section}
+                )
+            else:
+                booking_id = str(uuid.uuid4())
+                await db.execute(
+                    text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section)"
+                         " VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
+                    {"id": booking_id, "sid": item.slot_id, "pid": parent_id,
+                     "sn": item.student_name, "sec": item.section}
+                )
+
+            await db.execute(text(f"RELEASE SAVEPOINT bsp_{i}"))
+            batch_times.append((slot.start_time, slot.end_time))
+            booked.append({"slot_id": item.slot_id, "booking_id": booking_id, "teacher_name": slot.teacher_name})
+
+        except IntegrityError:
+            await db.execute(text(f"ROLLBACK TO SAVEPOINT bsp_{i}"))
+            failed.append({"slot_id": item.slot_id, "reason": "conflict"})
+
+    await db.commit()
+    return {"booked": booked, "failed": failed}
 
 
 @router.delete("/{booking_id}")
