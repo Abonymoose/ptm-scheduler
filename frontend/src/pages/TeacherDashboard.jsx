@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
-import { blockSlot, unblockSlot } from '../api/admin'
+import { blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { setAttendance as setAttendanceApi } from '../api/bookings'
 
 const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
@@ -21,6 +21,7 @@ const clock = () => { const n = new Date(); let h = n.getHours(); const m = n.ge
 const initials = name => { if (!name) return '??'; const p = name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean); return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase() }
 
 const DONE_TICK = <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#F47920" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+const ACTION_PAST = { block: 'blocked', unblock: 'unblocked', cancel: 'cancelled' }
 
 function Toast({ msg }) {
   return <div style={{ position: 'fixed', bottom: 'clamp(16px,2.5vw,28px)', left: '50%', transform: 'translateX(-50%)', background: '#1B3F7A', color: '#fff', padding: 'clamp(10px,1.4vw,16px) clamp(18px,2.5vw,28px)', borderRadius: 50, fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, opacity: msg ? 1 : 0, transition: 'opacity .3s', pointerEvents: 'none', zIndex: 999, whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 32px)', textAlign: 'center' }}>{msg}</div>
@@ -48,6 +49,13 @@ export default function TeacherDashboard() {
   const [newCap, setNewCap] = useState(1)
   const [creating, setCreating] = useState(false)
   const [hlNext, setHlNext] = useState(true)
+  const [bulkSel, setBulkSel] = useState(new Set())
+  const [lastSel, setLastSel] = useState(null)
+  const [bulkCancelConfirm, setBulkCancelConfirm] = useState(0)
+  const [bulking, setBulking] = useState(false)
+  const mouseDownActive = useRef(false)
+  const dragAnchor = useRef(null)
+  const dragMoved = useRef(false)
 
   useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue) }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
@@ -58,6 +66,11 @@ export default function TeacherDashboard() {
       s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
       document.head.appendChild(s)
     }
+  }, [])
+  useEffect(() => {
+    const onUp = () => { mouseDownActive.current = false }
+    window.addEventListener('mouseup', onUp)
+    return () => window.removeEventListener('mouseup', onUp)
   }, [])
 
   const fetchData = async () => {
@@ -82,6 +95,24 @@ export default function TeacherDashboard() {
   const handleUnblock = async slot_id => {
     try { await unblockSlot(slot_id); showToast('Slot unblocked'); fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed to unblock') }
+  }
+
+  const handleBulkAction = async (action) => {
+    const ids = [...bulkSel]
+    if (ids.length === 0 || bulking) return
+    if (action === 'cancel') {
+      const bookedCount = ids.filter(id => sortedSlots.find(s => s.id === id)?.booked_count > 0).length
+      if (bookedCount > 0 && !bulkCancelConfirm) { setBulkCancelConfirm(bookedCount); return }
+    }
+    setBulkCancelConfirm(0)
+    setBulking(true)
+    try {
+      const result = await batchSlotAction(ids, action)
+      const n = result.done.length; const sk = result.skipped.length
+      showToast(`${n} slot${n !== 1 ? 's' : ''} ${ACTION_PAST[action]}${sk > 0 ? `, ${sk} skipped` : ''}`)
+      setBulkSel(new Set()); setLastSel(null); fetchData()
+    } catch (err) { showToast(err.response?.data?.detail || 'Action failed') }
+    setBulking(false)
   }
 
   const openAttendance = bk => {
@@ -250,62 +281,82 @@ export default function TeacherDashboard() {
               ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
               : sortedSlots.length === 0
               ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
-              : sortedSlots.map(slot => {
+              : sortedSlots.map((slot, idx) => {
                   const bk = slot.bookings?.[0] ?? null
                   const isBooked = slot.booked_count > 0
                   const isBlocked = slot.is_blocked
-                  const isSel = selectedSlot?.id === slot.id
+                  const isBulkSel = bulkSel.has(slot.id)
                   return (
                     <div
                       key={slot.id}
-                      onClick={() => setSelectedSlot(isSel ? null : slot)}
+                      onClick={(e) => {
+                        if (dragMoved.current) { dragMoved.current = false; return }
+                        if (e.shiftKey && lastSel !== null) {
+                          const lo = Math.min(lastSel, idx); const hi = Math.max(lastSel, idx)
+                          setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
+                        } else {
+                          setBulkSel(prev => { const n = new Set(prev); n.has(slot.id) ? n.delete(slot.id) : n.add(slot.id); return n })
+                          setLastSel(idx)
+                        }
+                      }}
+                      onMouseDown={(e) => { if (e.button !== 0) return; mouseDownActive.current = true; dragAnchor.current = idx; dragMoved.current = false }}
+                      onMouseEnter={() => {
+                        if (!mouseDownActive.current || dragAnchor.current === null || dragAnchor.current === idx) return
+                        dragMoved.current = true
+                        const lo = Math.min(dragAnchor.current, idx); const hi = Math.max(dragAnchor.current, idx)
+                        setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
+                      }}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.4vw,14px)',
+                        display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,12px)',
                         padding: 'clamp(12px,1.6vw,16px) clamp(16px,2.5vw,24px)',
                         borderBottom: '1px solid #F4EDE4',
                         cursor: 'pointer',
-                        background: isBlocked ? '#F5F5F4' : isSel ? '#FFFAF7' : '#fff',
-                        borderLeft: isSel ? '3px solid #1B3F7A' : isBooked ? '3px solid #F4C099' : '3px solid transparent',
-                        transition: 'background .12s',
+                        background: isBulkSel ? '#EFF6FF' : isBlocked ? '#F5F5F4' : '#fff',
+                        borderLeft: isBulkSel ? '3px solid #1B3F7A' : isBooked ? '3px solid #F4C099' : '3px solid transparent',
+                        transition: 'background .1s',
+                        userSelect: 'none',
                       }}
                     >
-                      <div style={{ width: 'clamp(64px,9vw,86px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${isBulkSel ? '#1B3F7A' : '#D1D5DB'}`, background: isBulkSel ? '#1B3F7A' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 900 }}>{isBulkSel ? '✓' : ''}</div>
+                      <div style={{ width: 'clamp(60px,8.5vw,80px)', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isBlocked ? (
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 600 }}>Blocked — unavailable</div>
                         ) : isBooked ? (
                           <>
-                            <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
-                            {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
+                            <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
+                            {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
                           </>
                         ) : (
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 500 }}>Free</div>
                         )}
                       </div>
+                      {isBooked && bk && (
+                        <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
+                          style={{ fontSize: 'clamp(10px,1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C' }}>Cancel mtg</button>
+                      )}
                       {!isBooked && (
                         <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
                           style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
                       )}
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(8px,1.2vw,12px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>
                     </div>
                   )
                 })
             }
             </div>
 
-            {/* Drawer */}
-            <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '14px 20px', flexShrink: 0 }}>
-              {selectedSlot ? (
-                <>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>
-                    {fmt(selectedSlot.start_time)}{selectedSlot.bookings?.length > 0 ? ` — ${selectedSlot.bookings[0].student_name || selectedSlot.bookings[0].parent_name}${selectedSlot.bookings[0].section ? ' · ' + selectedSlot.bookings[0].section : ''}` : ''}
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {selectedSlot.bookings?.length > 0 && <button onClick={() => { handleCancelBooking(selectedSlot.bookings[0].booking_id); setSelectedSlot(null) }} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#1B3F7A', fontFamily: 'inherit' }}>Cancel booking</button>}
-                    <button onClick={() => setSelectedSlot(null)} style={{ fontSize: 14, padding: '9px 20px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Dismiss</button>
-                  </div>
-                </>
-              ) : <div style={{ fontSize: 14, color: '#C4B5A5', fontWeight: 500, textAlign: 'center' }}>Tap any slot to manage it</div>}
+            {/* Bulk action bar */}
+            <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '12px 20px', flexShrink: 0, minHeight: 52, display: 'flex', alignItems: 'center' }}>
+              {bulkSel.size > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1B3F7A', marginRight: 2 }}>{bulkSel.size} selected</span>
+                  {[['block','Block'],['unblock','Unblock'],['cancel','Cancel slots']].map(([action, label]) => (
+                    <button key={action} disabled={bulking} onClick={() => handleBulkAction(action)} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 50, cursor: bulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: bulking ? .6 : 1 }}>{label}</button>
+                  ))}
+                  <button onClick={() => { setBulkSel(new Set()); setLastSel(null) }} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit', marginLeft: 'auto' }}>Clear</button>
+                </div>
+              ) : <div style={{ fontSize: 13, color: '#C4B5A5', fontWeight: 500, textAlign: 'center', width: '100%' }}>Tap a slot to select · shift-click or drag for range</div>}
             </div>
 
             {/* Bottom bar */}
@@ -370,6 +421,20 @@ export default function TeacherDashboard() {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
               <button onClick={() => { handleCancelBooking(cancelModal.booking_id); setCancelModal(null) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK CANCEL CONFIRM */}
+      {bulkCancelConfirm > 0 && (
+        <div onClick={() => setBulkCancelConfirm(0)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+            <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Cancel {bulkSel.size} slot{bulkSel.size !== 1 ? 's' : ''}?</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>This will cancel {bulkCancelConfirm} parent meeting{bulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+              <button onClick={() => handleBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Cancel slots</button>
             </div>
           </div>
         </div>

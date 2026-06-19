@@ -121,6 +121,92 @@ async def get_all_slots(
     return [dict(r._mapping) for r in rows]
 
 
+class BatchSlotAction(BaseModel):
+    slot_ids: list[str]
+    action: str  # "block" | "unblock" | "cancel"
+
+
+@router.post("/batch-action")
+async def batch_slot_action(
+    body: BatchSlotAction,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    role = current_user["role"]
+    if role not in ("teacher", "admin"):
+        raise HTTPException(status_code=403, detail="Only teachers or admins can perform batch slot actions")
+    if body.action not in ("block", "unblock", "cancel"):
+        raise HTTPException(status_code=400, detail="action must be block, unblock, or cancel")
+
+    done: list[str] = []
+    skipped: list[dict] = []
+
+    for i, slot_id in enumerate(body.slot_ids):
+        try:
+            await db.execute(text(f"SAVEPOINT bsa_{i}"))
+
+            res = await db.execute(
+                text("SELECT id, teacher_id, school_id FROM slots WHERE id = :sid FOR UPDATE"),
+                {"sid": slot_id}
+            )
+            slot = res.fetchone()
+            if not slot:
+                await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                skipped.append({"slot_id": slot_id, "reason": "not_found"})
+                continue
+
+            if role == "teacher" and str(slot.teacher_id) != current_user["sub"]:
+                await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                skipped.append({"slot_id": slot_id, "reason": "forbidden"})
+                continue
+            if role == "admin" and str(slot.school_id) != current_user["school_id"]:
+                await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                skipped.append({"slot_id": slot_id, "reason": "forbidden"})
+                continue
+
+            if body.action == "block":
+                res = await db.execute(
+                    text("SELECT status FROM bookings WHERE slot_id = :sid AND status != 'cancelled'"),
+                    {"sid": slot_id}
+                )
+                statuses = [r.status for r in res.fetchall()]
+                if "blocked" in statuses:
+                    await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                    skipped.append({"slot_id": slot_id, "reason": "already_blocked"})
+                    continue
+                if "confirmed" in statuses:
+                    await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                    skipped.append({"slot_id": slot_id, "reason": "booked"})
+                    continue
+                await db.execute(
+                    text("INSERT INTO bookings (id, slot_id, parent_id, status) VALUES (:id, :sid, NULL, 'blocked')"),
+                    {"id": str(uuid.uuid4()), "sid": slot_id}
+                )
+
+            elif body.action == "unblock":
+                res = await db.execute(
+                    text("DELETE FROM bookings WHERE slot_id = :sid AND status = 'blocked' RETURNING id"),
+                    {"sid": slot_id}
+                )
+                if not res.fetchall():
+                    await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+                    skipped.append({"slot_id": slot_id, "reason": "not_blocked"})
+                    continue
+
+            elif body.action == "cancel":
+                await db.execute(text("DELETE FROM slots WHERE id = :sid"), {"sid": slot_id})
+
+            await db.execute(text(f"RELEASE SAVEPOINT bsa_{i}"))
+            done.append(slot_id)
+
+        except Exception:
+            await db.execute(text(f"ROLLBACK TO SAVEPOINT bsa_{i}"))
+            skipped.append({"slot_id": slot_id, "reason": "error"})
+
+    await db.commit()
+    return {"done": done, "skipped": skipped}
+
+
 async def _load_slot_for_block(db: AsyncSession, slot_id: str, current_user: dict):
     """Fetch a slot and authorise the caller (owning teacher or same-school admin)."""
     result = await db.execute(

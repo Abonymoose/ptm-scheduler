@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
-import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot } from '../api/admin'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -32,6 +32,13 @@ export default function AdminDashboard() {
   const [loadingMSlots, setLoadingMSlots] = useState(false)
   const [savingTeacher, setSavingTeacher] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(null)
+  const [mBulkSel, setMBulkSel] = useState(new Set())
+  const [mLastSel, setMLastSel] = useState(null)
+  const [mBulkCancelConfirm, setMBulkCancelConfirm] = useState(0)
+  const [mBulking, setMBulking] = useState(false)
+  const mMouseDown = useRef(false)
+  const mDragAnchor = useRef(null)
+  const mDragMoved = useRef(false)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -41,6 +48,11 @@ export default function AdminDashboard() {
       s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
       document.head.appendChild(s)
     }
+  }, [])
+  useEffect(() => {
+    const onUp = () => { mMouseDown.current = false }
+    window.addEventListener('mouseup', onUp)
+    return () => window.removeEventListener('mouseup', onUp)
   }, [])
 
   const fetchData = async () => {
@@ -95,6 +107,7 @@ export default function AdminDashboard() {
     setManageTeacher(t)
     setManageForm({ name: t.name || '', email: t.email || '', subject: t.sub || '' })
     setConfirmCancel(null)
+    setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0)
     setLoadingMSlots(true)
     try { setManageSlots(await getTeacherSlots(t.id)) } catch { showToast('Failed to load slots') }
     setLoadingMSlots(false)
@@ -119,6 +132,26 @@ export default function AdminDashboard() {
   const toggleBlock = async (slot) => {
     try { await (slot.state === 'blocked' ? unblockSlot(slot.id) : blockSlot(slot.id)); await reloadManageSlots(); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed') }
+  }
+
+  const ADMIN_ACTION_PAST = { block: 'blocked', unblock: 'unblocked', cancel: 'cancelled' }
+  const handleManageBulkAction = async (action) => {
+    const ids = [...mBulkSel]
+    if (ids.length === 0 || mBulking) return
+    if (action === 'cancel') {
+      const bookedCount = ids.filter(id => manageSlots.find(s => s.id === id)?.state === 'booked').length
+      if (bookedCount > 0 && !mBulkCancelConfirm) { setMBulkCancelConfirm(bookedCount); return }
+    }
+    setMBulkCancelConfirm(0)
+    setMBulking(true)
+    try {
+      const result = await batchSlotAction(ids, action)
+      const n = result.done.length; const sk = result.skipped.length
+      showToast(`${n} slot${n !== 1 ? 's' : ''} ${ADMIN_ACTION_PAST[action]}${sk > 0 ? `, ${sk} skipped` : ''}`)
+      setMBulkSel(new Set()); setMLastSel(null)
+      await reloadManageSlots(); await fetchData()
+    } catch (err) { showToast(err.response?.data?.detail || 'Action failed') }
+    setMBulking(false)
   }
 
   return (
@@ -332,26 +365,62 @@ export default function AdminDashboard() {
 
               {/* Slot list */}
               <div>
-                <div style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>Slots</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                    Slots{mBulkSel.size > 0 ? ` · ${mBulkSel.size} selected` : ''}
+                  </div>
+                  {mBulkSel.size > 0 && (
+                    <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {[['block','Block'],['unblock','Unblock'],['cancel','Cancel']].map(([action, label]) => (
+                        <button key={action} disabled={mBulking} onClick={() => handleManageBulkAction(action)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 50, cursor: mBulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: mBulking ? .6 : 1 }}>{label}</button>
+                      ))}
+                      <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>✕</button>
+                    </div>
+                  )}
+                </div>
                 {loadingMSlots ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
                 : manageSlots.length === 0 ? <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>No slots</div>
-                : manageSlots.map(s => (
-                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 'clamp(8px,1.1vw,11px) 0', borderBottom: '1px solid #F4EDE4' }}>
-                    <div style={{ width: 'clamp(58px,8vw,74px)', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
-                    <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
+                : manageSlots.map((s, idx) => {
+                  const isMSel = mBulkSel.has(s.id)
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={(e) => {
+                        if (mDragMoved.current) { mDragMoved.current = false; return }
+                        if (e.shiftKey && mLastSel !== null) {
+                          const lo = Math.min(mLastSel, idx); const hi = Math.max(mLastSel, idx)
+                          setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
+                        } else {
+                          setMBulkSel(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })
+                          setMLastSel(idx)
+                        }
+                      }}
+                      onMouseDown={(e) => { if (e.button !== 0) return; mMouseDown.current = true; mDragAnchor.current = idx; mDragMoved.current = false }}
+                      onMouseEnter={() => {
+                        if (!mMouseDown.current || mDragAnchor.current === null || mDragAnchor.current === idx) return
+                        mDragMoved.current = true
+                        const lo = Math.min(mDragAnchor.current, idx); const hi = Math.max(mDragAnchor.current, idx)
+                        setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 7, padding: 'clamp(7px,1vw,10px) 0', borderBottom: '1px solid #F4EDE4', cursor: 'pointer', background: isMSel ? '#EFF6FF' : '#fff', borderLeft: isMSel ? '3px solid #1B3F7A' : '3px solid transparent', paddingLeft: isMSel ? 4 : 7, userSelect: 'none', transition: 'background .1s' }}
+                    >
+                      <div style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0, border: `2px solid ${isMSel ? '#1B3F7A' : '#D1D5DB'}`, background: isMSel ? '#1B3F7A' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8, fontWeight: 900 }}>{isMSel ? '✓' : ''}</div>
+                      <div style={{ width: 'clamp(56px,7.5vw,72px)', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
+                      </div>
+                      {s.state !== 'booked' && (
+                        <button onClick={e => { e.stopPropagation(); toggleBlock(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${s.state === 'blocked' ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: s.state === 'blocked' ? '#6B7280' : '#C45A0A', flexShrink: 0 }}>{s.state === 'blocked' ? 'Unblock' : 'Block'}</button>
+                      )}
+                      <button onClick={e => { e.stopPropagation(); onCancelSlotClick(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
                     </div>
-                    {s.state !== 'booked' && (
-                      <button onClick={() => toggleBlock(s)} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${s.state === 'blocked' ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: s.state === 'blocked' ? '#6B7280' : '#C45A0A', flexShrink: 0 }}>{s.state === 'blocked' ? 'Unblock' : 'Block'}</button>
-                    )}
-                    <button onClick={() => onCancelSlotClick(s)} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
 
-          {/* Booked-slot cancel confirm */}
+          {/* Booked-slot cancel confirm (single) */}
           {confirmCancel && (
             <div onClick={e => { e.stopPropagation(); setConfirmCancel(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
@@ -360,6 +429,20 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button onClick={() => setConfirmCancel(null)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
                   <button onClick={() => doCancelSlot(confirmCancel)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Continue</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bulk cancel confirm */}
+          {mBulkCancelConfirm > 0 && (
+            <div onClick={e => { e.stopPropagation(); setMBulkCancelConfirm(0) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
+                <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel {mBulkSel.size} slot{mBulkSel.size !== 1 ? 's' : ''}?</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {mBulkCancelConfirm} parent meeting{mBulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={() => setMBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+                  <button onClick={() => handleManageBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Cancel slots</button>
                 </div>
               </div>
             </div>

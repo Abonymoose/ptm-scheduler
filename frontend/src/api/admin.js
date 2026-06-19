@@ -27,3 +27,8 @@ export const unblockSlot = async (slotId) => {
   const res = await axios.post(`${BASE_URL}/slots/${slotId}/unblock`, {}, authHeader())
   return res.data
 }
+
+export const batchSlotAction = async (slotIds, action) => {
+  const res = await axios.post(`${BASE_URL}/slots/batch-action`, { slot_ids: slotIds, action }, authHeader())
+  return res.data
+}
