@@ -20,6 +20,43 @@ def _require_admin(current_user: dict):
         raise HTTPException(status_code=403, detail="Admins only")
 
 
+@router.get("/unbooked-parents")
+async def get_unbooked_parents(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Parents in this school with ZERO confirmed bookings — so the school can
+    follow up. Cancelled/blocked bookings don't count as booked."""
+    _require_admin(current_user)
+
+    result = await db.execute(
+        text(
+            "SELECT u.id, u.name, u.email, u.parent_name, u.section, u.grade"
+            " FROM users u"
+            " WHERE u.role = 'parent' AND u.school_id = :sid"
+            " AND NOT EXISTS ("
+            "   SELECT 1 FROM bookings b"
+            "   WHERE b.parent_id = u.id AND b.status = 'confirmed'"
+            " )"
+            " ORDER BY u.name"
+        ),
+        {"sid": current_user["school_id"]}
+    )
+    rows = result.fetchall()
+    parents = [
+        {
+            "id": str(r.id),
+            "parent_name": r.parent_name or r.name,
+            "student_name": r.name,
+            "email": r.email,
+            "section": r.section,
+            "grade": r.grade,
+        }
+        for r in rows
+    ]
+    return {"count": len(parents), "parents": parents}
+
+
 @router.get("/teachers/{teacher_id}/slots")
 async def get_teacher_slots(
     teacher_id: str,

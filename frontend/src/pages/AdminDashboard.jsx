@@ -9,6 +9,7 @@ const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://loca
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
 const getAllBookings = () => api.get('/bookings/all').then(r => r.data)
 const getAllSlots = () => api.get('/slots/all').then(r => r.data)
+const getUnbookedParents = () => api.get('/admin/unbooked-parents').then(r => r.data)
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -38,6 +39,7 @@ export default function AdminDashboard() {
   const [mBulking, setMBulking] = useState(false)
   const [mSelectMode, setMSelectMode] = useState(false)
   const [teacherSearch, setTeacherSearch] = useState('')
+  const [unbooked, setUnbooked] = useState({ count: 0, parents: [] })
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
@@ -59,7 +61,10 @@ export default function AdminDashboard() {
   }, [])
 
   const fetchData = async () => {
-    try { const [b, s] = await Promise.all([getAllBookings(), getAllSlots()]); setBookings(b); setSlots(s) }
+    try {
+      const [b, s, u] = await Promise.all([getAllBookings(), getAllSlots(), getUnbookedParents()])
+      setBookings(b); setSlots(s); setUnbooked(u)
+    }
     catch { showToast('Failed to load data') }
     setLoading(false)
   }
@@ -193,7 +198,7 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings'],['t','Terminal']].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['t','Terminal']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
@@ -323,6 +328,36 @@ export default function AdminDashboard() {
                   </div>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {/* HASN'T BOOKED YET */}
+        {tab === 'u' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
+              <span style={{ fontSize: 'clamp(11px,1.4vw,15px)', color: '#C45A0A', fontWeight: 700 }}>
+                {unbooked.count} parent{unbooked.count !== 1 ? 's' : ''} haven't booked
+              </span>
+            </div>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
+              {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              : unbooked.count === 0 ? (
+                <div style={{ textAlign: 'center', color: '#16A34A', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 600, marginTop: 'clamp(32px,6vw,60px)' }}>
+                  All parents have booked 🎉
+                </div>
+              ) : unbooked.parents.map(p => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,12px)', padding: 'clamp(7px,1vw,11px) clamp(8px,1.2vw,14px)', borderRadius: 'clamp(5px,.8vw,8px)', border: '1px solid #FDE9D4', marginBottom: 3, background: '#FFF8F3' }}>
+                  <div style={{ width: 'clamp(26px,3.2vw,38px)', height: 'clamp(26px,3.2vw,38px)', borderRadius: '50%', background: '#FFF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(9px,1.1vw,13px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>{getInit(p.parent_name || p.student_name || '?')}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {p.parent_name}{p.student_name && p.student_name !== p.parent_name ? ` · ${p.student_name}` : ''}{p.section ? ` (${p.section})` : ''}
+                    </div>
+                    <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
+                  </div>
+                  <span style={{ fontSize: 'clamp(8px,1vw,11px)', padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: '#FEF2F2', color: '#B91C1C', fontWeight: 600, flexShrink: 0 }}>No booking</span>
+                </div>
+              ))}
             </div>
           </div>
         )}

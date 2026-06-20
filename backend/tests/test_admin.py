@@ -82,3 +82,41 @@ def test_delete_slot_non_admin_forbidden(client, seed):
     d = seed["slots"]["D"]
     r = client.delete(f"/admin/slots/{d}", headers=auth(seed["tokens"]["t1"]))
     assert r.status_code == 403
+
+
+# --- /admin/unbooked-parents -------------------------------------------------
+def test_unbooked_parents_lists_parents_with_no_bookings(client, seed):
+    r = client.get("/admin/unbooked-parents", headers=auth(seed["tokens"]["admin"]))
+    assert r.status_code == 200
+    body = r.json()
+    emails = [p["email"] for p in body["parents"]]
+    assert seed["emails"]["parent"] in emails
+    assert seed["emails"]["parent2"] in emails
+    assert body["count"] == len(body["parents"]) == 2
+    for k in ("id", "parent_name", "student_name", "email", "section"):
+        assert k in body["parents"][0]
+
+
+def test_unbooked_parents_excludes_booked(client, seed):
+    a = seed["slots"]["A"]
+    client.post("/bookings/", json={"slot_id": a}, headers=auth(seed["tokens"]["parent"]))
+    body = client.get("/admin/unbooked-parents", headers=auth(seed["tokens"]["admin"])).json()
+    emails = [p["email"] for p in body["parents"]]
+    assert seed["emails"]["parent"] not in emails       # has a confirmed booking
+    assert seed["emails"]["parent2"] in emails          # still un-booked
+    assert body["count"] == 1
+
+
+def test_unbooked_parents_cancelled_still_counts_as_unbooked(client, seed):
+    a = seed["slots"]["A"]
+    bid = client.post("/bookings/", json={"slot_id": a}, headers=auth(seed["tokens"]["parent"])).json()["booking_id"]
+    client.delete(f"/bookings/{bid}", headers=auth(seed["tokens"]["parent"]))  # cancel → un-booked again
+    body = client.get("/admin/unbooked-parents", headers=auth(seed["tokens"]["admin"])).json()
+    emails = [p["email"] for p in body["parents"]]
+    assert seed["emails"]["parent"] in emails
+    assert body["count"] == 2
+
+
+def test_unbooked_parents_non_admin_forbidden(client, seed):
+    r = client.get("/admin/unbooked-parents", headers=auth(seed["tokens"]["t1"]))
+    assert r.status_code == 403
