@@ -25,7 +25,32 @@
       "Bash(git push *)",
       "PowerShell(head *)",
       "PowerShell(Get-Command *)",
-      "PowerShell(pip install *)"
+      "PowerShell(pip install *)",
+      "Bash(Select-String \"ahead|behind\")",
+      "Bash(ls -d venv* env* .venv)",
+      "Bash(python -c \"import asyncpg, bcrypt, dotenv; print\\('deps OK'\\)\")",
+      "Bash(python create_students.py)",
+      "Bash(python -c ' *)",
+      "Bash(python -m py_compile routers/bookings.py)",
+      "PowerShell(py -0p 2>&1; Write-Output \"--- check each for sqlalchemy ---\"; foreach \\($v in @\\('-3.13','-3.12','-3.11','-3.10'\\)\\) { try { $r = & py $v -c \"import sqlalchemy; print\\('has sqlalchemy'\\)\" 2>$null; if \\($r\\) { Write-Output \"$v : $r\" } } catch {} })",
+      "PowerShell(cd \"C:\\\\Users\\\\Parshv Mehta\\\\ptm-scheduler\\\\backend\"; if \\(Test-Path .env\\) { \\(Get-Content .env | ForEach-Object { \\($_ -split '='\\)[0] }\\) -join ', ' } else { 'NO .env FILE' })",
+      "PowerShell(cd \"C:\\\\Users\\\\Parshv Mehta\\\\ptm-scheduler\\\\backend\"; python -m pip install --quiet sqlalchemy asyncpg python-dotenv \"passlib[bcrypt]\" python-jose 2>&1 | Select-Object -Last 5; Write-Output \"EXIT:$LASTEXITCODE\")",
+      "Bash(python -m uvicorn main:app --reload --port 8000)",
+      "Bash(timeout 5)",
+      "Bash(curl -s -X POST http://localhost:8000/slots/batch-action -H \"Content-Type: application/json\" -d \"{\\\\\"slot_ids\\\\\":[], \\\\\"action\\\\\":\\\\\"block\\\\\"}\")",
+      "Bash(where python *)",
+      "Bash(pip3 show *)",
+      "Bash(where pip3 *)",
+      "Bash(where uvicorn *)",
+      "Bash(dir \"C:\\\\Users\\\\Parshv Mehta\\\\ptm-scheduler\\\\backend\\\\venv\\\\Scripts\\\\python.exe\")",
+      "Bash(\"C:\\\\Users\\\\Parshv Mehta\\\\ptm-scheduler\\\\backend\\\\venv\\\\Scripts\\\\python.exe\" -c \"import uvicorn; print\\('ok'\\)\")",
+      "PowerShell(py -3.12 -c \"import uvicorn; print\\('ok'\\)\" 2>&1)",
+      "PowerShell(py --list 2>&1)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:8000/slots/batch-action -H \"Content-Type: application/json\" -d '{\"slot_ids\":[], \"action\":\"block\"}')",
+      "Bash(cat .gitignore)",
+      "Bash(cat backend/requirements.txt)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
