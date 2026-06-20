@@ -53,9 +53,11 @@ export default function TeacherDashboard() {
   const [lastSel, setLastSel] = useState(null)
   const [bulkCancelConfirm, setBulkCancelConfirm] = useState(0)
   const [bulking, setBulking] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
   const mouseDownActive = useRef(false)
   const dragAnchor = useRef(null)
   const dragMoved = useRef(false)
+  const longPressTimer = useRef(null)
 
   useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue) }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
@@ -110,7 +112,7 @@ export default function TeacherDashboard() {
       const result = await batchSlotAction(ids, action)
       const n = result.done.length; const sk = result.skipped.length
       showToast(`${n} slot${n !== 1 ? 's' : ''} ${ACTION_PAST[action]}${sk > 0 ? `, ${sk} skipped` : ''}`)
-      setBulkSel(new Set()); setLastSel(null); fetchData()
+      setBulkSel(new Set()); setLastSel(null); setSelectMode(false); fetchData()
     } catch (err) { showToast(err.response?.data?.detail || 'Action failed') }
     setBulking(false)
   }
@@ -286,26 +288,43 @@ export default function TeacherDashboard() {
                   const isBooked = slot.booked_count > 0
                   const isBlocked = slot.is_blocked
                   const isBulkSel = bulkSel.has(slot.id)
+                  const inSelect = selectMode || bulkSel.size > 0
                   return (
                     <div
                       key={slot.id}
                       onClick={(e) => {
                         if (dragMoved.current) { dragMoved.current = false; return }
+                        if (inSelect) {
+                          if (e.shiftKey && lastSel !== null) {
+                            const lo = Math.min(lastSel, idx); const hi = Math.max(lastSel, idx)
+                            setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
+                          } else {
+                            setBulkSel(prev => { const n = new Set(prev); n.has(slot.id) ? n.delete(slot.id) : n.add(slot.id); return n })
+                            setLastSel(idx)
+                          }
+                          return
+                        }
                         if (e.shiftKey && lastSel !== null) {
                           const lo = Math.min(lastSel, idx); const hi = Math.max(lastSel, idx)
                           setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
+                          setSelectMode(true)
                         } else {
-                          setBulkSel(prev => { const n = new Set(prev); n.has(slot.id) ? n.delete(slot.id) : n.add(slot.id); return n })
+                          setBulkSel(new Set([slot.id]))
                           setLastSel(idx)
+                          setSelectMode(true)
                         }
                       }}
                       onMouseDown={(e) => { if (e.button !== 0) return; mouseDownActive.current = true; dragAnchor.current = idx; dragMoved.current = false }}
                       onMouseEnter={() => {
                         if (!mouseDownActive.current || dragAnchor.current === null || dragAnchor.current === idx) return
                         dragMoved.current = true
+                        if (!selectMode) setSelectMode(true)
                         const lo = Math.min(dragAnchor.current, idx); const hi = Math.max(dragAnchor.current, idx)
                         setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
                       }}
+                      onTouchStart={() => { longPressTimer.current = setTimeout(() => { if (!selectMode) { setSelectMode(true); setBulkSel(new Set([slot.id])); setLastSel(idx) } }, 500) }}
+                      onTouchEnd={() => { clearTimeout(longPressTimer.current) }}
+                      onTouchMove={() => { clearTimeout(longPressTimer.current) }}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,12px)',
                         padding: 'clamp(12px,1.6vw,16px) clamp(16px,2.5vw,24px)',
@@ -317,7 +336,6 @@ export default function TeacherDashboard() {
                         userSelect: 'none',
                       }}
                     >
-                      <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${isBulkSel ? '#1B3F7A' : '#D1D5DB'}`, background: isBulkSel ? '#1B3F7A' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 900 }}>{isBulkSel ? '✓' : ''}</div>
                       <div style={{ width: 'clamp(60px,8.5vw,80px)', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isBlocked ? (
@@ -331,11 +349,11 @@ export default function TeacherDashboard() {
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 500 }}>Free</div>
                         )}
                       </div>
-                      {isBooked && bk && (
+                      {!inSelect && isBooked && bk && (
                         <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
                           style={{ fontSize: 'clamp(10px,1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C' }}>Cancel mtg</button>
                       )}
-                      {!isBooked && (
+                      {!inSelect && !isBooked && (
                         <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
                           style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
                       )}
@@ -347,17 +365,17 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Bulk action bar */}
-            <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '12px 20px', flexShrink: 0, minHeight: 52, display: 'flex', alignItems: 'center' }}>
-              {bulkSel.size > 0 ? (
+            {bulkSel.size > 0 ? (
+              <div style={{ borderTop: '1.5px solid #F4C099', background: '#FFF8F3', padding: '12px 20px', flexShrink: 0, minHeight: 52, display: 'flex', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#1B3F7A', marginRight: 2 }}>{bulkSel.size} selected</span>
                   {[['block','Block'],['unblock','Unblock'],['cancel','Cancel slots']].map(([action, label]) => (
                     <button key={action} disabled={bulking} onClick={() => handleBulkAction(action)} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 50, cursor: bulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: bulking ? .6 : 1 }}>{label}</button>
                   ))}
-                  <button onClick={() => { setBulkSel(new Set()); setLastSel(null) }} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit', marginLeft: 'auto' }}>Clear</button>
+                  <button onClick={() => { setBulkSel(new Set()); setLastSel(null); setSelectMode(false) }} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit', marginLeft: 'auto' }}>Done</button>
                 </div>
-              ) : <div style={{ fontSize: 13, color: '#C4B5A5', fontWeight: 500, textAlign: 'center', width: '100%' }}>Tap a slot to select · shift-click or drag for range</div>}
-            </div>
+              </div>
+            ) : null}
 
             {/* Bottom bar */}
             <div style={{ padding: '12px 20px', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>

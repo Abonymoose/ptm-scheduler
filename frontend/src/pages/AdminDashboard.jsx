@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [termInput, setTermInput] = useState('')
   const terminalRef = useRef(null)
   const [manageTeacher, setManageTeacher] = useState(null)
-  const [manageForm, setManageForm] = useState({ name: '', email: '', subject: '' })
+  const [manageForm, setManageForm] = useState({ name: '', email: '', subject: '', venue: '' })
   const [manageSlots, setManageSlots] = useState([])
   const [loadingMSlots, setLoadingMSlots] = useState(false)
   const [savingTeacher, setSavingTeacher] = useState(false)
@@ -36,9 +36,12 @@ export default function AdminDashboard() {
   const [mLastSel, setMLastSel] = useState(null)
   const [mBulkCancelConfirm, setMBulkCancelConfirm] = useState(0)
   const [mBulking, setMBulking] = useState(false)
+  const [mSelectMode, setMSelectMode] = useState(false)
+  const [teacherSearch, setTeacherSearch] = useState('')
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
+  const mLongPress = useRef(null)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -71,6 +74,11 @@ export default function AdminDashboard() {
     if (s.booked_count > 0) teacherMap[key].booked += s.booked_count
   })
   const teachers = Object.values(teacherMap).sort((a,b) => a.name.localeCompare(b.name))
+  const filteredTeachers = teachers.filter(t => {
+    if (!teacherSearch) return true
+    const q = teacherSearch.toLowerCase()
+    return t.name.toLowerCase().includes(q) || (t.sub && t.sub.toLowerCase().includes(q))
+  })
   const totalBookings = bookings.filter(b => b.status !== 'cancelled').length
   const totalSlots = slots.length
   const avgFill = teachers.length > 0 ? Math.round(teachers.reduce((sum,t) => sum + (t.slots.length > 0 ? t.booked/t.slots.length*100 : 0), 0) / teachers.length) : 0
@@ -105,9 +113,9 @@ export default function AdminDashboard() {
 
   const openManage = async (t) => {
     setManageTeacher(t)
-    setManageForm({ name: t.name || '', email: t.email || '', subject: t.sub || '' })
+    setManageForm({ name: t.name || '', email: t.email || '', subject: t.sub || '', venue: t.venue || '' })
     setConfirmCancel(null)
-    setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0)
+    setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0); setMSelectMode(false)
     setLoadingMSlots(true)
     try { setManageSlots(await getTeacherSlots(t.id)) } catch { showToast('Failed to load slots') }
     setLoadingMSlots(false)
@@ -148,7 +156,7 @@ export default function AdminDashboard() {
       const result = await batchSlotAction(ids, action)
       const n = result.done.length; const sk = result.skipped.length
       showToast(`${n} slot${n !== 1 ? 's' : ''} ${ADMIN_ACTION_PAST[action]}${sk > 0 ? `, ${sk} skipped` : ''}`)
-      setMBulkSel(new Set()); setMLastSel(null)
+      setMBulkSel(new Set()); setMLastSel(null); setMSelectMode(false)
       await reloadManageSlots(); await fetchData()
     } catch (err) { showToast(err.response?.data?.detail || 'Action failed') }
     setMBulking(false)
@@ -194,10 +202,16 @@ export default function AdminDashboard() {
         {tab === 'o' && (
           <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', flex: 1 }}>
-              <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', marginBottom: 'clamp(6px,1vw,10px)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Teachers &amp; fill rate</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(6px,1vw,10px)', gap: 8 }}>
+                <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em' }}>Teachers &amp; fill rate</div>
+                <input
+                  type="text" placeholder="Search name or subject…" value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)}
+                  style={{ padding: 'clamp(5px,.7vw,8px) clamp(10px,1.3vw,14px)', fontSize: 'clamp(11px,1.3vw,14px)', border: '1.5px solid #F4C099', borderRadius: 'clamp(6px,.8vw,10px)', outline: 'none', fontFamily: 'system-ui,sans-serif', color: '#1B3F7A', width: 'clamp(130px,18vw,200px)', boxSizing: 'border-box' }}
+                  onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+              </div>
               {loading ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>Loading…</div>
-              : teachers.length === 0 ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>No teachers yet</div>
-              : teachers.map((t, i) => {
+              : filteredTeachers.length === 0 ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>{teacherSearch ? 'No teachers match.' : 'No teachers yet'}</div>
+              : filteredTeachers.map((t, i) => {
                 const pct = t.slots.length > 0 ? Math.round(t.booked/t.slots.length*100) : 0
                 const isOpen = openTeacher === i
                 return (
@@ -352,7 +366,7 @@ export default function AdminDashboard() {
             <div className="custom-scroll" style={{ overflowY: 'auto', padding: 'clamp(16px,2.2vw,24px)', display: 'flex', flexDirection: 'column', gap: 'clamp(14px,2vw,20px)' }}>
               {/* Editable details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject']].map(([lbl, key]) => (
+                {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject'], ['Venue', 'venue']].map(([lbl, key]) => (
                   <div key={key}>
                     <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>{lbl}</label>
                     <input value={manageForm[key]} onChange={e => setManageForm(f => ({ ...f, [key]: e.target.value }))}
@@ -374,7 +388,7 @@ export default function AdminDashboard() {
                       {[['block','Block'],['unblock','Unblock'],['cancel','Cancel']].map(([action, label]) => (
                         <button key={action} disabled={mBulking} onClick={() => handleManageBulkAction(action)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 50, cursor: mBulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: mBulking ? .6 : 1 }}>{label}</button>
                       ))}
-                      <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>✕</button>
+                      <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null); setMSelectMode(false) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Done</button>
                     </div>
                   )}
                 </div>
@@ -382,37 +396,55 @@ export default function AdminDashboard() {
                 : manageSlots.length === 0 ? <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>No slots</div>
                 : manageSlots.map((s, idx) => {
                   const isMSel = mBulkSel.has(s.id)
+                  const inMSelect = mSelectMode || mBulkSel.size > 0
                   return (
                     <div
                       key={s.id}
                       onClick={(e) => {
                         if (mDragMoved.current) { mDragMoved.current = false; return }
+                        if (inMSelect) {
+                          if (e.shiftKey && mLastSel !== null) {
+                            const lo = Math.min(mLastSel, idx); const hi = Math.max(mLastSel, idx)
+                            setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
+                          } else {
+                            setMBulkSel(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })
+                            setMLastSel(idx)
+                          }
+                          return
+                        }
                         if (e.shiftKey && mLastSel !== null) {
                           const lo = Math.min(mLastSel, idx); const hi = Math.max(mLastSel, idx)
                           setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
+                          setMSelectMode(true)
                         } else {
-                          setMBulkSel(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n })
+                          setMBulkSel(new Set([s.id]))
                           setMLastSel(idx)
+                          setMSelectMode(true)
                         }
                       }}
                       onMouseDown={(e) => { if (e.button !== 0) return; mMouseDown.current = true; mDragAnchor.current = idx; mDragMoved.current = false }}
                       onMouseEnter={() => {
                         if (!mMouseDown.current || mDragAnchor.current === null || mDragAnchor.current === idx) return
                         mDragMoved.current = true
+                        if (!mSelectMode) setMSelectMode(true)
                         const lo = Math.min(mDragAnchor.current, idx); const hi = Math.max(mDragAnchor.current, idx)
                         setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
                       }}
+                      onTouchStart={() => { mLongPress.current = setTimeout(() => { if (!mSelectMode) { setMSelectMode(true); setMBulkSel(new Set([s.id])); setMLastSel(idx) } }, 500) }}
+                      onTouchEnd={() => { clearTimeout(mLongPress.current) }}
+                      onTouchMove={() => { clearTimeout(mLongPress.current) }}
                       style={{ display: 'flex', alignItems: 'center', gap: 7, padding: 'clamp(7px,1vw,10px) 0', borderBottom: '1px solid #F4EDE4', cursor: 'pointer', background: isMSel ? '#EFF6FF' : '#fff', borderLeft: isMSel ? '3px solid #1B3F7A' : '3px solid transparent', paddingLeft: isMSel ? 4 : 7, userSelect: 'none', transition: 'background .1s' }}
                     >
-                      <div style={{ width: 13, height: 13, borderRadius: 3, flexShrink: 0, border: `2px solid ${isMSel ? '#1B3F7A' : '#D1D5DB'}`, background: isMSel ? '#1B3F7A' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8, fontWeight: 900 }}>{isMSel ? '✓' : ''}</div>
                       <div style={{ width: 'clamp(56px,7.5vw,72px)', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
                       </div>
-                      {s.state !== 'booked' && (
+                      {!inMSelect && s.state !== 'booked' && (
                         <button onClick={e => { e.stopPropagation(); toggleBlock(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${s.state === 'blocked' ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: s.state === 'blocked' ? '#6B7280' : '#C45A0A', flexShrink: 0 }}>{s.state === 'blocked' ? 'Unblock' : 'Block'}</button>
                       )}
-                      <button onClick={e => { e.stopPropagation(); onCancelSlotClick(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
+                      {!inMSelect && (
+                        <button onClick={e => { e.stopPropagation(); onCancelSlotClick(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
+                      )}
                     </div>
                   )
                 })}

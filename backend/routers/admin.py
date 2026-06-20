@@ -12,6 +12,7 @@ class TeacherUpdate(BaseModel):
     name: str
     email: str
     subject: str | None = None
+    venue: str | None = None
 
 
 def _require_admin(current_user: dict):
@@ -103,8 +104,8 @@ async def update_teacher(
         raise HTTPException(status_code=400, detail="Email already in use by another user")
 
     await db.execute(
-        text("UPDATE users SET name = :name, email = :email, subject = :subject WHERE id = :tid"),
-        {"name": body.name, "email": body.email, "subject": body.subject, "tid": teacher_id}
+        text("UPDATE users SET name = :name, email = :email, subject = :subject, venue = :venue WHERE id = :tid"),
+        {"name": body.name, "email": body.email, "subject": body.subject, "venue": body.venue, "tid": teacher_id}
     )
     await db.commit()
 
