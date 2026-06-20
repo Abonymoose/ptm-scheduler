@@ -12,7 +12,7 @@ DATABASE_URL = DATABASE_URL.split("?")[0]
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,
     connect_args={"ssl": "require"}
 )
 

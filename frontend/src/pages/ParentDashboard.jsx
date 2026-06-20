@@ -273,7 +273,10 @@ export default function ParentDashboard() {
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.65)', marginTop: 2 }}>Inventure Academy · PTM 09 Apr 2026</div>
             </div>
           </div>
-          <img src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
+            <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            <img src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
+          </div>
         </div>
 
         {/* MAIN TABS */}
