@@ -81,6 +81,44 @@ python seed.py
 
 Requires `INVENT-2026` school to exist in the DB (created separately via a one-time SQL insert).
 
+## Testing
+
+The backend has a pytest suite covering **every API endpoint** — status codes,
+response shapes, auth guards, and failure paths (including the cart batch flow,
+auto-scheduler, and the `/slots/batch-action` bulk endpoint).
+
+### Safety: test branch only
+
+The suite runs **exclusively** against the Neon **test branch**, never
+production. It reads `TEST_DATABASE_URL` from `backend/.env.test`. If that
+variable is missing the suite **hard-fails** with a clear message — it will
+**never** fall back to the production `DATABASE_URL`.
+
+`backend/.env.test` is gitignored and must never be committed. Create it with:
+
+```bash
+# backend/.env.test
+TEST_DATABASE_URL=postgresql://<user>:<pass>@<neon-test-branch-host>/neondb?sslmode=require
+SECRET_KEY=test-secret-key-not-for-production
+```
+
+### Running
+
+```bash
+cd backend
+pip install -r requirements.txt   # includes pytest + httpx
+
+pytest                 # run the whole suite
+pytest -v              # verbose, one line per test
+pytest tests/test_slots.py        # a single module
+pytest -k batch_action            # tests matching a keyword
+```
+
+The DB is **fully reset (TRUNCATE … CASCADE) and re-seeded before every test**,
+so tests are independent of each other and of run order. The seed creates one
+school, one admin, two teachers (with slots), and two parents. A summary at the
+end prints `N passed / N failed` and lists any failing endpoints.
+
 ## Features
 
 | Feature | Status |
