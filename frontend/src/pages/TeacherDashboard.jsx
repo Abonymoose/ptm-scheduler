@@ -37,7 +37,6 @@ export default function TeacherDashboard() {
   const [attModal, setAttModal] = useState(null)
   const [attSel, setAttSel] = useState([])
   const [savingAtt, setSavingAtt] = useState(false)
-  const [selectedSlot, setSelectedSlot] = useState(null)
   const [venueModal, setVenueModal] = useState(false)
   const [venueText, setVenueText] = useState('Room TBD')
   const [venueInput, setVenueInput] = useState('')
@@ -58,6 +57,7 @@ export default function TeacherDashboard() {
   const dragAnchor = useRef(null)
   const dragMoved = useRef(false)
   const longPressTimer = useRef(null)
+  const longPressFired = useRef(false)
 
   useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue) }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
@@ -294,6 +294,8 @@ export default function TeacherDashboard() {
                       key={slot.id}
                       onClick={(e) => {
                         if (dragMoved.current) { dragMoved.current = false; return }
+                        // A long-press already selected this slot; swallow the click that follows it.
+                        if (longPressFired.current) { longPressFired.current = false; return }
                         if (inSelect) {
                           if (e.shiftKey && lastSel !== null) {
                             const lo = Math.min(lastSel, idx); const hi = Math.max(lastSel, idx)
@@ -322,7 +324,7 @@ export default function TeacherDashboard() {
                         const lo = Math.min(dragAnchor.current, idx); const hi = Math.max(dragAnchor.current, idx)
                         setBulkSel(prev => { const n = new Set(prev); sortedSlots.slice(lo, hi + 1).forEach(s => n.add(s.id)); return n })
                       }}
-                      onTouchStart={() => { longPressTimer.current = setTimeout(() => { if (!selectMode) { setSelectMode(true); setBulkSel(new Set([slot.id])); setLastSel(idx) } }, 500) }}
+                      onTouchStart={() => { longPressTimer.current = setTimeout(() => { if (!selectMode) { longPressFired.current = true; setSelectMode(true); setBulkSel(new Set([slot.id])); setLastSel(idx) } }, 500) }}
                       onTouchEnd={() => { clearTimeout(longPressTimer.current) }}
                       onTouchMove={() => { clearTimeout(longPressTimer.current) }}
                       style={{

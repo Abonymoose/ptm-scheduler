@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
   const mLongPress = useRef(null)
+  const mLongPressFired = useRef(false)
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => {
@@ -437,6 +438,8 @@ export default function AdminDashboard() {
                       key={s.id}
                       onClick={(e) => {
                         if (mDragMoved.current) { mDragMoved.current = false; return }
+                        // A long-press already selected this slot; swallow the click that follows it.
+                        if (mLongPressFired.current) { mLongPressFired.current = false; return }
                         if (inMSelect) {
                           if (e.shiftKey && mLastSel !== null) {
                             const lo = Math.min(mLastSel, idx); const hi = Math.max(mLastSel, idx)
@@ -465,7 +468,7 @@ export default function AdminDashboard() {
                         const lo = Math.min(mDragAnchor.current, idx); const hi = Math.max(mDragAnchor.current, idx)
                         setMBulkSel(prev => { const n = new Set(prev); manageSlots.slice(lo, hi + 1).forEach(sl => n.add(sl.id)); return n })
                       }}
-                      onTouchStart={() => { mLongPress.current = setTimeout(() => { if (!mSelectMode) { setMSelectMode(true); setMBulkSel(new Set([s.id])); setMLastSel(idx) } }, 500) }}
+                      onTouchStart={() => { mLongPress.current = setTimeout(() => { if (!mSelectMode) { mLongPressFired.current = true; setMSelectMode(true); setMBulkSel(new Set([s.id])); setMLastSel(idx) } }, 500) }}
                       onTouchEnd={() => { clearTimeout(mLongPress.current) }}
                       onTouchMove={() => { clearTimeout(mLongPress.current) }}
                       style={{ display: 'flex', alignItems: 'center', gap: 7, padding: 'clamp(7px,1vw,10px) 0', borderBottom: '1px solid #F4EDE4', cursor: 'pointer', background: isMSel ? '#EFF6FF' : '#fff', borderLeft: isMSel ? '3px solid #1B3F7A' : '3px solid transparent', paddingLeft: isMSel ? 4 : 7, userSelect: 'none', transition: 'background .1s' }}
