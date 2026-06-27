@@ -16,8 +16,10 @@ class SignupRequest(BaseModel):
     name: str
     email: str
     password: str
-    role: str  # parent, teacher, admin
     invite_code: str
+    # NOTE: role is intentionally NOT accepted here. Public self-signup can only
+    # ever create a 'parent' (forced server-side). Teacher/admin accounts are
+    # created via seed/admin flows only. Any `role` sent in the body is ignored.
 
 class LoginRequest(BaseModel):
     email: str
@@ -56,7 +58,8 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     if result.fetchone():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Create user
+    # Self-signup always creates a parent. Never trust a client-supplied role.
+    role = "parent"
     user_id = str(uuid.uuid4())
     await db.execute(
         text("""
@@ -69,12 +72,12 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
             "name": body.name,
             "email": body.email,
             "pwd": hash_password(body.password),
-            "role": body.role
+            "role": role
         }
     )
     await db.commit()
 
-    token = create_access_token({"sub": user_id, "role": body.role, "school_id": str(school.id), "name": body.name})
+    token = create_access_token({"sub": user_id, "role": role, "school_id": str(school.id), "name": body.name})
     return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login")

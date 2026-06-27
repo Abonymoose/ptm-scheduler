@@ -126,6 +126,42 @@ def test_signup_duplicate_email(client, seed):
     assert r.status_code == 400
 
 
+def _role_of(email):
+    """Look up the persisted role for an email straight from the DB."""
+    async def _q():
+        async with seed_engine.connect() as c:
+            return (await c.execute(
+                text("SELECT role FROM users WHERE email = :e"), {"e": email}
+            )).scalar()
+    return asyncio.run(_q())
+
+
+# --- signup role-escalation guard (regression) -------------------------------
+def test_signup_ignores_admin_role_in_body(client, seed):
+    r = client.post("/auth/signup", json={
+        "name": "Sneaky", "email": "sneaky-admin@test.edu", "password": "pw",
+        "role": "admin", "invite_code": seed["invite_code"]})
+    assert r.status_code == 200
+    assert _role_of("sneaky-admin@test.edu") == "parent"   # NOT admin
+
+
+def test_signup_ignores_teacher_role_in_body(client, seed):
+    r = client.post("/auth/signup", json={
+        "name": "Sneaky T", "email": "sneaky-teacher@test.edu", "password": "pw",
+        "role": "teacher", "invite_code": seed["invite_code"]})
+    assert r.status_code == 200
+    assert _role_of("sneaky-teacher@test.edu") == "parent"  # NOT teacher
+
+
+def test_signup_without_role_creates_parent(client, seed):
+    r = client.post("/auth/signup", json={
+        "name": "Plain Parent", "email": "plain-parent@test.edu", "password": "pw",
+        "invite_code": seed["invite_code"]})
+    assert r.status_code == 200
+    assert "access_token" in r.json()
+    assert _role_of("plain-parent@test.edu") == "parent"
+
+
 # --- /auth/me + /auth/venue --------------------------------------------------
 def test_me(client, seed):
     r = client.get("/auth/me", headers=auth(seed["tokens"]["t1"]))
