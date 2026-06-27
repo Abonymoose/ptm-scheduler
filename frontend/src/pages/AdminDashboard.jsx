@@ -421,7 +421,7 @@ export default function AdminDashboard() {
                   </div>
                   {mBulkSel.size > 0 && (
                     <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {[['block','Block'],['unblock','Unblock'],['cancel','Cancel']].map(([action, label]) => (
+                      {[['block','Block'],['unblock','Unblock'],['cancel','Remove']].map(([action, label]) => (
                         <button key={action} disabled={mBulking} onClick={() => handleManageBulkAction(action)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 50, cursor: mBulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: mBulking ? .6 : 1 }}>{label}</button>
                       ))}
                       <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null); setMSelectMode(false) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Done</button>
@@ -481,7 +481,7 @@ export default function AdminDashboard() {
                         <button onClick={e => { e.stopPropagation(); toggleBlock(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${s.state === 'blocked' ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: s.state === 'blocked' ? '#6B7280' : '#C45A0A', flexShrink: 0 }}>{s.state === 'blocked' ? 'Unblock' : 'Block'}</button>
                       )}
                       {!inMSelect && (
-                        <button onClick={e => { e.stopPropagation(); onCancelSlotClick(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Cancel slot</button>
+                        <button onClick={e => { e.stopPropagation(); onCancelSlotClick(s) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.2vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', flexShrink: 0 }}>Remove slot</button>
                       )}
                     </div>
                   )
@@ -512,7 +512,7 @@ export default function AdminDashboard() {
                 <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {mBulkCancelConfirm} parent meeting{mBulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button onClick={() => setMBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
-                  <button onClick={() => handleManageBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Cancel slots</button>
+                  <button onClick={() => handleManageBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Remove slots</button>
                 </div>
               </div>
             </div>
