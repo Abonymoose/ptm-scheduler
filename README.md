@@ -133,7 +133,7 @@ end prints `N passed / N failed` and lists any failing endpoints.
 | Admin: overview of all teachers + fill rates | Done |
 | Admin: view all bookings, search by name | Done |
 | Admin: copy school invite code | Done |
-| Auto-scheduler (AI-assisted booking) | Phase 4 |
+| Auto-scheduler (one-tap booking across teachers) | Done |
 | Google Calendar integration | Phase 4 |
 
 ## Project Structure

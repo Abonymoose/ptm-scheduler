@@ -49,7 +49,7 @@ All queries use SQLAlchemy `text()` with named parameters — there are no SQLAl
 **Multi-tenancy**: Every query scopes by `school_id` pulled from the JWT. Never query across schools.
 
 ### Frontend (`frontend/`)
-React 19 + Vite + Tailwind CSS 4. Currently a skeleton (`App.jsx` renders a placeholder). No routing library yet.
+React 19 + Vite + Tailwind CSS 4. Routing via `react-router-dom`: `App.jsx` defines routes for `/login` and role-guarded `/parent`, `/teacher`, `/admin` (see `ProtectedRoute`). Pages live in `src/pages/` (Login, ParentDashboard, TeacherDashboard, AdminDashboard); auth state in `src/context/AuthContext.jsx`.
 
 ## Key Conventions
 

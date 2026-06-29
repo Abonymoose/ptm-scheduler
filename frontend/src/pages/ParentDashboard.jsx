@@ -281,7 +281,7 @@ export default function ParentDashboard() {
 
         {/* MAIN TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
-          {[['grid','Book'],['sched','My schedule'],['past','Past']].map(([key, lbl]) => (
+          {[['grid','Book'],['sched','My schedule']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>
               {lbl}
               {key === 'sched' && activeBookings.length > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F47920', color: '#fff', borderRadius: 20, fontSize: 'clamp(9px,1vw,12px)', fontWeight: 700, padding: '1px clamp(5px,.7vw,8px)', marginLeft: 5, verticalAlign: 'middle', minWidth: 20 }}>{activeBookings.length}</span>}
@@ -483,15 +483,6 @@ export default function ParentDashboard() {
           </div>
         )}
 
-        {/* PAST TAB */}
-        {tab === 'past' && (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>Past meetings</span>
-            </div>
-            <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No past meetings yet</div>
-          </div>
-        )}
       </div>
 
       {/* CANCEL MODAL */}

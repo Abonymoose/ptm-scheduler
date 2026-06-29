@@ -24,9 +24,6 @@ export default function AdminDashboard() {
   const [toast, setToast] = useState('')
   const [openTeacher, setOpenTeacher] = useState(null)
   const [openBooking, setOpenBooking] = useState(null)
-  const [termLog, setTermLog] = useState([{ type: 'info', text: 'PTM Admin Terminal v1.0 — type "help" for commands' }])
-  const [termInput, setTermInput] = useState('')
-  const terminalRef = useRef(null)
   const [manageTeacher, setManageTeacher] = useState(null)
   const [manageForm, setManageForm] = useState({ name: '', email: '', subject: '', venue: '' })
   const [manageSlots, setManageSlots] = useState([])
@@ -95,24 +92,6 @@ export default function AdminDashboard() {
   })
 
   const getInit = name => name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()
-
-  const termScroll = () => setTimeout(() => terminalRef.current?.scrollTo({ top: terminalRef.current.scrollHeight, behavior: 'smooth' }), 0)
-
-  const runTermCmd = async (raw) => {
-    const line = raw.trim()
-    if (!line) return
-    setTermLog(l => [...l, { type: 'info', text: `> ${line}` }]); termScroll()
-    const parts = line.split(' ')
-    const cmd = parts[0].toLowerCase()
-    if (cmd === 'help') {
-      setTermLog(l => [...l,
-        { type: 'info', text: 'help  — list commands' },
-        { type: 'info', text: 'Teacher management is available via the Manage button on the Overview tab.' },
-      ]); termScroll()
-    } else {
-      setTermLog(l => [...l, { type: 'error', text: `Unknown command: "${cmd}". Type "help" for commands.` }]); termScroll()
-    }
-  }
 
   const parentBookings = {}
   bookings.forEach(b => { if (!parentBookings[b.student_name]) parentBookings[b.student_name] = []; parentBookings[b.student_name].push(b) })
@@ -199,7 +178,7 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['t','Terminal']].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`]].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
@@ -359,27 +338,6 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: 'clamp(8px,1vw,11px)', padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: '#FEF2F2', color: '#B91C1C', fontWeight: 600, flexShrink: 0 }}>No booking</span>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* TERMINAL */}
-        {tab === 't' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#1B3F7A' }}>
-            <div ref={terminalRef} className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(12px,1.8vw,20px) clamp(14px,2vw,22px)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {termLog.map((entry, i) => (
-                <div key={i} style={{ fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', lineHeight: 1.6, color: entry.type === 'success' ? '#4ADE80' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{entry.text}</div>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,.12)', padding: 'clamp(10px,1.4vw,16px) clamp(14px,2vw,22px)', display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,.2)', flexShrink: 0 }}>
-              <span style={{ fontFamily: "'Courier New',Courier,monospace", color: '#F47920', fontSize: 'clamp(12px,1.5vw,15px)', flexShrink: 0 }}>$</span>
-              <input
-                value={termInput}
-                onChange={e => setTermInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { runTermCmd(termInput); setTermInput('') } }}
-                placeholder="Type a command..."
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: "'Courier New',Courier,monospace", fontSize: 'clamp(12px,1.5vw,15px)', color: '#fff', caretColor: '#F47920' }}
-              />
             </div>
           </div>
         )}

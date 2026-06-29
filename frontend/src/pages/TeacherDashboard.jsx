@@ -138,7 +138,6 @@ export default function TeacherDashboard() {
   const markedCount = bookedSlots.filter(s => (s.bookings?.[0]?.attendance?.length || 0) > 0).length
 
   const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
-  const pastSlots = []
 
   // vertical list for manage tab — all slots sorted by start time
   const sortedSlots = [...slots].sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
@@ -190,7 +189,7 @@ export default function TeacherDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
-          {[['s','My schedule'],['p','Past meetings'],['m','Manage slots']].map(([key, lbl]) => (
+          {[['s','My schedule'],['m','Manage slots']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>{lbl}</div>
           ))}
         </div>
@@ -251,18 +250,6 @@ export default function TeacherDashboard() {
             </div>
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{markedCount} marked</span>
-            </div>
-          </div>
-        )}
-
-        {/* PAST MEETINGS */}
-        {tab === 'p' && (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{pastSlots.length} past meetings</span>
-            </div>
-            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {pastSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No past meetings yet</div> : null}
             </div>
           </div>
         )}
