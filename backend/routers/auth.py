@@ -4,13 +4,22 @@ from sqlalchemy import text
 from pydantic import BaseModel, EmailStr
 from database import get_db
 from auth import hash_password, verify_password, create_access_token, get_current_user
+from email_service import send_otp_email
+import os
 import uuid
+import secrets
 import asyncio
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# OTP is hardcoded until SES is wired up. Replace with a random code + email send.
-HARDCODED_OTP = "000000"
+
+def generate_otp() -> str:
+    """Random 6-digit login code. Only random when an email provider is
+    configured (MSG91_AUTH_KEY set); otherwise a fixed 000000 so local dev and
+    the test suite work without sending real email."""
+    if os.getenv("MSG91_AUTH_KEY"):
+        return f"{secrets.randbelow(1_000_000):06d}"
+    return "000000"
 
 class SignupRequest(BaseModel):
     name: str
@@ -123,7 +132,7 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="Admins use password login")
 
-    code = HARDCODED_OTP
+    code = generate_otp()
     await db.execute(
         text(
             "INSERT INTO otps (email, code, expires_at, used)"
@@ -132,7 +141,10 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
         {"email": body.email, "code": code}
     )
     await db.commit()
-    print(f"OTP for {body.email}: {code}")  # TODO: send via SES instead of logging
+    # DB owns verification; MSG91 only delivers. Off-thread so we don't block the loop.
+    sent = await asyncio.to_thread(send_otp_email, body.email, code)
+    if not sent:
+        raise HTTPException(status_code=502, detail="Couldn't send the login code. Please try again.")
     return {"message": "OTP sent"}
 
 
@@ -185,7 +197,7 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
     if user.role != "admin":
         raise HTTPException(status_code=400, detail="Not an admin account")
 
-    code = HARDCODED_OTP
+    code = generate_otp()
     await db.execute(
         text(
             "INSERT INTO otps (email, code, expires_at, used)"
@@ -194,7 +206,9 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
         {"email": body.email, "code": code}
     )
     await db.commit()
-    print(f"OTP for {body.email}: {code}")  # TODO: send via SES instead of logging
+    sent = await asyncio.to_thread(send_otp_email, body.email, code)
+    if not sent:
+        raise HTTPException(status_code=502, detail="Couldn't send the login code. Please try again.")
     return {"message": "OTP sent to admin email"}
 
 

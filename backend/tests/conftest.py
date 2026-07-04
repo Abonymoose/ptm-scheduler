@@ -50,6 +50,12 @@ from fastapi.testclient import TestClient
 from main import app                       # noqa: E402
 from auth import create_access_token, hash_password  # noqa: E402
 
+# Safety: tests must never send a real email. Even if the dev machine has a
+# provider key in its environment/.env, force it off so OTP stays 000000 and
+# send_otp_email() only logs. (database.py's load_dotenv runs during the import
+# above, so we pop AFTER it.)
+os.environ.pop("MSG91_AUTH_KEY", None)
+
 # --- A dedicated seeding engine (NullPool → a fresh connection per asyncio.run,
 #     so it never reuses a connection across event loops).
 _seed_url = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://").split("?")[0]
