@@ -15,6 +15,7 @@ const EGG_GAMES = {
   rugby: 'https://script.google.com/macros/s/AKfycbxjYzXDX0iopyVPSDgG8_sTlQPpjv5KYMdsOtLXzYrQYdHPmHdswUb5NTXedQ3RK8XyoQ/exec',
   basketbros: 'https://script.google.com/macros/s/AKfycbxUfaDSpH-0SJL0WPKt38JY7OOOGMmtpY9JTSbL8pvtjxS7jSpNHHu6MdZgWUshIU00Kw/exec',
   slope: 'https://slope-unblocked.gitlab.io/file/',
+  subwaysurfers: 'https://gertdoro.github.io/3hg7dj3bnc82/index.html',
 }
 const EGG_CODES = Object.keys(EGG_GAMES)
 const EGG_MAX_LEN = Math.max(...EGG_CODES.map(c => c.length))

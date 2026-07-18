@@ -50,7 +50,19 @@
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:8000/slots/batch-action -H \"Content-Type: application/json\" -d '{\"slot_ids\":[], \"action\":\"block\"}')",
       "Bash(cat .gitignore)",
       "Bash(cat backend/requirements.txt)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(ssh -i \"C:/Users/Parshv Mehta/ptm-key.pem\" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 ubuntu@40.192.1.79 'cd ~/ptm-scheduler && echo \"=== HEAD before ===\" && git rev-parse --short HEAD && echo \"=== git pull ===\" && git pull && echo \"=== HEAD after ===\" && git rev-parse HEAD')",
+      "Bash(ssh -i \"C:/Users/Parshv Mehta/ptm-key.pem\" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 ubuntu@40.192.1.79 'cd ~/ptm-scheduler && sudo systemctl restart ptm && sleep 3 && echo \"=== service status ===\" && systemctl is-active ptm && sudo systemctl status ptm --no-pager -n 5')",
+      "WebFetch(domain:docs.msg91.com)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:msg91.com)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\Parshv Mehta\\\\ptm-scheduler\\\\backend\"; $env:MSG91_AUTH_KEY=\"dummy\"; $env:MSG91_TEMPLATE_ID=$null; py -3.12 -c \"import os; os.environ['MSG91_AUTH_KEY']='dummy'; os.environ.pop\\('MSG91_TEMPLATE_ID',None\\); from routers.auth import generate_otp; from email_service import send_otp_email; c=generate_otp\\(\\); print\\('generate_otp \\(key set\\) is 6-digit random:', c, len\\(c\\)==6 and c!='000000' or c\\); print\\('send with no template returns:', send_otp_email\\('x@y.com','111111'\\)\\)\"; $env:MSG91_AUTH_KEY=$null)",
+      "PowerShell($p = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess; if \\($p\\) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; \"stopped vite dev server \\(pid $p\\)\" } else { \"no dev server on 5173\" })",
+      "Bash(curl -s -o /dev/null -D - -L -A \"Mozilla/5.0\" \"https://script.google.com/macros/s/AKfycbwiQgeRHVDP8wzJ_CeSE1LyaKCMu1qdlopwylhD4LdBvBVd2y36VjlWY0iyk38WH0JiJA/exec\")",
+      "Bash(grep -iE \"\\\\.html?$\")",
+      "Bash(curl -s -o /tmp/bb.txt -D - -L -A Mozilla/5.0 https://script.google.com/macros/s/AKfycbxUfaDSpH-0SJL0WPKt38JY7OOOGMmtpY9JTSbL8pvtjxS7jSpNHHu6MdZgWUshIU00Kw/exec)"
     ]
   }
 }
