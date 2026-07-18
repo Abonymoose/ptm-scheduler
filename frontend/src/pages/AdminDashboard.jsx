@@ -4,6 +4,7 @@ import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
+import { wipeBookings, resetSlots, getChangelog } from '../api/demo'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -15,7 +16,7 @@ const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', 
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 
 export default function AdminDashboard() {
-  const { logoutUser } = useAuth()
+  const { user, logoutUser } = useAuth()
   const [bookings, setBookings] = useState([])
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,6 +38,10 @@ export default function AdminDashboard() {
   const [mSelectMode, setMSelectMode] = useState(false)
   const [teacherSearch, setTeacherSearch] = useState('')
   const [unbooked, setUnbooked] = useState({ count: 0, parents: [] })
+  const [demoLog, setDemoLog] = useState([])           // terminal output lines
+  const [demoBusy, setDemoBusy] = useState(false)
+  const [demoConfirm, setDemoConfirm] = useState(null) // 'wipe' | 'reset' | null
+  const [changelog, setChangelog] = useState(null)
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
@@ -68,6 +73,33 @@ export default function AdminDashboard() {
   }
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  // --- Demo control panel ---
+  const demoPrint = (text, type = 'info') => setDemoLog(l => [...l, { type, text }])
+  const runDemoAction = async (kind) => {
+    setDemoConfirm(null)
+    setDemoBusy(true)
+    try {
+      if (kind === 'wipe') {
+        demoPrint('$ wipe-bookings')
+        const r = await wipeBookings()
+        demoPrint(`Deleted ${r.deleted} booking${r.deleted !== 1 ? 's' : ''}.`, 'success')
+      } else {
+        demoPrint('$ reset-slots')
+        const r = await resetSlots()
+        demoPrint(`Removed ${r.slots_deleted} old slots. Created ${r.slots_created} fresh slots across ${r.teachers} teachers.`, 'success')
+      }
+      await fetchData()
+    } catch (err) {
+      demoPrint(err.response?.data?.detail || 'Action failed.', 'error')
+    }
+    setDemoBusy(false)
+  }
+  useEffect(() => {
+    if (tab === 'demo' && changelog === null) {
+      getChangelog().then(setChangelog).catch(() => setChangelog({ days: [], total: 0, error: true }))
+    }
+  }, [tab, changelog])
 
   const teacherMap = {}
   slots.forEach(s => {
@@ -178,7 +210,7 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`]].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['demo','Demo']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
@@ -342,6 +374,54 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* DEMO */}
+        {tab === 'demo' && (
+          <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {/* Terminal panel */}
+            <div style={{ background: '#1B3F7A', margin: 'clamp(10px,1.5vw,16px)', borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
+              <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(12px,1.8vw,20px)', borderBottom: '1px solid rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#FF6B6B' }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#FDBA30' }} />
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#4ADE80' }} />
+                <span style={{ marginLeft: 8, color: 'rgba(255,255,255,.7)', fontSize: 'clamp(11px,1.3vw,14px)', fontFamily: "'Courier New',monospace" }}>demo control · {user?.name || 'admin'}</span>
+              </div>
+              <div style={{ padding: 'clamp(12px,1.8vw,20px)', minHeight: 90, maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }} className="custom-scroll">
+                {demoLog.length === 0 && <div style={{ color: 'rgba(255,255,255,.5)', fontFamily: "'Courier New',monospace", fontSize: 'clamp(12px,1.4vw,14px)' }}>Ready. Pick an action below.</div>}
+                {demoLog.map((entry, i) => (
+                  <div key={i} style={{ fontFamily: "'Courier New',monospace", fontSize: 'clamp(12px,1.4vw,14px)', lineHeight: 1.6, whiteSpace: 'pre-wrap', color: entry.type === 'success' ? '#4ADE80' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)' }}>{entry.text}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ padding: '0 clamp(10px,1.5vw,16px)', display: 'flex', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'wrap', flexShrink: 0 }}>
+              <button onClick={() => setDemoConfirm('wipe')} disabled={demoBusy}
+                style={{ flex: '1 1 200px', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe all bookings</button>
+              <button onClick={() => setDemoConfirm('reset')} disabled={demoBusy}
+                style={{ flex: '1 1 200px', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #F4C099', background: '#fff', color: '#C45A0A', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Reset slots</button>
+            </div>
+
+            {/* What's new */}
+            <div style={{ padding: 'clamp(14px,2vw,20px) clamp(14px,2vw,22px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 'clamp(8px,1.2vw,12px)' }}>What's new</div>
+              {changelog === null ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading changelog…</div>
+              : changelog.error ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Changelog unavailable.</div>
+              : changelog.days.length === 0 ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>No commits in the last 7 days.</div>
+              : changelog.days.map(day => (
+                <div key={day.date} style={{ marginBottom: 'clamp(10px,1.5vw,16px)' }}>
+                  <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{day.date}</div>
+                  {day.commits.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 'clamp(11px,1.3vw,14px)' }}>
+                      <code style={{ color: '#C45A0A', fontFamily: "'Courier New',monospace", flexShrink: 0 }}>{c.hash}</code>
+                      <span style={{ color: '#374151', minWidth: 0 }}>{c.message}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* BOTTOM BAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
           <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · 09 Apr 2026</span>
@@ -475,6 +555,26 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* DEMO CONFIRM */}
+      {demoConfirm && (
+        <div onClick={() => setDemoConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(22px,3vw,34px)', width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
+            <div style={{ fontSize: 'clamp(16px,2.1vw,22px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10 }}>
+              {demoConfirm === 'wipe' ? 'Wipe all bookings?' : 'Reset all slots?'}
+            </div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>
+              {demoConfirm === 'wipe'
+                ? 'This permanently deletes EVERY booking (including cancelled meetings and blocked slots) for your school. Slots stay; they just become free.'
+                : 'This deletes ALL slots for your school (and any bookings on them) and regenerates a fresh 45-slot grid per teacher. This cannot be undone.'}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setDemoConfirm(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => runDemoAction(demoConfirm)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>{demoConfirm === 'wipe' ? 'Wipe bookings' : 'Reset slots'}</button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -55,6 +55,8 @@ from auth import create_access_token, hash_password  # noqa: E402
 # send_otp_email() only logs. (database.py's load_dotenv runs during the import
 # above, so we pop AFTER it.)
 os.environ.pop("MSG91_AUTH_KEY", None)
+# Same for the demo secret — tests set it per-case via monkeypatch; default off.
+os.environ.pop("DEMO_SECRET_CODE", None)
 
 # --- A dedicated seeding engine (NullPool → a fresh connection per asyncio.run,
 #     so it never reuses a connection across event loops).
@@ -71,6 +73,8 @@ T1_ID = str(uuid.uuid4())
 T2_ID = str(uuid.uuid4())
 PARENT_ID = str(uuid.uuid4())
 PARENT2_ID = str(uuid.uuid4())
+DEMO_ID = str(uuid.uuid4())
+DEMO_EMAIL = "demo@inventureacademy.com"
 
 INVITE_CODE = "TEST-2026"
 ADMIN_PASSWORD = "admin123"
@@ -114,6 +118,9 @@ async def _reset_and_seed():
             {"id": PARENT2_ID, "name": "Parent Two", "email": "parent2@test.edu",
              "pwd": hash_password(PARENT_PASSWORD), "role": "parent",
              "subject": None, "venue": None, "section": "5B", "grade": 5, "pn": "Parent Two"},
+            {"id": DEMO_ID, "name": "Demo Admin", "email": DEMO_EMAIL,
+             "pwd": hash_password(ADMIN_PASSWORD), "role": "admin",
+             "subject": None, "venue": None, "section": None, "grade": None, "pn": None},
         ]
         for u in users:
             await conn.execute(
@@ -152,9 +159,9 @@ def seed():
         "school_id": SCHOOL_ID,
         "invite_code": INVITE_CODE,
         "admin_password": ADMIN_PASSWORD,
-        "ids": {"admin": ADMIN_ID, "t1": T1_ID, "t2": T2_ID, "parent": PARENT_ID, "parent2": PARENT2_ID},
+        "ids": {"admin": ADMIN_ID, "t1": T1_ID, "t2": T2_ID, "parent": PARENT_ID, "parent2": PARENT2_ID, "demo": DEMO_ID},
         "emails": {"admin": "admin@test.edu", "t1": "teacher1@test.edu", "t2": "teacher2@test.edu",
-                   "parent": "parent@test.edu", "parent2": "parent2@test.edu"},
+                   "parent": "parent@test.edu", "parent2": "parent2@test.edu", "demo": DEMO_EMAIL},
         "slots": dict(SLOT_IDS),
         "tokens": {
             "admin": _tok(ADMIN_ID, "admin", "Admin User"),

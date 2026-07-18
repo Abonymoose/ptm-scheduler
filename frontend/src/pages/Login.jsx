@@ -7,6 +7,10 @@ import { LOGO_LARGE } from '../assets/logos'
 // Frontend-only easter egg. Pure client-side: never calls the backend, never
 // creates a session. Requires the exact email + an exact (case-sensitive) code.
 // Add a game by dropping another `code: url` pair in here — any code length works.
+// Demo email is public (not a secret); only the code (DEMO_SECRET_CODE) is, and
+// that's checked server-side. Routing this email to the code step lets the demo
+// admin type the secret code — request-otp would otherwise reject an admin email.
+const DEMO_EMAIL = 'demo@inventureacademy.com'
 const EGG_EMAIL = 'alphamogger@pm4k.com'
 const EGG_GAMES = {
   pmmxgu: 'https://vex5.gitlab.io/file/',
@@ -50,6 +54,9 @@ export default function Login() {
     if (!email) { setError('Please enter your email.'); return }
     // Easter egg: advance to the code step looking exactly normal — no backend call.
     if (email === EGG_EMAIL) { setStep(2); return }
+    // Demo login: skip request-otp (admin emails are rejected there) and go straight
+    // to code entry; the typed code is checked against DEMO_SECRET_CODE in verify-otp.
+    if (email === DEMO_EMAIL) { setStep(2); return }
     if (isAdmin && !password) { setError('Please enter your password.'); return }
     setLoading(true)
     try {
@@ -88,14 +95,17 @@ export default function Login() {
   }
 
   const handleDigit = (i, raw) => {
-    // Easter-egg check runs BEFORE normal OTP logic: the code is letters, which the
-    // digit inputs strip, so capture raw keystrokes into a rolling buffer instead.
+    // Easter egg: capture raw keystrokes into a rolling buffer (runs before OTP
+    // logic). For the egg email we never fill boxes/submit — the buffer alone
+    // drives it, so codes longer than 6 chars still work.
     if (email === EGG_EMAIL) {
       eggKeys.current = (eggKeys.current + raw.slice(-1)).slice(-EGG_MAX_LEN)
       const hit = EGG_CODES.find(code => eggKeys.current.endsWith(code))
       if (hit) { setEgg(EGG_GAMES[hit]); return }
+      return
     }
-    const d = raw.replace(/\D/g, '')
+    // Alphanumeric, 6 chars — letters are needed for the demo login code.
+    const d = raw.replace(/[^a-zA-Z0-9]/g, '')
     const n = [...digits]
     if (!d) { n[i] = ''; setDigits(n); return }
     n[i] = d[d.length - 1]
@@ -120,7 +130,7 @@ export default function Login() {
   const handleOtpPaste = (e) => {
     const pasted = e.clipboardData.getData('text') || ''
     if (email === EGG_EMAIL && eggUrlFor(pasted)) { e.preventDefault(); setEgg(eggUrlFor(pasted)); return }
-    const txt = pasted.replace(/\D/g, '').slice(0, 6)
+    const txt = pasted.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6)
     if (!txt) return
     e.preventDefault()
     const n = Array(6).fill('')

@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from database import get_db
-from routers import auth, slots, bookings, admin, notes
+from routers import auth, slots, bookings, admin, notes, demo
 from dotenv import load_dotenv
 import os
 
@@ -30,6 +30,7 @@ app.include_router(slots.router)
 app.include_router(bookings.router)
 app.include_router(admin.router)
 app.include_router(notes.router)
+app.include_router(demo.router)
 
 @app.get("/")
 async def health_check():

@@ -148,8 +148,32 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
     return {"message": "OTP sent"}
 
 
+DEMO_EMAIL = "demo@inventureacademy.com"
+
+
 @router.post("/verify-otp")
 async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
+    # Demo login: only active when DEMO_SECRET_CODE is set (prod). The code is
+    # checked against the env secret, NOT the otps table. Disabled otherwise, so
+    # tests/local fall through to the normal OTP flow below.
+    demo_secret = os.getenv("DEMO_SECRET_CODE")
+    if demo_secret and body.email == DEMO_EMAIL:
+        if body.code != demo_secret:
+            raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+        result = await db.execute(
+            text("SELECT id, role, school_id, name, section, grade, family_id, parent_name FROM users WHERE email = :email"),
+            {"email": body.email}
+        )
+        user = result.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="No account found for this email")
+        token = create_access_token({
+            "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
+            "name": user.name, "section": user.section, "grade": user.grade,
+            "family_id": user.family_id, "parent_name": user.parent_name,
+        })
+        return {"access_token": token, "token_type": "bearer", "role": user.role, "name": user.name}
+
     result = await db.execute(
         text(
             "SELECT id, code FROM otps"
