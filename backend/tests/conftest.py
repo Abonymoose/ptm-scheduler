@@ -92,7 +92,7 @@ SLOT_IDS = {label: str(uuid.uuid4()) for label in SLOT_DEFS}
 async def _reset_and_seed():
     async with seed_engine.begin() as conn:
         await conn.execute(text(
-            "TRUNCATE bookings, slots, otps, users, schools RESTART IDENTITY CASCADE"
+            "TRUNCATE meeting_notes, bookings, slots, otps, users, schools RESTART IDENTITY CASCADE"
         ))
         await conn.execute(
             text("INSERT INTO schools (id, name, invite_code) VALUES (:id, :n, :c)"),

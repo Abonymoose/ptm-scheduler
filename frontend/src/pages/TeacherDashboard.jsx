@@ -5,8 +5,18 @@ import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import { blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { setAttendance as setAttendanceApi } from '../api/bookings'
+import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
 
 const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
+
+const noteIcon = filled => (
+  <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+    <rect x="4" y="2.5" width="12" height="15" rx="2" stroke={filled ? '#F47920' : '#C4B5A5'} strokeWidth="1.6" fill={filled ? '#FFF0E6' : 'none'} />
+    <line x1="7" y1="6.5" x2="13" y2="6.5" stroke={filled ? '#F47920' : '#C4B5A5'} strokeWidth="1.4" strokeLinecap="round" />
+    <line x1="7" y1="10" x2="13" y2="10" stroke={filled ? '#F47920' : '#C4B5A5'} strokeWidth="1.4" strokeLinecap="round" />
+    <line x1="7" y1="13.5" x2="11" y2="13.5" stroke={filled ? '#F47920' : '#C4B5A5'} strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+)
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -48,6 +58,12 @@ export default function TeacherDashboard() {
   const [newCap, setNewCap] = useState(1)
   const [creating, setCreating] = useState(false)
   const [hlNext, setHlNext] = useState(true)
+  const [notes, setNotes] = useState([])
+  const [noteModal, setNoteModal] = useState(null)   // { booking_id, name }
+  const [noteDraft, setNoteDraft] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [notesSearch, setNotesSearch] = useState('')
+  const [noteDrafts, setNoteDrafts] = useState({})   // inline edits in the Notes tab
   const [bulkSel, setBulkSel] = useState(new Set())
   const [lastSel, setLastSel] = useState(null)
   const [bulkCancelConfirm, setBulkCancelConfirm] = useState(0)
@@ -77,12 +93,46 @@ export default function TeacherDashboard() {
 
   const fetchData = async () => {
     setLoading(true)
-    try { const d = await getMySlots(); setSlots(d) }
+    try { const [d, n] = await Promise.all([getMySlots(), getMyNotes()]); setSlots(d); setNotes(n) }
     catch { showToast('Failed to load slots') }
     setLoading(false)
   }
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  // --- Notes ---
+  const noteIds = new Set(notes.map(n => n.booking_id))
+  const noteTextFor = bid => notes.find(n => n.booking_id === bid)?.note_text || ''
+  const openNote = bk => {
+    if (!bk?.booking_id) return
+    setNoteModal({ booking_id: bk.booking_id, name: bk.student_name || bk.parent_name || 'this meeting' })
+    setNoteDraft(noteTextFor(bk.booking_id))
+  }
+  const handleSaveNote = async () => {
+    if (!noteModal) return
+    setSavingNote(true)
+    try {
+      await saveNoteApi(noteModal.booking_id, noteDraft)
+      setNotes(await getMyNotes())
+      showToast(noteDraft.trim() ? 'Note saved' : 'Note cleared')
+      setNoteModal(null)
+    } catch (err) { showToast(err.response?.data?.detail || 'Failed to save note') }
+    setSavingNote(false)
+  }
+  const saveInlineNote = async (bid, textVal) => {
+    try {
+      await saveNoteApi(bid, textVal)
+      setNotes(await getMyNotes())
+      setNoteDrafts(prev => { const n = { ...prev }; delete n[bid]; return n })
+      showToast(textVal.trim() ? 'Note saved' : 'Note cleared')
+    } catch (err) { showToast(err.response?.data?.detail || 'Failed to save note') }
+  }
+  const filteredNotes = notes.filter(n => {
+    const q = notesSearch.trim().toLowerCase()
+    if (!q) return true
+    const hay = [n.student_name, n.parent_name, n.section, n.grade != null ? `grade ${n.grade}` : '', n.grade, n.teacher_name, n.note_text].filter(Boolean).join(' ').toLowerCase()
+    return hay.includes(q)
+  })
 
   const handleCancelBooking = async booking_id => {
     if (!booking_id) { showToast('No booking to cancel'); return }
@@ -189,7 +239,7 @@ export default function TeacherDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
-          {[['s','My schedule'],['m','Manage slots']].map(([key, lbl]) => (
+          {[['s','My schedule'],['n','Notes'],['m','Manage slots']].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>{lbl}</div>
           ))}
         </div>
@@ -239,6 +289,8 @@ export default function TeacherDashboard() {
                           {isDone && DONE_TICK}
                         </div>
                       </div>
+                      {bk && <button onClick={() => openNote(bk)} title={noteIds.has(bk.booking_id) ? 'Edit note' : 'Add note'}
+                        style={{ width: 'clamp(28px,3.5vw,38px)', height: 'clamp(28px,3.5vw,38px)', borderRadius: 8, background: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>{noteIcon(noteIds.has(bk.booking_id))}</button>}
                       {bk && <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name })}
                         onMouseEnter={e => e.currentTarget.style.color = '#F47920'}
                         onMouseLeave={e => e.currentTarget.style.color = '#C4B5A5'}
@@ -250,6 +302,45 @@ export default function TeacherDashboard() {
             </div>
             <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>{markedCount} marked</span>
+            </div>
+          </div>
+        )}
+
+        {/* NOTES */}
+        {tab === 'n' && (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input value={notesSearch} onChange={e => setNotesSearch(e.target.value)} placeholder="Search notes, student, parent, grade…"
+                style={{ flex: 1, padding: 'clamp(8px,1vw,12px) clamp(12px,1.5vw,16px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+              {notesSearch && <button onClick={() => setNotesSearch('')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 12px', borderRadius: 10, background: '#fff', color: '#9CA3AF', border: '1.5px solid #E5D5C5', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>}
+            </div>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              : notes.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 500 }}>No notes yet. Tap the note icon on a meeting to add one.</div>
+              : filteredNotes.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 500 }}>No notes match “{notesSearch}”.</div>
+              : filteredNotes.map(n => {
+                const draft = noteDrafts[n.booking_id]
+                const val = draft !== undefined ? draft : n.note_text
+                const changed = draft !== undefined && draft !== n.note_text
+                return (
+                  <div key={n.booking_id} style={{ padding: 'clamp(12px,1.6vw,18px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4EDE4' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.student_name || n.parent_name || 'Meeting'}{n.section ? ` · ${n.section}` : ''}{n.grade != null ? ` · Gr ${n.grade}` : ''}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmt(n.start_time)}</div>
+                    </div>
+                    {n.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>Parent: {n.parent_name}</div>}
+                    <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}
+                      placeholder="Write a note…"
+                      style={{ width: '100%', marginTop: 8, padding: 'clamp(8px,1vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                      onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                      <button onClick={() => saveInlineNote(n.booking_id, val)} disabled={!changed}
+                        style={{ fontSize: 13, fontWeight: 700, padding: '6px 18px', borderRadius: 50, border: 'none', background: changed ? '#F47920' : '#F1E4D6', color: changed ? '#fff' : '#C4B5A5', cursor: changed ? 'pointer' : 'default', fontFamily: 'inherit' }}>Save</button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -428,6 +519,23 @@ export default function TeacherDashboard() {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
               <button onClick={() => { handleCancelBooking(cancelModal.booking_id); setCancelModal(null) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOTE MODAL */}
+      {noteModal && (
+        <div onClick={() => setNoteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(440px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>Note</div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(12px,1.6vw,16px)' }}>Private to you · {noteModal.name}</div>
+            <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} autoFocus rows={5} placeholder="Write a private note about this meeting…"
+              style={{ width: '100%', padding: 'clamp(10px,1.4vw,14px)', border: '1.5px solid #F4C099', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+              onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+            <div style={{ display: 'flex', gap: 12, marginTop: 'clamp(14px,2vw,20px)' }}>
+              <button onClick={() => setNoteModal(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Close</button>
+              <button onClick={handleSaveNote} disabled={savingNote} style={{ flex: 2, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: savingNote ? 'not-allowed' : 'pointer', opacity: savingNote ? .6 : 1, border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>{savingNote ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         </div>
