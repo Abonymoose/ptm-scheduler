@@ -78,6 +78,15 @@ export default function ParentDashboard() {
   const [cart, setCart] = useState([])
   const [confirming, setConfirming] = useState(false)
   const [batchResult, setBatchResult] = useState(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [animationsOn, setAnimationsOn] = useState(true)   // session-only (no localStorage)
+  const [soundOn, setSoundOn] = useState(false)            // politer default: off
+  const [cartAnimating, setCartAnimating] = useState(false)
+  const [animatedInIds, setAnimatedInIds] = useState(() => new Set())
+  const [confirmFlourish, setConfirmFlourish] = useState(false)
+  const pendingPicksRef = useRef([])
+  const audioCtxRef = useRef(null)
+  const animTimersRef = useRef([])
   const [notes, setNotes] = useState([])
   const [noteModal, setNoteModal] = useState(null)   // { booking_id, name }
   const [noteDraft, setNoteDraft] = useState('')
@@ -96,7 +105,15 @@ export default function ParentDashboard() {
       s.textContent = `.custom-scroll::-webkit-scrollbar{width:3px;height:3px}.custom-scroll::-webkit-scrollbar-track{background:transparent}.custom-scroll::-webkit-scrollbar-thumb{background:#F4C099;border-radius:2px}.custom-scroll::-webkit-scrollbar-thumb:hover{background:#F47920}`
       document.head.appendChild(s)
     }
+    if (!document.getElementById('parent-anim-style')) {
+      const a = document.createElement('style')
+      a.id = 'parent-anim-style'
+      a.textContent = `@keyframes cartPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}@keyframes confirmShimmer{0%{transform:translateX(-160%) skewX(-18deg)}100%{transform:translateX(260%) skewX(-18deg)}}`
+      document.head.appendChild(a)
+    }
   }, [])
+  // Cancel any in-flight animation timers on unmount.
+  useEffect(() => () => { animTimersRef.current.forEach(clearTimeout) }, [])
 
   // Auto-scroll when parent switches the active child pill
   useEffect(() => {
@@ -274,29 +291,90 @@ export default function ParentDashboard() {
     setCancelModal(null)
   }
 
-  const openAutoModal = () => { setSelectedTeachers(new Set(teacherOptions.map(t => t.id))); setAutoResult(null); setAutoModal(true) }
+  const openAutoModal = () => { setSelectedTeachers(new Set(teacherOptions.map(t => t.id))); setAutoResult(null); pendingPicksRef.current = []; setAutoModal(true) }
   const toggleTeacher = id => { setSelectedTeachers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }) }
+
+  // Short, subtle "pop" synthesised via Web Audio (no asset). Respects the toggle
+  // and swallows any error (autoplay policy, unsupported, etc.).
+  const playPop = () => {
+    if (!soundOn) return
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      if (!audioCtxRef.current) audioCtxRef.current = new AC()
+      const ctx = audioCtxRef.current
+      if (ctx.state === 'suspended') ctx.resume()
+      const now = ctx.currentTime
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(520, now)
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.05)
+      gain.gain.setValueAtTime(0.0001, now)
+      gain.gain.exponentialRampToValueAtTime(0.11, now + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18)
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.start(now); osc.stop(now + 0.2)
+    } catch { /* audio unavailable — ignore */ }
+  }
+
+  const clearAnimTimers = () => { animTimersRef.current.forEach(clearTimeout); animTimersRef.current = [] }
+  const triggerFlourish = () => {
+    setConfirmFlourish(true)
+    animTimersRef.current.push(setTimeout(() => setConfirmFlourish(false), 750))
+  }
+  // Stage auto-scheduled picks into the cart. With animations on: one-by-one in
+  // chronological order, each popping in over a total of ~1.7s, then a flourish.
+  const runCartFillAnimation = (picks) => {
+    if (!picks || picks.length === 0) return
+    if (!animationsOn) { setCart(prev => [...prev, ...picks]); return }
+    clearAnimTimers()
+    setCartAnimating(true)
+    const POP_MS = 240
+    const stagger = 1700 / picks.length
+    picks.forEach((pick, i) => {
+      animTimersRef.current.push(setTimeout(() => {
+        setCart(prev => [...prev, pick])
+        setAnimatedInIds(prev => { const n = new Set(prev); n.add(pick.slot_id); return n })
+        playPop()
+        animTimersRef.current.push(setTimeout(() => {
+          setAnimatedInIds(prev => { const n = new Set(prev); n.delete(pick.slot_id); return n })
+        }, POP_MS + 40))
+        if (i === picks.length - 1) {
+          animTimersRef.current.push(setTimeout(() => { setCartAnimating(false); triggerFlourish() }, POP_MS + 40))
+        }
+      }, i * stagger))
+    })
+  }
+  // Closing the auto modal commits any staged picks (via animation).
+  const closeAutoModal = () => {
+    setAutoModal(false)
+    if (pendingPicksRef.current.length) {
+      const picks = pendingPicksRef.current
+      pendingPicksRef.current = []
+      runCartFillAnimation(picks)
+    }
+  }
 
   const handleAutoSchedule = async () => {
     setAutoScheduling(true)
     try {
       const result = await autoSchedule([...selectedTeachers], { student_name: child.student_name, section: child.section }, true)
       const picks = result.picks || []
-      setCart(prev => {
-        const existingSlotIds = new Set(prev.map(c => c.slot_id))
-        const existingStartTimes = new Set(prev.map(c => c.start_time))
-        const toAdd = picks
-          .filter(p => !existingSlotIds.has(p.slot_id) && !existingStartTimes.has(p.start_time))
-          .map(p => ({
-            slot_id: p.slot_id,
-            student_name: child.student_name,
-            section: child.section,
-            start_time: p.start_time,
-            end_time: p.end_time,
-            teacher_name: p.teacher_name,
-          }))
-        return [...prev, ...toAdd]
-      })
+      const existingSlotIds = new Set(cart.map(c => c.slot_id))
+      const existingStartTimes = new Set(cart.map(c => c.start_time))
+      // Sort chronologically (earliest first) so the animation reads left-to-right in time.
+      pendingPicksRef.current = picks
+        .filter(p => !existingSlotIds.has(p.slot_id) && !existingStartTimes.has(p.start_time))
+        .map(p => ({
+          slot_id: p.slot_id,
+          student_name: child.student_name,
+          section: child.section,
+          start_time: p.start_time,
+          end_time: p.end_time,
+          teacher_name: p.teacher_name,
+        }))
+        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
       setAutoResult({ picks, conflicts: result.conflicts || [] })
     } catch (err) {
       showToast(err.response?.data?.detail || 'Auto-schedule failed')
@@ -324,6 +402,9 @@ export default function ParentDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
+            <button onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings" style={{ width: 'clamp(30px,3.6vw,38px)', height: 'clamp(30px,3.6vw,38px)', borderRadius: '50%', background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+            </button>
             <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
           </div>
@@ -354,7 +435,7 @@ export default function ParentDashboard() {
             </div>
 
             {/* Grid */}
-            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, pointerEvents: cartAnimating ? 'none' : 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
@@ -396,6 +477,7 @@ export default function ParentDashboard() {
                           <td key={t} style={{ padding: 2, border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>
                             <button
                               onClick={() => {
+                                if (cartAnimating) return
                                 if (isBooked) { setCancelModal({ booking_id: slotToBookingId[slot.id], teacher: t }); return }
                                 handleCartToggle(slot)
                               }}
@@ -403,6 +485,7 @@ export default function ParentDashboard() {
                               onMouseLeave={() => setHoveredCancel(null)}
                               style={{
                                 width: '100%', height: '100%', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                animation: animatedInIds.has(slot.id) ? 'cartPop .24s ease-out' : 'none',
                                 border: isBooked
                                   ? (cls === 'child1' ? '2px solid #F47920' : '2px solid #2563EB')
                                   : isCart
@@ -460,16 +543,18 @@ export default function ParentDashboard() {
                 onClick={handleConfirm}
                 disabled={cart.length === 0 || confirming}
                 style={{
+                  position: 'relative', overflow: 'hidden',
                   fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700,
                   padding: 'clamp(8px,1.1vw,13px) clamp(14px,2vw,24px)',
                   borderRadius: 50, border: 'none',
                   cursor: cart.length === 0 || confirming ? 'default' : 'pointer',
-                  background: cart.length === 0 || confirming ? '#F4C099' : '#F47920',
+                  background: confirmFlourish ? '#1B3F7A' : cart.length === 0 || confirming ? '#F4C099' : '#F47920',
                   color: '#fff', fontFamily: 'inherit',
-                  boxShadow: cart.length > 0 && !confirming ? '0 2px 12px rgba(244,121,32,.35)' : 'none',
-                  transition: 'all .15s',
+                  boxShadow: confirmFlourish ? '0 2px 16px rgba(27,63,122,.45)' : cart.length > 0 && !confirming ? '0 2px 12px rgba(244,121,32,.35)' : 'none',
+                  transition: 'background .3s, box-shadow .3s',
                 }}>
-                {confirming ? 'Booking…' : `Confirm ${cart.length > 0 ? cart.length + ' ' : ''}slot${cart.length !== 1 ? 's' : ''}`}
+                {confirmFlourish && <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: 'linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent)', animation: 'confirmShimmer .7s ease-out', pointerEvents: 'none' }} />}
+                <span style={{ position: 'relative' }}>{confirming ? 'Booking…' : `Confirm ${cart.length > 0 ? cart.length + ' ' : ''}slot${cart.length !== 1 ? 's' : ''}`}</span>
               </button>
             </div>
           </div>
@@ -607,9 +692,32 @@ export default function ParentDashboard() {
         </div>
       )}
 
+      {/* SETTINGS MODAL */}
+      {settingsOpen && (
+        <div onClick={() => setSettingsOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(22px,3vw,32px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+            <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 4 }}>Settings</div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(16px,2.2vw,22px)' }}>These apply for this session only.</div>
+            {[['Animations', 'Slot pop-in when auto-scheduling', animationsOn, setAnimationsOn],
+              ['Sound effects', 'A subtle pop as each slot lands', soundOn, setSoundOn]].map(([label, sub, on, set]) => (
+              <div key={label} onClick={() => set(v => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 'clamp(10px,1.4vw,14px) 0', borderBottom: label === 'Animations' ? '1px solid #F4EDE4' : 'none', cursor: 'pointer' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A' }}>{label}</div>
+                  <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginTop: 1 }}>{sub}</div>
+                </div>
+                <div style={{ width: 46, height: 26, borderRadius: 26, background: on ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: on ? 22 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setSettingsOpen(false)} style={{ width: '100%', marginTop: 'clamp(16px,2.2vw,22px)', padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,17px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit' }}>Done</button>
+          </div>
+        </div>
+      )}
+
       {/* AUTO-SCHEDULE MODAL */}
       {autoModal && (
-        <div onClick={() => setAutoModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
+        <div onClick={closeAutoModal} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
             {autoResult === null ? (<>
               <div style={{ padding: 'clamp(18px,2.5vw,28px) clamp(20px,2.8vw,28px) clamp(12px,1.8vw,18px)', borderBottom: '1px solid #F4C099' }}>
@@ -638,7 +746,7 @@ export default function ParentDashboard() {
                 })}
               </div>
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4', display: 'flex', gap: 10 }}>
-                <button onClick={() => setAutoModal(false)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: '#F3F4F6', color: '#6B7280', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                <button onClick={closeAutoModal} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: '#F3F4F6', color: '#6B7280', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
                 <button onClick={handleAutoSchedule} disabled={selectedTeachers.size === 0 || autoScheduling} style={{ flex: 2, padding: 'clamp(10px,1.4vw,14px)', fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, background: selectedTeachers.size === 0 || autoScheduling ? '#F4C099' : '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: selectedTeachers.size === 0 || autoScheduling ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                   {autoScheduling ? 'Finding slots…' : `Add ${selectedTeachers.size > 0 ? selectedTeachers.size : ''} to cart`}
                 </button>
@@ -668,7 +776,7 @@ export default function ParentDashboard() {
                 )}
               </div>
               <div style={{ padding: 'clamp(14px,2vw,20px) clamp(20px,2.8vw,28px)', borderTop: '1px solid #FDE9D4' }}>
-                <button onClick={() => setAutoModal(false)} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done — review cart</button>
+                <button onClick={closeAutoModal} style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, background: '#1B3F7A', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit' }}>Done — review cart</button>
               </div>
             </>)}
           </div>
