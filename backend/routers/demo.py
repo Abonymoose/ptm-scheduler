@@ -1,15 +1,76 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from pydantic import BaseModel
 from database import get_db
-from auth import get_current_user
+from auth import get_current_user, create_access_token
+import logging
 from datetime import datetime, timezone, timedelta
 from collections import OrderedDict
 import subprocess
 import os
 import uuid
+import random
 
 router = APIRouter(prefix="/demo", tags=["demo"])
+
+# Hidden seed parent — every fake booking hangs off this account so demo data is
+# separately wipeable (delete by parent_id). One per school.
+SEED_PARENT_EMAIL = "seed@demo.local"
+
+_FAKE_NAMES = [
+    "Aarav Sharma", "Diya Patel", "Vihaan Reddy", "Ananya Iyer", "Arjun Nair",
+    "Saanvi Rao", "Ishaan Gupta", "Aadhya Menon", "Kabir Singh", "Myra Joshi",
+    "Rehan Khan", "Kiara Pillai", "Advait Desai", "Anika Bose", "Vivaan Mehta",
+    "Navya Chettri", "Reyansh Das", "Aisha Kapoor", "Dhruv Rao", "Prisha Naidu",
+]
+_FAKE_SECTIONS = [f"{g}{s}" for g in range(4, 9) for s in "ABCD"]  # 4A .. 8D
+
+
+class AddTeacher(BaseModel):
+    name: str
+    email: str
+    subject: str | None = None
+
+
+class SeedData(BaseModel):
+    teacher_id: str
+    fill_percent: int = 50
+
+
+class Impersonate(BaseModel):
+    user_id: str
+
+
+_impersonation_log = logging.getLogger("ptm.impersonation")
+IMPERSONATION_EXPIRE_MINUTES = 60
+
+
+async def _get_or_create_seed_parent(db: AsyncSession, school_id: str) -> str:
+    row = (await db.execute(
+        text("SELECT id FROM users WHERE email = :e AND school_id = :sid"),
+        {"e": SEED_PARENT_EMAIL, "sid": school_id}
+    )).fetchone()
+    if row:
+        return str(row.id)
+    uid = str(uuid.uuid4())
+    await db.execute(
+        text("INSERT INTO users (id, school_id, name, email, hashed_password, role, parent_name)"
+             " VALUES (:id, :sid, 'Demo Seed', :e, 'x', 'parent', 'Demo Seed')"),
+        {"id": uid, "sid": school_id, "e": SEED_PARENT_EMAIL}
+    )
+    return uid
+
+
+async def _generate_grid(db: AsyncSession, teacher_id: str, school_id: str) -> int:
+    for i in range(SLOTS_PER_TEACHER):
+        start = PTM_START + i * SLOT_DURATION
+        await db.execute(
+            text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
+                 " VALUES (:id, :tid, :sid, :start, :end, 1)"),
+            {"id": str(uuid.uuid4()), "tid": teacher_id, "sid": school_id, "start": start, "end": start + SLOT_DURATION}
+        )
+    return SLOTS_PER_TEACHER
 
 # Repo root = two levels up from this file (backend/routers/demo.py -> repo/).
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -138,3 +199,155 @@ async def changelog(current_user: dict = Depends(get_current_user)):
 
     total = sum(len(d["commits"]) for d in days)
     return {"notes": notes, "days": days, "total": total, "git_error": git_error}
+
+
+@router.post("/add-teacher")
+async def add_teacher(
+    body: AddTeacher,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a real teacher in the admin's school + generate their slot grid."""
+    _require_admin(current_user)
+    sid = current_user["school_id"]
+    email = body.email.strip().lower()
+    name = body.name.strip()
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+
+    dup = (await db.execute(text("SELECT 1 FROM users WHERE email = :e"), {"e": email})).fetchone()
+    if dup:
+        raise HTTPException(status_code=400, detail=f"A user with email {email} already exists")
+
+    tid = str(uuid.uuid4())
+    await db.execute(
+        text("INSERT INTO users (id, school_id, name, email, hashed_password, role, subject)"
+             " VALUES (:id, :sid, :n, :e, 'x', 'teacher', :subj)"),
+        {"id": tid, "sid": sid, "n": name, "e": email, "subj": body.subject}
+    )
+    slots = await _generate_grid(db, tid, sid)
+    await db.commit()
+    return {"id": tid, "name": name, "email": email, "subject": body.subject, "slots_created": slots}
+
+
+@router.post("/seed-data")
+async def seed_data(
+    body: SeedData,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Fill a teacher's FREE slots with fake confirmed bookings (seed parent),
+    randomly spread, up to fill_percent. Never touches real or blocked slots."""
+    _require_admin(current_user)
+    sid = current_user["school_id"]
+    pct = max(0, min(100, body.fill_percent))
+
+    teacher = (await db.execute(
+        text("SELECT id FROM users WHERE id = :tid AND role = 'teacher' AND school_id = :sid"),
+        {"tid": body.teacher_id, "sid": sid}
+    )).fetchone()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found in your school")
+
+    # FREE = no live booking of any kind (no confirmed, no blocked marker).
+    free = (await db.execute(
+        text("SELECT s.id FROM slots s"
+             " WHERE s.teacher_id = :tid AND s.school_id = :sid"
+             " AND NOT EXISTS (SELECT 1 FROM bookings b WHERE b.slot_id = s.id AND b.status != 'cancelled')"),
+        {"tid": body.teacher_id, "sid": sid}
+    )).fetchall()
+    free_ids = [str(r.id) for r in free]
+
+    n_to_fill = round(len(free_ids) * pct / 100)
+    chosen = random.sample(free_ids, n_to_fill) if n_to_fill else []
+
+    seed_parent = await _get_or_create_seed_parent(db, sid)
+    created = 0
+    for slot_id in chosen:
+        await db.execute(
+            text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section)"
+                 " VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
+            {"id": str(uuid.uuid4()), "sid": slot_id, "pid": seed_parent,
+             "sn": random.choice(_FAKE_NAMES), "sec": random.choice(_FAKE_SECTIONS)}
+        )
+        created += 1
+    await db.commit()
+    return {"created": created, "free_before": len(free_ids), "fill_percent": pct}
+
+
+@router.get("/users")
+async def demo_users(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Teachers + parents in the admin's school, for the 'View as' picker.
+    (Admins are excluded — they can't be impersonated. Seed parent hidden.)"""
+    _require_admin(current_user)
+    rows = (await db.execute(
+        text("SELECT id, name, role, section, grade FROM users"
+             " WHERE school_id = :sid AND role IN ('teacher','parent') AND email != :seed"
+             " ORDER BY role, name"),
+        {"sid": current_user["school_id"], "seed": SEED_PARENT_EMAIL}
+    )).fetchall()
+    return [{"id": str(r.id), "name": r.name, "role": r.role, "section": r.section, "grade": r.grade} for r in rows]
+
+
+@router.post("/impersonate")
+async def impersonate(
+    body: Impersonate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Issue a short-lived token for a teacher/parent in the admin's own school.
+    Every guard is server-enforced — the frontend is never trusted."""
+    _require_admin(current_user)
+
+    target = (await db.execute(
+        text("SELECT id, role, school_id, name, section, grade, family_id, parent_name"
+             " FROM users WHERE id = :uid"),
+        {"uid": body.user_id}
+    )).fetchone()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if str(target.school_id) != current_user["school_id"]:
+        raise HTTPException(status_code=403, detail="That user is in a different school")
+    if target.role not in ("teacher", "parent"):
+        raise HTTPException(status_code=403, detail="Can only view as a teacher or parent")
+
+    token = create_access_token(
+        {
+            "sub": str(target.id), "role": target.role, "school_id": str(target.school_id),
+            "name": target.name, "section": target.section, "grade": target.grade,
+            "family_id": target.family_id, "parent_name": target.parent_name,
+            "impersonated_by": current_user["sub"],
+        },
+        expires_minutes=IMPERSONATION_EXPIRE_MINUTES,
+    )
+    _impersonation_log.warning(
+        "IMPERSONATION admin=%s target=%s role=%s at %s",
+        current_user["sub"], target.id, target.role, datetime.now(timezone.utc).isoformat(),
+    )
+    return {"access_token": token, "target_name": target.name, "target_role": target.role}
+
+
+@router.post("/wipe-seed-data")
+async def wipe_seed_data(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete ONLY seeded bookings (parent_id = seed parent). Real bookings survive."""
+    _require_admin(current_user)
+    sid = current_user["school_id"]
+    seed_row = (await db.execute(
+        text("SELECT id FROM users WHERE email = :e AND school_id = :sid"),
+        {"e": SEED_PARENT_EMAIL, "sid": sid}
+    )).fetchone()
+    if not seed_row:
+        return {"deleted": 0}
+    res = await db.execute(
+        text("DELETE FROM bookings WHERE parent_id = :pid RETURNING id"),
+        {"pid": str(seed_row.id)}
+    )
+    deleted = len(res.fetchall())
+    await db.commit()
+    return {"deleted": deleted}

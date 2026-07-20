@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
-import { wipeBookings, resetSlots, getChangelog } from '../api/demo'
+import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -16,7 +17,8 @@ const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', 
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 
 export default function AdminDashboard() {
-  const { user, logoutUser } = useAuth()
+  const { user, logoutUser, beginImpersonation } = useAuth()
+  const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +45,11 @@ export default function AdminDashboard() {
   const [demoConfirm, setDemoConfirm] = useState(null) // 'wipe' | 'reset' | null
   const [changelog, setChangelog] = useState(null)
   const [gitOpen, setGitOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ name: '', email: '', subject: '' })
+  const [seedTeacherId, setSeedTeacherId] = useState('')
+  const [seedFill, setSeedFill] = useState(50)
+  const [demoUsers, setDemoUsers] = useState(null)
+  const [viewAsSearch, setViewAsSearch] = useState('')
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
@@ -85,6 +92,10 @@ export default function AdminDashboard() {
         demoPrint('$ wipe-bookings')
         const r = await wipeBookings()
         demoPrint(`Deleted ${r.deleted} booking${r.deleted !== 1 ? 's' : ''}.`, 'success')
+      } else if (kind === 'wipeseed') {
+        demoPrint('$ wipe-seed-data')
+        const r = await wipeSeedData()
+        demoPrint(`Removed ${r.deleted} seeded booking${r.deleted !== 1 ? 's' : ''} (real bookings untouched).`, 'success')
       } else {
         demoPrint('$ reset-slots')
         const r = await resetSlots()
@@ -96,11 +107,49 @@ export default function AdminDashboard() {
     }
     setDemoBusy(false)
   }
+  const handleAddTeacher = async () => {
+    if (!addForm.name.trim() || !addForm.email.trim()) { demoPrint('Name and email are required.', 'error'); return }
+    setDemoBusy(true)
+    demoPrint(`$ add-teacher ${addForm.email.trim()}`)
+    try {
+      const r = await addTeacher({ name: addForm.name.trim(), email: addForm.email.trim(), subject: addForm.subject.trim() || null })
+      demoPrint(`Added ${r.name} with ${r.slots_created} slots.`, 'success')
+      setAddForm({ name: '', email: '', subject: '' })
+      await fetchData()
+      getDemoUsers().then(setDemoUsers).catch(() => {})   // refresh the View-as list
+
+    } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to add teacher.', 'error') }
+    setDemoBusy(false)
+  }
+  const handleSeedData = async () => {
+    if (!seedTeacherId) { demoPrint('Pick a teacher to seed.', 'error'); return }
+    setDemoBusy(true)
+    demoPrint(`$ seed-data teacher=${seedTeacherId.slice(0, 8)} fill=${seedFill}%`)
+    try {
+      const r = await seedData(seedTeacherId, Number(seedFill))
+      demoPrint(`Seeded ${r.created} fake booking${r.created !== 1 ? 's' : ''} (${r.free_before} free slots were available).`, 'success')
+      await fetchData()
+    } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to seed data.', 'error') }
+    setDemoBusy(false)
+  }
   useEffect(() => {
     if (tab === 'demo' && changelog === null) {
       getChangelog().then(setChangelog).catch(() => setChangelog({ days: [], total: 0, error: true }))
     }
-  }, [tab, changelog])
+    if (tab === 'demo' && demoUsers === null) {
+      getDemoUsers().then(setDemoUsers).catch(() => setDemoUsers([]))
+    }
+  }, [tab, changelog, demoUsers])
+
+  const handleImpersonate = async (u) => {
+    try {
+      const r = await impersonate(u.id)
+      beginImpersonation(r.access_token)                 // stashes admin token, swaps session (user set synchronously)
+      navigate(u.role === 'teacher' ? '/teacher' : '/parent')
+    } catch (err) {
+      demoPrint(err.response?.data?.detail || 'Could not view as that user.', 'error')
+    }
+  }
 
   const teacherMap = {}
   slots.forEach(s => {
@@ -402,6 +451,63 @@ export default function AdminDashboard() {
                 style={{ flex: '1 1 200px', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #F4C099', background: '#fff', color: '#C45A0A', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Reset slots</button>
             </div>
 
+            {/* Add teacher */}
+            <div style={{ margin: 'clamp(12px,1.8vw,18px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>Add teacher</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[['name', 'Name'], ['email', 'Email'], ['subject', 'Subject (optional)']].map(([k, ph]) => (
+                  <input key={k} value={addForm[k]} onChange={e => setAddForm(f => ({ ...f, [k]: e.target.value }))} placeholder={ph}
+                    style={{ flex: '1 1 140px', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                ))}
+                <button onClick={handleAddTeacher} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Add</button>
+              </div>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#9CA3AF', marginTop: 6 }}>Creates a real teacher with a fresh 45-slot grid.</div>
+            </div>
+
+            {/* Seed data + wipe demo data */}
+            <div style={{ margin: 'clamp(10px,1.4vw,14px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>Seed demo bookings</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <select value={seedTeacherId} onChange={e => setSeedTeacherId(e.target.value)}
+                  style={{ flex: '2 1 160px', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', background: '#fff', boxSizing: 'border-box' }}>
+                  <option value="">Pick a teacher…</option>
+                  {teachers.map(t => <option key={t.id} value={t.id}>{titleName(t.name)}</option>)}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <input type="number" min={0} max={100} value={seedFill} onChange={e => setSeedFill(e.target.value)}
+                    style={{ width: 64, padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                  <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>% full</span>
+                </div>
+                <button onClick={handleSeedData} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Seed</button>
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setDemoConfirm('wipeseed')} disabled={demoBusy} style={{ padding: 'clamp(7px,.9vw,10px) clamp(14px,2vw,20px)', borderRadius: 50, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(11px,1.3vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe demo data</button>
+              </div>
+            </div>
+
+            {/* View as (impersonate) */}
+            <div style={{ margin: 'clamp(10px,1.4vw,14px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 2 }}>View as</div>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#9CA3AF', marginBottom: 8 }}>Open a teacher's or parent's dashboard as them (60-min session, with a banner).</div>
+              <input value={viewAsSearch} onChange={e => setViewAsSearch(e.target.value)} placeholder="Search teachers &amp; parents…"
+                style={{ width: '100%', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+              <div className="custom-scroll" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                {demoUsers === null ? <div style={{ color: '#9CA3AF', fontSize: 13, padding: '6px 0' }}>Loading…</div>
+                : (() => {
+                    const q = viewAsSearch.trim().toLowerCase()
+                    const list = demoUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q))
+                    if (list.length === 0) return <div style={{ color: '#9CA3AF', fontSize: 13, padding: '6px 0' }}>No matches.</div>
+                    return list.map(u => (
+                      <div key={u.id} onClick={() => handleImpersonate(u)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 'clamp(7px,1vw,10px) clamp(6px,1vw,10px)', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid #FDE9D4' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#FFF8F3'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleName(u.name)}{u.section ? ` · ${u.section}` : ''}</span>
+                        <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: u.role === 'teacher' ? '#FFF0E6' : '#EFF6FF', color: u.role === 'teacher' ? '#C45A0A' : '#1D4ED8' }}>{u.role}</span>
+                      </div>
+                    ))
+                  })()}
+              </div>
+            </div>
+
             {/* What's new */}
             <div style={{ padding: 'clamp(14px,2vw,20px) clamp(14px,2vw,22px)' }}>
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 'clamp(8px,1.2vw,12px)' }}>What's new</div>
@@ -593,16 +699,18 @@ export default function AdminDashboard() {
         <div onClick={() => setDemoConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(22px,3vw,34px)', width: '100%', maxWidth: 'min(400px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 16px 50px rgba(0,0,0,.2)' }}>
             <div style={{ fontSize: 'clamp(16px,2.1vw,22px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10 }}>
-              {demoConfirm === 'wipe' ? 'Wipe all bookings?' : 'Reset all slots?'}
+              {demoConfirm === 'wipe' ? 'Wipe all bookings?' : demoConfirm === 'wipeseed' ? 'Wipe demo data?' : 'Reset all slots?'}
             </div>
             <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>
               {demoConfirm === 'wipe'
                 ? 'This permanently deletes EVERY booking (including cancelled meetings and blocked slots) for your school. Slots stay; they just become free.'
+                : demoConfirm === 'wipeseed'
+                ? 'This removes ONLY the fake seeded bookings (from the demo seed account). Real parent bookings are left completely untouched.'
                 : 'This deletes ALL slots for your school (and any bookings on them) and regenerates a fresh 45-slot grid per teacher. This cannot be undone.'}
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setDemoConfirm(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
-              <button onClick={() => runDemoAction(demoConfirm)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>{demoConfirm === 'wipe' ? 'Wipe bookings' : 'Reset slots'}</button>
+              <button onClick={() => runDemoAction(demoConfirm)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>{demoConfirm === 'wipe' ? 'Wipe bookings' : demoConfirm === 'wipeseed' ? 'Wipe demo data' : 'Reset slots'}</button>
             </div>
           </div>
         </div>
