@@ -56,6 +56,21 @@ function Toast({ msg }) {
   return <div style={{ position: 'fixed', bottom: 'clamp(16px,2.5vw,28px)', left: '50%', transform: 'translateX(-50%)', background: '#1B3F7A', color: '#fff', padding: 'clamp(10px,1.4vw,16px) clamp(18px,2.5vw,28px)', borderRadius: 50, fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, opacity: msg ? 1 : 0, transition: 'opacity .3s', pointerEvents: 'none', zIndex: 999, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(27,63,122,.3)', maxWidth: 'calc(100vw - 32px)', textAlign: 'center' }}>{msg}</div>
 }
 
+// Persist parent settings across refreshes. All access is try/catch-guarded so a
+// blocked/unavailable localStorage falls back silently to in-memory defaults.
+const SETTINGS_KEYS = { animations: 'ptm.settings.animations', sound: 'ptm.settings.sound' }
+const readStoredBool = (key, fallback) => {
+  try {
+    const v = localStorage.getItem(key)
+    if (v === 'true') return true
+    if (v === 'false') return false
+    return fallback
+  } catch { return fallback }
+}
+const writeStoredBool = (key, val) => {
+  try { localStorage.setItem(key, val ? 'true' : 'false') } catch { /* unavailable — ignore */ }
+}
+
 export default function ParentDashboard() {
   const { user, logoutUser } = useAuth()
   const [slots, setSlots] = useState([])
@@ -79,8 +94,8 @@ export default function ParentDashboard() {
   const [confirming, setConfirming] = useState(false)
   const [batchResult, setBatchResult] = useState(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [animationsOn, setAnimationsOn] = useState(true)   // session-only (no localStorage)
-  const [soundOn, setSoundOn] = useState(false)            // politer default: off
+  const [animationsOn, setAnimationsOn] = useState(() => readStoredBool(SETTINGS_KEYS.animations, true))   // default ON
+  const [soundOn, setSoundOn] = useState(() => readStoredBool(SETTINGS_KEYS.sound, false))                 // default OFF (politer)
   const [cartAnimating, setCartAnimating] = useState(false)
   const [animatedInIds, setAnimatedInIds] = useState(() => new Set())
   const [confirmFlourish, setConfirmFlourish] = useState(false)
@@ -114,6 +129,9 @@ export default function ParentDashboard() {
   }, [])
   // Cancel any in-flight animation timers on unmount.
   useEffect(() => () => { animTimersRef.current.forEach(clearTimeout) }, [])
+  // Persist settings whenever a toggle changes.
+  useEffect(() => { writeStoredBool(SETTINGS_KEYS.animations, animationsOn) }, [animationsOn])
+  useEffect(() => { writeStoredBool(SETTINGS_KEYS.sound, soundOn) }, [soundOn])
 
   // Auto-scroll when parent switches the active child pill
   useEffect(() => {
