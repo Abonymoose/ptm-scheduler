@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [demoBusy, setDemoBusy] = useState(false)
   const [demoConfirm, setDemoConfirm] = useState(null) // 'wipe' | 'reset' | null
   const [changelog, setChangelog] = useState(null)
+  const [gitOpen, setGitOpen] = useState(false)
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
@@ -406,18 +407,47 @@ export default function AdminDashboard() {
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 'clamp(8px,1.2vw,12px)' }}>What's new</div>
               {changelog === null ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading changelog…</div>
               : changelog.error ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Changelog unavailable.</div>
-              : changelog.days.length === 0 ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>No commits in the last 7 days.</div>
-              : changelog.days.map(day => (
-                <div key={day.date} style={{ marginBottom: 'clamp(10px,1.5vw,16px)' }}>
-                  <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{day.date}</div>
-                  {day.commits.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 'clamp(11px,1.3vw,14px)' }}>
-                      <code style={{ color: '#C45A0A', fontFamily: "'Courier New',monospace", flexShrink: 0 }}>{c.hash}</code>
-                      <span style={{ color: '#374151', minWidth: 0 }}>{c.message}</span>
+              : (<>
+                {/* Hand-written, teacher-facing notes (primary) */}
+                {(changelog.notes || []).length === 0
+                  ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>No release notes yet.</div>
+                  : (changelog.notes || []).map((sec, si) => (
+                    <div key={si} style={{ marginBottom: 'clamp(12px,1.8vw,18px)' }}>
+                      <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 6 }}>{sec.heading}</div>
+                      {sec.items.map((it, ii) => (
+                        <div key={ii} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 'clamp(12px,1.4vw,15px)', color: '#374151', lineHeight: 1.45 }}>
+                          <span style={{ color: '#F47920', flexShrink: 0, fontWeight: 800 }}>•</span>
+                          <span style={{ minWidth: 0 }}>{it}</span>
+                        </div>
+                      ))}
                     </div>
                   ))}
+
+                {/* Git commits (secondary, collapsed) */}
+                <div style={{ marginTop: 'clamp(8px,1.2vw,14px)', borderTop: '1px solid #F4EDE4', paddingTop: 'clamp(8px,1.2vw,12px)' }}>
+                  <button onClick={() => setGitOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                    <span style={{ display: 'inline-block', transition: 'transform .15s', transform: gitOpen ? 'rotate(90deg)' : 'none' }}>▸</span>
+                    Developer changelog (git){changelog.total ? ` · ${changelog.total}` : ''}
+                  </button>
+                  {gitOpen && (
+                    <div style={{ marginTop: 'clamp(8px,1.2vw,12px)' }}>
+                      {changelog.git_error ? <div style={{ color: '#9CA3AF', fontSize: 13 }}>Git log unavailable.</div>
+                      : changelog.days.length === 0 ? <div style={{ color: '#9CA3AF', fontSize: 13 }}>No commits in the last 7 days.</div>
+                      : changelog.days.map(day => (
+                        <div key={day.date} style={{ marginBottom: 'clamp(8px,1.2vw,14px)' }}>
+                          <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{day.date}</div>
+                          {day.commits.map((c, i) => (
+                            <div key={i} style={{ display: 'flex', gap: 10, padding: '3px 0', fontSize: 'clamp(10px,1.2vw,13px)' }}>
+                              <code style={{ color: '#C45A0A', fontFamily: "'Courier New',monospace", flexShrink: 0 }}>{c.hash}</code>
+                              <span style={{ color: '#6B7280', minWidth: 0 }}>{c.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
+              </>)}
             </div>
           </div>
         )}

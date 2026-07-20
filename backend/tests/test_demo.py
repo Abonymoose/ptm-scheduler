@@ -73,6 +73,15 @@ def test_admin_changelog(client, seed):
             assert "hash" in c and "message" in c
 
 
+def test_changelog_includes_handwritten_notes(client, seed):
+    body = client.get("/demo/changelog", headers=auth(seed["tokens"]["admin"])).json()
+    assert isinstance(body["notes"], list)
+    # CHANGELOG_DEMO.md ships with sections; each has a heading + non-empty items.
+    assert len(body["notes"]) >= 1
+    for sec in body["notes"]:
+        assert sec["heading"] and isinstance(sec["items"], list) and len(sec["items"]) >= 1
+
+
 # --- demo login (DEMO_SECRET_CODE) -------------------------------------------
 def test_demo_login_correct_code(client, seed, monkeypatch):
     monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")

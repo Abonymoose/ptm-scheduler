@@ -82,31 +82,59 @@ async def reset_slots(
     return {"slots_deleted": slots_deleted, "teachers": len(teachers), "slots_created": slots_created}
 
 
+CHANGELOG_MD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CHANGELOG_DEMO.md")
+
+
+def _read_handwritten_notes():
+    """Parse CHANGELOG_DEMO.md into [{heading, items:[...]}]. Missing file -> []."""
+    try:
+        with open(CHANGELOG_MD, "r", encoding="utf-8") as f:
+            text_body = f.read()
+    except OSError:
+        return []
+    sections = []
+    current = None
+    for line in text_body.splitlines():
+        s = line.strip()
+        if s.startswith("## "):
+            current = {"heading": s[3:].strip(), "items": []}
+            sections.append(current)
+        elif (s.startswith("- ") or s.startswith("* ")) and current is not None:
+            current["items"].append(s[2:].strip())
+    # Drop any empty sections.
+    return [sec for sec in sections if sec["items"]]
+
+
 @router.get("/changelog")
 async def changelog(current_user: dict = Depends(get_current_user)):
-    """Commits from the last 7 days, grouped by date (newest first)."""
+    """Hand-written release notes (primary) + raw git commits from the last 7 days."""
     _require_admin(current_user)
+    notes = _read_handwritten_notes()
+
+    # Git commits are secondary — if git is unavailable, still return the notes.
+    days = []
+    git_error = None
     try:
         out = subprocess.run(
             ["git", "-C", REPO_ROOT, "log", "--since=7 days ago",
              "--date=short", "--pretty=format:%h\x1f%ad\x1f%s"],
             capture_output=True, text=True, timeout=10,
         )
+        if out.returncode != 0:
+            git_error = (out.stderr or "git log failed").strip()
+        else:
+            grouped: "OrderedDict[str, list]" = OrderedDict()
+            for line in out.stdout.splitlines():
+                if not line.strip():
+                    continue
+                parts = line.split("\x1f")
+                if len(parts) != 3:
+                    continue
+                h, date, msg = parts
+                grouped.setdefault(date, []).append({"hash": h, "message": msg})
+            days = [{"date": d, "commits": c} for d, c in grouped.items()]
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Could not read changelog: {exc}")
-    if out.returncode != 0:
-        raise HTTPException(status_code=500, detail=(out.stderr or "git log failed").strip())
+        git_error = str(exc)
 
-    grouped: "OrderedDict[str, list]" = OrderedDict()
-    for line in out.stdout.splitlines():
-        if not line.strip():
-            continue
-        parts = line.split("\x1f")
-        if len(parts) != 3:
-            continue
-        h, date, msg = parts
-        grouped.setdefault(date, []).append({"hash": h, "message": msg})
-
-    days = [{"date": d, "commits": c} for d, c in grouped.items()]
     total = sum(len(d["commits"]) for d in days)
-    return {"days": days, "total": total}
+    return {"notes": notes, "days": days, "total": total, "git_error": git_error}
