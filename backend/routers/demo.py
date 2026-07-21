@@ -26,6 +26,23 @@ _FAKE_NAMES = [
 ]
 _FAKE_SECTIONS = [f"{g}{s}" for g in range(4, 9) for s in "ABCD"]  # 4A .. 8D
 
+# Weighted attendance picks: mostly one parent, sometimes both, occasionally other.
+_ATTENDANCE_CHOICES = [["Mother"], ["Father"], ["Mother", "Father"], ["Other"]]
+_ATTENDANCE_WEIGHTS = [35, 35, 20, 10]
+
+_FAKE_NOTES = [
+    "Discussed progress in algebra; needs more practice with word problems.",
+    "Parent raised concerns about homework load.",
+    "Great improvement this term — keep it up.",
+    "Reading fluency is strong; working on comprehension depth.",
+    "A little distracted in class lately — agreed to check in weekly.",
+    "Excellent participation; encouraged to attempt the extension problems.",
+    "Handwriting has improved; still rushing on longer questions.",
+    "Confident with fractions now; moving on to decimals next.",
+    "Needs to revise before assessments — shared a study plan with the parent.",
+    "Very creative in projects; guiding on structuring written work.",
+]
+
 
 class AddTeacher(BaseModel):
     name: str
@@ -36,6 +53,8 @@ class AddTeacher(BaseModel):
 class SeedData(BaseModel):
     teacher_id: str
     fill_percent: int = 50
+    realistic: bool = False
+    realistic_percent: int = 60
 
 
 class Impersonate(BaseModel):
@@ -262,17 +281,44 @@ async def seed_data(
     chosen = random.sample(free_ids, n_to_fill) if n_to_fill else []
 
     seed_parent = await _get_or_create_seed_parent(db, sid)
-    created = 0
+    booking_ids = []
     for slot_id in chosen:
+        bid = str(uuid.uuid4())
         await db.execute(
             text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section)"
                  " VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
-            {"id": str(uuid.uuid4()), "sid": slot_id, "pid": seed_parent,
+            {"id": bid, "sid": slot_id, "pid": seed_parent,
              "sn": random.choice(_FAKE_NAMES), "sec": random.choice(_FAKE_SECTIONS)}
         )
-        created += 1
+        booking_ids.append(bid)
+    created = len(booking_ids)
+
+    # "Realistic": for ~realistic_percent of the new bookings, mark attendance and
+    # write a note authored by THIS teacher (so it shows up when you View-as them).
+    attendance_marked = 0
+    notes_created = 0
+    if body.realistic and booking_ids:
+        rp = max(0, min(100, body.realistic_percent))
+        picked = random.sample(booking_ids, round(created * rp / 100))
+        for bid in picked:
+            att = random.choices(_ATTENDANCE_CHOICES, weights=_ATTENDANCE_WEIGHTS, k=1)[0]
+            await db.execute(
+                text("UPDATE bookings SET attendance = CAST(:att AS text[]) WHERE id = :bid"),
+                {"att": att, "bid": bid}
+            )
+            attendance_marked += 1
+            await db.execute(
+                text("INSERT INTO meeting_notes (id, booking_id, author_id, author_role, note_text, updated_at)"
+                     " VALUES (:id, :bid, :aid, 'teacher', :txt, NOW())"),
+                {"id": str(uuid.uuid4()), "bid": bid, "aid": body.teacher_id, "txt": random.choice(_FAKE_NOTES)}
+            )
+            notes_created += 1
+
     await db.commit()
-    return {"created": created, "free_before": len(free_ids), "fill_percent": pct}
+    return {
+        "created": created, "free_before": len(free_ids), "fill_percent": pct,
+        "attendance_marked": attendance_marked, "notes_created": notes_created,
+    }
 
 
 @router.get("/users")

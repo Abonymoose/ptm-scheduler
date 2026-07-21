@@ -156,6 +156,66 @@ def test_seed_data_fills_half_without_touching_real_or_blocked(client, seed):
     assert blocked == 1
 
 
+def _count(sql, params):
+    async def _q():
+        async with seed_engine.connect() as c:
+            return (await c.execute(text(sql), params)).scalar()
+    return asyncio.run(_q())
+
+
+def test_seed_data_realistic_false_no_attendance_no_notes(client, seed):
+    tid = client.post("/demo/add-teacher", json={"name": "Plain", "email": "plain@test.edu"},
+                      headers=auth(seed["tokens"]["admin"])).json()["id"]
+    r = client.post("/demo/seed-data", json={"teacher_id": tid, "fill_percent": 50}, headers=auth(seed["tokens"]["admin"]))
+    body = r.json()
+    assert body["attendance_marked"] == 0 and body["notes_created"] == 0
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE author_id = :t", {"t": tid}) == 0
+    assert _count("SELECT COUNT(*) FROM bookings WHERE parent_id = (SELECT id FROM users WHERE email='seed@demo.local') AND attendance IS NOT NULL", {}) == 0
+
+
+def test_seed_data_realistic_marks_attendance_and_teacher_notes(client, seed):
+    tid = client.post("/demo/add-teacher", json={"name": "Realistic", "email": "realistic@test.edu"},
+                      headers=auth(seed["tokens"]["admin"])).json()["id"]
+    r = client.post("/demo/seed-data", json={"teacher_id": tid, "fill_percent": 100, "realistic": True, "realistic_percent": 60},
+                    headers=auth(seed["tokens"]["admin"]))
+    body = r.json()
+    created = body["created"]
+    assert created > 0
+    # ~60% got attendance + a note, and the two counts match.
+    assert body["attendance_marked"] == body["notes_created"]
+    assert abs(body["attendance_marked"] - created * 0.6) <= 1
+
+    # Notes are authored by the TEACHER, not the seed parent.
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE author_id = :t AND author_role='teacher'", {"t": tid}) == body["notes_created"]
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE author_id = (SELECT id FROM users WHERE email='seed@demo.local')", {}) == 0
+    # Attendance was actually written on the bookings.
+    assert _count("SELECT COUNT(*) FROM bookings b WHERE b.parent_id=(SELECT id FROM users WHERE email='seed@demo.local') AND b.attendance IS NOT NULL", {}) == body["attendance_marked"]
+
+
+def test_wipe_seed_data_cascades_notes_but_spares_real(client, seed):
+    # A REAL booking + a REAL note (on teacher1's slot A, booked by the real parent).
+    real_bid = client.post("/bookings/", json={"slot_id": seed["slots"]["A"], "student_name": "Real Kid", "section": "7C"},
+                           headers=auth(seed["tokens"]["parent"])).json()["booking_id"]
+    client.put(f"/notes/{real_bid}", json={"note_text": "Real parent note"}, headers=auth(seed["tokens"]["parent"]))
+
+    # Seeded teacher with realistic data (bookings + teacher notes).
+    tid = client.post("/demo/add-teacher", json={"name": "Casc", "email": "casc@test.edu"},
+                      headers=auth(seed["tokens"]["admin"])).json()["id"]
+    sd = client.post("/demo/seed-data", json={"teacher_id": tid, "fill_percent": 80, "realistic": True, "realistic_percent": 70},
+                     headers=auth(seed["tokens"]["admin"])).json()
+    assert sd["notes_created"] > 0
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE author_id = :t", {"t": tid}) == sd["notes_created"]
+
+    client.post("/demo/wipe-seed-data", headers=auth(seed["tokens"]["admin"]))
+
+    # Seeded bookings gone -> their notes cascaded away.
+    assert _count("SELECT COUNT(*) FROM bookings WHERE parent_id=(SELECT id FROM users WHERE email='seed@demo.local')", {}) == 0
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE author_id = :t", {"t": tid}) == 0
+    # Real booking + real note survive.
+    assert _count("SELECT COUNT(*) FROM bookings WHERE id = :b AND status='confirmed'", {"b": real_bid}) == 1
+    assert _count("SELECT COUNT(*) FROM meeting_notes WHERE booking_id = :b", {"b": real_bid}) == 1
+
+
 def test_wipe_seed_data_removes_only_seed_bookings(client, seed):
     tid = client.post("/demo/add-teacher", json={"name": "Wipe Target", "email": "wipetarget@test.edu"},
                       headers=auth(seed["tokens"]["admin"])).json()["id"]

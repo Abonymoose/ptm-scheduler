@@ -48,6 +48,8 @@ export default function AdminDashboard() {
   const [addForm, setAddForm] = useState({ name: '', email: '', subject: '' })
   const [seedTeacherId, setSeedTeacherId] = useState('')
   const [seedFill, setSeedFill] = useState(50)
+  const [seedRealistic, setSeedRealistic] = useState(false)
+  const [seedRealisticPct, setSeedRealisticPct] = useState(60)
   const [demoUsers, setDemoUsers] = useState(null)
   const [viewAsSearch, setViewAsSearch] = useState('')
   const mMouseDown = useRef(false)
@@ -124,10 +126,14 @@ export default function AdminDashboard() {
   const handleSeedData = async () => {
     if (!seedTeacherId) { demoPrint('Pick a teacher to seed.', 'error'); return }
     setDemoBusy(true)
-    demoPrint(`$ seed-data teacher=${seedTeacherId.slice(0, 8)} fill=${seedFill}%`)
+    demoPrint(`$ seed-data teacher=${seedTeacherId.slice(0, 8)} fill=${seedFill}%${seedRealistic ? ` realistic=${seedRealisticPct}%` : ''}`)
     try {
-      const r = await seedData(seedTeacherId, Number(seedFill))
-      demoPrint(`Seeded ${r.created} fake booking${r.created !== 1 ? 's' : ''} (${r.free_before} free slots were available).`, 'success')
+      const r = await seedData(seedTeacherId, Number(seedFill), seedRealistic, Number(seedRealisticPct))
+      const tname = teachers.find(t => t.id === seedTeacherId)?.name
+      let msg = `Created ${r.created} booking${r.created !== 1 ? 's' : ''}`
+      if (seedRealistic) msg += `, marked ${r.attendance_marked} attended, wrote ${r.notes_created} notes`
+      if (tname) msg += ` for ${titleName(tname)}`
+      demoPrint(msg + '.', 'success')
       await fetchData()
     } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to seed data.', 'error') }
     setDemoBusy(false)
@@ -479,6 +485,19 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>% full</span>
                 </div>
                 <button onClick={handleSeedData} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Seed</button>
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={seedRealistic} onChange={e => setSeedRealistic(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#1B3F7A', cursor: 'pointer' }} />
+                  <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 600, color: '#1B3F7A' }}>Realistic (attendance + notes)</span>
+                </label>
+                {seedRealistic && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="number" min={0} max={100} value={seedRealisticPct} onChange={e => setSeedRealisticPct(e.target.value)}
+                      style={{ width: 64, padding: 'clamp(6px,.9vw,10px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                    <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF' }}>% get attendance + a note</span>
+                  </div>
+                )}
               </div>
               <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                 <button onClick={() => setDemoConfirm('wipeseed')} disabled={demoBusy} style={{ padding: 'clamp(7px,.9vw,10px) clamp(14px,2vw,20px)', borderRadius: 50, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(11px,1.3vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe demo data</button>
