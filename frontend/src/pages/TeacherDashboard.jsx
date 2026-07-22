@@ -6,6 +6,7 @@ import { titleName } from '../utils/teacherTitle'
 import { blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { setAttendance as setAttendanceApi } from '../api/bookings'
 import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
+import InfoButton from '../components/InfoButton'
 
 const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
 
@@ -248,7 +249,7 @@ export default function TeacherDashboard() {
         {tab === 's' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, minHeight: 'clamp(44px,5.5vw,58px)' }}>
-              <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked<InfoButton text="Record who attended the meeting: Mother, Father, or Other." label="About attendance" /></span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#9CA3AF', fontWeight: 500 }}>
                   <span>Highlight next</span>
@@ -271,8 +272,8 @@ export default function TeacherDashboard() {
                 const isCurrent = hlNext && !isDone && i === upcomingSlots.findIndex(s => !(s.bookings?.[0]?.attendance?.length))
                 return (
                   <div key={slot.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(68px,9vw,88px)', background: isDone ? '#FAFAFA' : isCurrent ? '#FFFAF7' : '#fff', borderLeft: isCurrent ? '3px solid #F47920' : 'none', transition: 'background .12s' }}>
-                    <div style={{ width: 'clamp(60px,8vw,80px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
-                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                    <div style={{ width: 'clamp(66px,8.5vw,86px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
+                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.02em', whiteSpace: 'nowrap', textAlign: 'center' }}>{fmt(slot.start_time)}</div>
                     </div>
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: isDone ? '#E5E5E5' : '#F4C099' }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.4vw,14px)', flex: 1, padding: 'clamp(10px,1.4vw,14px) clamp(14px,2vw,18px)', minWidth: 0 }}>
@@ -352,7 +353,7 @@ export default function TeacherDashboard() {
             <div style={{ padding: '10px 20px', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{freeSlots.length} free</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{blockedSlots.length} blocked</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{blockedSlots.length} blocked<InfoButton text="Marks a slot unavailable so parents can't book it — useful for breaks or lunch." label="About blocking slots" /></span>
             </div>
 
             {/* Vertical slot list */}
@@ -416,7 +417,7 @@ export default function TeacherDashboard() {
                         userSelect: 'none',
                       }}
                     >
-                      <div style={{ width: 'clamp(60px,8.5vw,80px)', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                      <div style={{ width: 'clamp(66px,9vw,86px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isBlocked ? (
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 600 }}>Blocked — unavailable</div>

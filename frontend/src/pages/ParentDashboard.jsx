@@ -5,6 +5,7 @@ import { batchBooking, getMyBookings, cancelBooking, autoSchedule } from '../api
 import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
 import { LOGO_LARGE } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
+import InfoButton from '../components/InfoButton'
 
 const noteIcon = filled => (
   <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
@@ -449,7 +450,10 @@ export default function ParentDashboard() {
                 ))}
               </div>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to add to cart, then Confirm</span>
-              <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', marginLeft: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit', flexShrink: 0 }}>Auto-schedule</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
+                <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit' }}>Auto-schedule</button>
+                <InfoButton text="Automatically picks meeting slots across the teachers you select, avoiding time clashes." label="About auto-schedule" />
+              </div>
             </div>
 
             {/* Grid */}
@@ -457,7 +461,7 @@ export default function ParentDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 'clamp(48px,6vw,64px)', textAlign: 'left', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', paddingBottom: 8, paddingLeft: 'clamp(10px,1.5vw,18px)', fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 600, color: '#9CA3AF', position: 'sticky', top: 0, zIndex: 5 }}>Time</th>
+                    <th style={{ width: 'clamp(56px,7vw,74px)', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', paddingBottom: 8, fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 600, color: '#9CA3AF', position: 'sticky', top: 0, zIndex: 5 }}>Time</th>
                     {teachers.map(t => (
                       <th key={t} style={{ textAlign: 'center', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', minWidth: 'clamp(80px,9vw,110px)', position: 'sticky', top: 0, zIndex: 5, padding: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%', padding: '8px 4px' }}>
@@ -471,7 +475,7 @@ export default function ParentDashboard() {
                 <tbody>
                   {allTimes.map(time => (
                     <tr key={time} ref={el => { rowRefs.current[time] = el }}>
-                      <td style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', paddingLeft: 'clamp(10px,1.5vw,18px)', background: '#FFF8F3', fontWeight: 600, borderRight: '2px solid #F4C099', border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>{fmt(time)}</td>
+                      <td style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', textAlign: 'center', whiteSpace: 'nowrap', background: '#FFF8F3', fontWeight: 600, borderRight: '2px solid #F4C099', border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>{fmt(time)}</td>
                       {teachers.map(t => {
                         const slot = teacherGroups[t]?.find(s => s.start_time === time)
                         if (!slot) return <td key={t} style={{ border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', background: '#F9FAFB' }} />
@@ -557,6 +561,7 @@ export default function ParentDashboard() {
                   ? `${cart.length} slot${cart.length !== 1 ? 's' : ''} in cart`
                   : 'Tap a slot to add to cart'}
               </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
                 onClick={handleConfirm}
                 disabled={cart.length === 0 || confirming}
@@ -574,6 +579,8 @@ export default function ParentDashboard() {
                 {confirmFlourish && <span style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '45%', background: 'linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent)', animation: 'confirmShimmer .7s ease-out', pointerEvents: 'none' }} />}
                 <span style={{ position: 'relative' }}>{confirming ? 'Booking…' : `Confirm ${cart.length > 0 ? cart.length + ' ' : ''}slot${cart.length !== 1 ? 's' : ''}`}</span>
               </button>
+              <InfoButton text="Your selected slots aren't booked until you press Confirm." label="About confirming slots" />
+              </div>
             </div>
           </div>
         )}
@@ -583,11 +590,14 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{activeBookings.length} upcoming meetings</span>
-              <div onClick={() => setColourByChild(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
-                <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: colourByChild ? '#C45A0A' : '#9CA3AF', fontWeight: 600 }}>Colour by child</span>
-                <div style={{ width: 38, height: 22, borderRadius: 22, background: colourByChild ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: colourByChild ? 18 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div onClick={() => setColourByChild(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: colourByChild ? '#C45A0A' : '#9CA3AF', fontWeight: 600 }}>Colour by child</span>
+                  <div style={{ width: 38, height: 22, borderRadius: 22, background: colourByChild ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: colourByChild ? 18 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
+                  </div>
                 </div>
+                <InfoButton text="Colour-codes meetings by which child they're for." label="About colour by child" />
               </div>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
@@ -604,8 +614,8 @@ export default function ParentDashboard() {
                 const barColor = isDone ? '#E5E5E5' : accent || '#F4C099'
                 return (
                   <div key={bk.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(62px,8vw,80px)', background: isDone ? '#FAFAFA' : '#fff', transition: 'background .12s' }}>
-                    <div style={{ width: 'clamp(60px,8vw,80px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
-                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : accent || '#1B3F7A', letterSpacing: '-.02em' }}>{fmt(bk.start_time)}</div>
+                    <div style={{ width: 'clamp(66px,8.5vw,86px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
+                      <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : accent || '#1B3F7A', letterSpacing: '-.02em', whiteSpace: 'nowrap', textAlign: 'center' }}>{fmt(bk.start_time)}</div>
                     </div>
                     <div style={{ width: 3, flexShrink: 0, alignSelf: 'stretch', background: barColor }} />
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>

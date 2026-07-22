@@ -6,6 +6,7 @@ import { LOGO_SMALL } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
+import InfoButton from '../components/InfoButton'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -403,10 +404,11 @@ export default function AdminDashboard() {
         {/* HASN'T BOOKED YET */}
         {tab === 'u' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0 }}>
+            <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ fontSize: 'clamp(11px,1.4vw,15px)', color: '#C45A0A', fontWeight: 700 }}>
                 {unbooked.count} parent{unbooked.count !== 1 ? 's' : ''} haven't booked
               </span>
+              <InfoButton text="Parents who haven't confirmed any meeting yet." label="About hasn't booked" />
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
               {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
@@ -451,10 +453,16 @@ export default function AdminDashboard() {
 
             {/* Action buttons */}
             <div style={{ padding: '0 clamp(10px,1.5vw,16px)', display: 'flex', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'wrap', flexShrink: 0 }}>
-              <button onClick={() => setDemoConfirm('wipe')} disabled={demoBusy}
-                style={{ flex: '1 1 200px', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe all bookings</button>
-              <button onClick={() => setDemoConfirm('reset')} disabled={demoBusy}
-                style={{ flex: '1 1 200px', padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #F4C099', background: '#fff', color: '#C45A0A', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Reset slots</button>
+              <div style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => setDemoConfirm('wipe')} disabled={demoBusy}
+                  style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe all bookings</button>
+                <InfoButton text="Deletes EVERY booking (including cancelled meetings and blocked slots) for your school. The slots stay — they just become free." label="About wipe all bookings" />
+              </div>
+              <div style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => setDemoConfirm('reset')} disabled={demoBusy}
+                  style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, border: '1.5px solid #F4C099', background: '#fff', color: '#C45A0A', fontWeight: 700, fontSize: 'clamp(13px,1.6vw,16px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Reset slots</button>
+                <InfoButton text="Deletes ALL slots for your school (and any bookings on them) and regenerates a fresh 45-slot grid per teacher." label="About reset slots" />
+              </div>
             </div>
 
             {/* Add teacher */}
@@ -499,8 +507,9 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4 }}>
                 <button onClick={() => setDemoConfirm('wipeseed')} disabled={demoBusy} style={{ padding: 'clamp(7px,.9vw,10px) clamp(14px,2vw,20px)', borderRadius: 50, border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontWeight: 700, fontSize: 'clamp(11px,1.3vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Wipe demo data</button>
+                <InfoButton text="Removes ONLY the fake seeded bookings (from the demo seed account). Real parent bookings are left untouched." label="About wipe demo data" />
               </div>
             </div>
 
@@ -666,7 +675,7 @@ export default function AdminDashboard() {
                       onTouchMove={() => { clearTimeout(mLongPress.current) }}
                       style={{ display: 'flex', alignItems: 'center', gap: 7, padding: 'clamp(7px,1vw,10px) 0', borderBottom: '1px solid #F4EDE4', cursor: 'pointer', background: isMSel ? '#EFF6FF' : '#fff', borderLeft: isMSel ? '3px solid #1B3F7A' : '3px solid transparent', paddingLeft: isMSel ? 4 : 7, userSelect: 'none', transition: 'background .1s' }}
                     >
-                      <div style={{ width: 'clamp(56px,7.5vw,72px)', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
+                      <div style={{ width: 'clamp(64px,8vw,80px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
                       </div>
