@@ -1,33 +1,53 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 // A small, muted (i) icon that opens a dismissable explanation popup. Click to
 // open (works on desktop + mobile); click away or the × to close. The popup is
 // portalled to <body> and fixed-positioned from the icon, so overflow containers
-// never clip it.
+// never clip it. It flips upward when there's no room below and is clamped so it
+// never runs off the left/right/top/bottom edges.
 export default function InfoButton({ text, label = 'More info', size = 15 }) {
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
-  const ref = useRef(null)
+  const [rect, setRect] = useState(null)
+  const [pos, setPos] = useState(null)
+  const iconRef = useRef(null)
+  const popRef = useRef(null)
 
   const toggle = (e) => {
     e.stopPropagation()
     e.preventDefault()
-    if (!open && ref.current) {
-      const r = ref.current.getBoundingClientRect()
-      const width = 240
-      setPos({
-        top: r.bottom + 6,
-        left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)),
-      })
+    if (!open && iconRef.current) {
+      setRect(iconRef.current.getBoundingClientRect())
+      setPos(null) // recomputed once the popup is measured
     }
     setOpen(o => !o)
   }
 
+  // Position after the popup renders (before paint), so we can measure its size.
+  useLayoutEffect(() => {
+    if (!open || !rect || !popRef.current) return
+    const pop = popRef.current.getBoundingClientRect()
+    const margin = 8
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    let left = Math.min(rect.left, vw - pop.width - margin)
+    left = Math.max(margin, left)
+
+    const spaceBelow = vh - rect.bottom - margin
+    const spaceAbove = rect.top - margin
+    let top = (pop.height <= spaceBelow || spaceBelow >= spaceAbove)
+      ? rect.bottom + 6            // open downward
+      : rect.top - pop.height - 6  // flip upward
+    top = Math.max(margin, Math.min(top, vh - pop.height - margin))
+
+    setPos({ top, left })
+  }, [open, rect])
+
   return (
     <>
       <button
-        ref={ref}
+        ref={iconRef}
         type="button"
         onClick={toggle}
         aria-label={label}
@@ -47,11 +67,15 @@ export default function InfoButton({ text, label = 'More info', size = 15 }) {
           <rect x="7.2" y="6.7" width="1.6" height="5" rx="0.8" fill="currentColor" />
         </svg>
       </button>
-      {open && createPortal(
+      {open && rect && createPortal(
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 100000 }} />
-          <div style={{
-            position: 'fixed', top: pos.top, left: pos.left, zIndex: 100001,
+          <div ref={popRef} style={{
+            position: 'fixed',
+            top: pos ? pos.top : rect.bottom + 6,
+            left: pos ? pos.left : rect.left,
+            visibility: pos ? 'visible' : 'hidden',
+            zIndex: 100001,
             width: 240, maxWidth: 'calc(100vw - 16px)', background: '#fff', color: '#374151',
             borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,.18)', border: '1px solid #F0E4D4',
             padding: '12px 32px 12px 14px', fontSize: 13, lineHeight: 1.5, fontWeight: 500,
