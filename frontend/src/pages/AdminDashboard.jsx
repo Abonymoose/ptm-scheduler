@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
-import { titleName } from '../utils/teacherTitle'
+import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
 import InfoButton from '../components/InfoButton'
@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const [openTeacher, setOpenTeacher] = useState(null)
   const [openBooking, setOpenBooking] = useState(null)
   const [manageTeacher, setManageTeacher] = useState(null)
-  const [manageForm, setManageForm] = useState({ name: '', email: '', subject: '', venue: '' })
+  const [manageForm, setManageForm] = useState({ title: 'Ms.', name: '', email: '', subject: '', venue: '' })
   const [manageSlots, setManageSlots] = useState([])
   const [loadingMSlots, setLoadingMSlots] = useState(false)
   const [savingTeacher, setSavingTeacher] = useState(false)
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   const [demoConfirm, setDemoConfirm] = useState(null) // 'wipe' | 'reset' | null
   const [changelog, setChangelog] = useState(null)
   const [gitOpen, setGitOpen] = useState(false)
-  const [addForm, setAddForm] = useState({ name: '', email: '', subject: '' })
+  const [addForm, setAddForm] = useState({ title: 'Ms.', name: '', email: '', subject: '' })
   const [seedTeacherId, setSeedTeacherId] = useState('')
   const [seedFill, setSeedFill] = useState(50)
   const [seedRealistic, setSeedRealistic] = useState(false)
@@ -115,9 +115,9 @@ export default function AdminDashboard() {
     setDemoBusy(true)
     demoPrint(`$ add-teacher ${addForm.email.trim()}`)
     try {
-      const r = await addTeacher({ name: addForm.name.trim(), email: addForm.email.trim(), subject: addForm.subject.trim() || null })
+      const r = await addTeacher({ name: combineTitle(addForm.title, addForm.name), email: addForm.email.trim(), subject: addForm.subject.trim() || null })
       demoPrint(`Added ${r.name} with ${r.slots_created} slots.`, 'success')
-      setAddForm({ name: '', email: '', subject: '' })
+      setAddForm({ title: addForm.title, name: '', email: '', subject: '' })
       await fetchData()
       getDemoUsers().then(setDemoUsers).catch(() => {})   // refresh the View-as list
 
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
   const openManage = async (t) => {
     setManageTeacher(t)
-    setManageForm({ name: t.name || '', email: t.email || '', subject: t.sub || '', venue: t.venue || '' })
+    setManageForm({ ...splitTitle(t.name || ''), email: t.email || '', subject: t.sub || '', venue: t.venue || '' })
     setConfirmCancel(null)
     setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0); setMSelectMode(false)
     setLoadingMSlots(true)
@@ -201,7 +201,8 @@ export default function AdminDashboard() {
   const saveTeacher = async () => {
     if (!manageForm.name || !manageForm.email) { showToast('Name and email are required'); return }
     setSavingTeacher(true)
-    try { await updateTeacher(manageTeacher.id, manageForm); showToast('Teacher updated'); await fetchData() }
+    const payload = { name: combineTitle(manageForm.title, manageForm.name), email: manageForm.email, subject: manageForm.subject, venue: manageForm.venue }
+    try { await updateTeacher(manageTeacher.id, payload); showToast('Teacher updated'); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed to save') }
     setSavingTeacher(false)
   }
@@ -469,6 +470,10 @@ export default function AdminDashboard() {
             <div style={{ margin: 'clamp(12px,1.8vw,18px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>Add teacher</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <select value={addForm.title} onChange={e => setAddForm(f => ({ ...f, title: e.target.value }))}
+                  style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', background: '#fff', boxSizing: 'border-box' }}>
+                  {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
                 {[['name', 'Name'], ['email', 'Email'], ['subject', 'Subject (optional)']].map(([k, ph]) => (
                   <input key={k} value={addForm[k]} onChange={e => setAddForm(f => ({ ...f, [k]: e.target.value }))} placeholder={ph}
                     style={{ flex: '1 1 140px', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
@@ -604,6 +609,14 @@ export default function AdminDashboard() {
             <div className="custom-scroll" style={{ overflowY: 'auto', padding: 'clamp(16px,2.2vw,24px)', display: 'flex', flexDirection: 'column', gap: 'clamp(14px,2vw,20px)' }}>
               {/* Editable details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Title</label>
+                  <select value={manageForm.title} onChange={e => setManageForm(f => ({ ...f, title: e.target.value }))}
+                    style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box' }}
+                    onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'}>
+                    {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
                 {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject'], ['Venue', 'venue']].map(([lbl, key]) => (
                   <div key={key}>
                     <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>{lbl}</label>
