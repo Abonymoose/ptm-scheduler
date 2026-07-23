@@ -18,13 +18,44 @@ router = APIRouter(prefix="/demo", tags=["demo"])
 # separately wipeable (delete by parent_id). One per school.
 SEED_PARENT_EMAIL = "seed@demo.local"
 
-_FAKE_NAMES = [
-    "Aarav Sharma", "Diya Patel", "Vihaan Reddy", "Ananya Iyer", "Arjun Nair",
-    "Saanvi Rao", "Ishaan Gupta", "Aadhya Menon", "Kabir Singh", "Myra Joshi",
-    "Rehan Khan", "Kiara Pillai", "Advait Desai", "Anika Bose", "Vivaan Mehta",
-    "Navya Chettri", "Reyansh Das", "Aisha Kapoor", "Dhruv Rao", "Prisha Naidu",
+# Separate first/last pools → 30 x 24 = 720 base combinations, so a single seed
+# run of a teacher's ~45 slots never has to repeat a name.
+_FIRST_NAMES = [
+    "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Reyansh", "Kabir", "Ishaan",
+    "Dhruv", "Advait", "Rehan", "Aryan", "Kiaan", "Rudra", "Shaurya",
+    "Ananya", "Diya", "Saanvi", "Aadhya", "Myra", "Aisha", "Prisha", "Navya",
+    "Kiara", "Anika", "Ira", "Riya", "Sara", "Meera", "Tara",
 ]
-_FAKE_SECTIONS = [f"{g}{s}" for g in range(4, 9) for s in "ABCD"]  # 4A .. 8D
+_LAST_NAMES = [
+    "Sharma", "Patel", "Reddy", "Iyer", "Nair", "Rao", "Gupta", "Menon",
+    "Singh", "Joshi", "Khan", "Pillai", "Desai", "Bose", "Mehta", "Chettri",
+    "Das", "Kapoor", "Naidu", "Verma", "Shetty", "Malhotra", "Bhat", "Sinha",
+]
+_INITIALS = "ABCDEFGHJKLMNPRSTVY"
+
+
+def _unique_name_generator(used: set):
+    """Return a callable that yields student names never seen in `used`. Falls back
+    to inserting a distinguishing middle initial rather than duplicating."""
+    def gen():
+        for _ in range(60):
+            n = f"{random.choice(_FIRST_NAMES)} {random.choice(_LAST_NAMES)}"
+            if n not in used:
+                used.add(n)
+                return n
+        for _ in range(300):
+            n = f"{random.choice(_FIRST_NAMES)} {random.choice(_INITIALS)}. {random.choice(_LAST_NAMES)}"
+            if n not in used:
+                used.add(n)
+                return n
+        i = 0  # extremely defensive — cycle initials until unique
+        while True:
+            n = f"{random.choice(_FIRST_NAMES)} {random.choice(_LAST_NAMES)} {chr(65 + i % 26)}."
+            if n not in used:
+                used.add(n)
+                return n
+            i += 1
+    return gen
 
 # Weighted attendance picks: mostly one parent, sometimes both, occasionally other.
 _ATTENDANCE_CHOICES = [["Mother"], ["Father"], ["Mother", "Father"], ["Other"]]
@@ -55,6 +86,9 @@ class SeedData(BaseModel):
     fill_percent: int = 50
     realistic: bool = False
     realistic_percent: int = 60
+    grade_min: int = 4
+    grade_max: int = 8
+    sections: list[str] = ["A", "B", "C", "D"]
 
 
 class Impersonate(BaseModel):
@@ -280,6 +314,25 @@ async def seed_data(
     n_to_fill = round(len(free_ids) * pct / 100)
     chosen = random.sample(free_ids, n_to_fill) if n_to_fill else []
 
+    # Grade range + section letters (with sensible defaults, clamped/ordered).
+    gmin, gmax = sorted((body.grade_min, body.grade_max))
+    gmin = max(1, gmin)
+    gmax = min(12, max(gmin, gmax))
+    letters = [s.strip().upper() for s in body.sections if s and s.strip()] or ["A", "B", "C", "D"]
+
+    def gen_section():
+        return f"{random.randint(gmin, gmax)}{random.choice(letters)}"
+
+    # Names must be unique within this run AND not collide with students already
+    # booked on this teacher's other slots.
+    existing = (await db.execute(
+        text("SELECT DISTINCT b.student_name FROM bookings b JOIN slots s ON b.slot_id = s.id"
+             " WHERE s.teacher_id = :tid AND b.status != 'cancelled' AND b.student_name IS NOT NULL"),
+        {"tid": body.teacher_id}
+    )).fetchall()
+    used_names = {r.student_name for r in existing}
+    gen_name = _unique_name_generator(used_names)
+
     seed_parent = await _get_or_create_seed_parent(db, sid)
     booking_ids = []
     for slot_id in chosen:
@@ -287,8 +340,7 @@ async def seed_data(
         await db.execute(
             text("INSERT INTO bookings (id, slot_id, parent_id, status, student_name, section)"
                  " VALUES (:id, :sid, :pid, 'confirmed', :sn, :sec)"),
-            {"id": bid, "sid": slot_id, "pid": seed_parent,
-             "sn": random.choice(_FAKE_NAMES), "sec": random.choice(_FAKE_SECTIONS)}
+            {"id": bid, "sid": slot_id, "pid": seed_parent, "sn": gen_name(), "sec": gen_section()}
         )
         booking_ids.append(bid)
     created = len(booking_ids)

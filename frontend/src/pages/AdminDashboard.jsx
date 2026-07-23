@@ -51,6 +51,9 @@ export default function AdminDashboard() {
   const [seedFill, setSeedFill] = useState(50)
   const [seedRealistic, setSeedRealistic] = useState(false)
   const [seedRealisticPct, setSeedRealisticPct] = useState(60)
+  const [seedGradeMin, setSeedGradeMin] = useState(4)
+  const [seedGradeMax, setSeedGradeMax] = useState(8)
+  const [seedSections, setSeedSections] = useState(['A', 'B', 'C', 'D'])
   const [demoUsers, setDemoUsers] = useState(null)
   const [viewAsSearch, setViewAsSearch] = useState('')
   const mMouseDown = useRef(false)
@@ -126,10 +129,18 @@ export default function AdminDashboard() {
   }
   const handleSeedData = async () => {
     if (!seedTeacherId) { demoPrint('Pick a teacher to seed.', 'error'); return }
+    if (seedSections.length === 0) { demoPrint('Pick at least one section letter.', 'error'); return }
     setDemoBusy(true)
-    demoPrint(`$ seed-data teacher=${seedTeacherId.slice(0, 8)} fill=${seedFill}%${seedRealistic ? ` realistic=${seedRealisticPct}%` : ''}`)
+    demoPrint(`$ seed-data teacher=${seedTeacherId.slice(0, 8)} fill=${seedFill}% grades=${seedGradeMin}-${seedGradeMax} sections=${seedSections.join('')}${seedRealistic ? ` realistic=${seedRealisticPct}%` : ''}`)
     try {
-      const r = await seedData(seedTeacherId, Number(seedFill), seedRealistic, Number(seedRealisticPct))
+      const r = await seedData(seedTeacherId, {
+        fill_percent: Number(seedFill),
+        realistic: seedRealistic,
+        realistic_percent: Number(seedRealisticPct),
+        grade_min: Number(seedGradeMin),
+        grade_max: Number(seedGradeMax),
+        sections: seedSections,
+      })
       const tname = teachers.find(t => t.id === seedTeacherId)?.name
       let msg = `Created ${r.created} booking${r.created !== 1 ? 's' : ''}`
       if (seedRealistic) msg += `, marked ${r.attendance_marked} attended, wrote ${r.notes_created} notes`
@@ -498,6 +509,27 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>% full</span>
                 </div>
                 <button onClick={handleSeedData} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Seed</button>
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,18px)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', fontWeight: 600 }}>Grades</span>
+                  <input type="number" min={1} max={12} value={seedGradeMin} onChange={e => setSeedGradeMin(e.target.value)}
+                    style={{ width: 48, padding: 'clamp(6px,.9vw,9px)', border: '1.5px solid #F4C099', borderRadius: 8, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                  <span style={{ color: '#9CA3AF' }}>–</span>
+                  <input type="number" min={1} max={12} value={seedGradeMax} onChange={e => setSeedGradeMax(e.target.value)}
+                    style={{ width: 48, padding: 'clamp(6px,.9vw,9px)', border: '1.5px solid #F4C099', borderRadius: 8, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', fontWeight: 600 }}>Sections</span>
+                  {['A', 'B', 'C', 'D', 'E'].map(letter => {
+                    const on = seedSections.includes(letter)
+                    return (
+                      <button key={letter} type="button"
+                        onClick={() => setSeedSections(prev => prev.includes(letter) ? prev.filter(l => l !== letter) : [...prev, letter])}
+                        style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', border: `1.5px solid ${on ? '#1B3F7A' : '#F4C099'}`, background: on ? '#1B3F7A' : '#fff', color: on ? '#fff' : '#9CA3AF' }}>{letter}</button>
+                    )
+                  })}
+                </div>
               </div>
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', userSelect: 'none' }}>

@@ -23,8 +23,8 @@ export const addTeacher = async (payload) => {
   return res.data
 }
 
-export const seedData = async (teacherId, fillPercent, realistic = false, realisticPercent = 60) => {
-  const res = await axios.post(`${BASE_URL}/demo/seed-data`, { teacher_id: teacherId, fill_percent: fillPercent, realistic, realistic_percent: realisticPercent }, authHeader())
+export const seedData = async (teacherId, opts = {}) => {
+  const res = await axios.post(`${BASE_URL}/demo/seed-data`, { teacher_id: teacherId, ...opts }, authHeader())
   return res.data
 }
 

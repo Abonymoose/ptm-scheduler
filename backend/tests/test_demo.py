@@ -163,6 +163,42 @@ def _count(sql, params):
     return asyncio.run(_q())
 
 
+def _seeded_rows(teacher_id):
+    """(student_name, section) for the seed parent's bookings on this teacher."""
+    async def _q():
+        async with seed_engine.connect() as c:
+            rows = (await c.execute(text(
+                "SELECT b.student_name, b.section FROM bookings b JOIN slots s ON b.slot_id = s.id"
+                " WHERE s.teacher_id = :tid AND b.parent_id = (SELECT id FROM users WHERE email='seed@demo.local')"
+            ), {"tid": teacher_id})).fetchall()
+            return [(r.student_name, r.section) for r in rows]
+    return asyncio.run(_q())
+
+
+def test_seed_data_names_are_unique_in_a_batch(client, seed):
+    tid = client.post("/demo/add-teacher", json={"name": "Uniq", "email": "uniq@test.edu"},
+                      headers=auth(seed["tokens"]["admin"])).json()["id"]
+    n = client.post("/demo/seed-data", json={"teacher_id": tid, "fill_percent": 100},
+                    headers=auth(seed["tokens"]["admin"])).json()["created"]
+    names = [r[0] for r in _seeded_rows(tid)]
+    assert len(names) == n and n >= 40
+    assert len(set(names)) == len(names)          # no repeats
+
+
+def test_seed_data_respects_grade_and_section_range(client, seed):
+    tid = client.post("/demo/add-teacher", json={"name": "Range", "email": "range@test.edu"},
+                      headers=auth(seed["tokens"]["admin"])).json()["id"]
+    client.post("/demo/seed-data",
+                json={"teacher_id": tid, "fill_percent": 100, "grade_min": 6, "grade_max": 7, "sections": ["A", "B"]},
+                headers=auth(seed["tokens"]["admin"]))
+    sections = [r[1] for r in _seeded_rows(tid)]
+    assert sections
+    for sec in sections:
+        grade, letter = int(sec[:-1]), sec[-1]
+        assert grade in (6, 7)
+        assert letter in ("A", "B")
+
+
 def test_seed_data_realistic_false_no_attendance_no_notes(client, seed):
     tid = client.post("/demo/add-teacher", json={"name": "Plain", "email": "plain@test.edu"},
                       headers=auth(seed["tokens"]["admin"])).json()["id"]
