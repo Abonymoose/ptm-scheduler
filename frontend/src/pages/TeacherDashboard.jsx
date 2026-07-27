@@ -39,8 +39,23 @@ function Toast({ msg }) {
   return <div style={{ position: 'fixed', bottom: 'clamp(16px,2.5vw,28px)', left: '50%', transform: 'translateX(-50%)', background: '#1B3F7A', color: '#fff', padding: 'clamp(10px,1.4vw,16px) clamp(18px,2.5vw,28px)', borderRadius: 50, fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, opacity: msg ? 1 : 0, transition: 'opacity .3s', pointerEvents: 'none', zIndex: 999, whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 32px)', textAlign: 'center' }}>{msg}</div>
 }
 
+// Phone-portrait breakpoint. Desktop/tablet (>640px) keeps the original layout
+// untouched; only <=640px opts into the mobile-specific styles below.
+function useIsMobile() {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    const on = e => setM(e.matches)
+    mq.addEventListener('change', on)
+    setM(mq.matches)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return m
+}
+
 export default function TeacherDashboard() {
   const { user, logoutUser } = useAuth()
+  const isMobile = useIsMobile()
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('s')
@@ -226,7 +241,7 @@ export default function TeacherDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
             <div style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
             <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
-            <img src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
+            {!isMobile && <img src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />}
           </div>
         </div>
 
@@ -243,7 +258,7 @@ export default function TeacherDashboard() {
         {/* TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
           {[['s','My schedule'],['n','Notes'],['m','Manage slots']].map(([key, lbl]) => (
-            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>{lbl}</div>
+            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: `clamp(12px,1.8vw,18px) ${isMobile ? 4 : 8}px`, textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em', whiteSpace: 'nowrap' }}>{lbl}</div>
           ))}
         </div>
 
@@ -272,6 +287,32 @@ export default function TeacherDashboard() {
                 const attendees = bk?.attendance || []
                 const isDone = attendees.length > 0
                 const isCurrent = hlNext && !isDone && i === upcomingSlots.findIndex(s => !(s.bookings?.[0]?.attendance?.length))
+                if (isMobile) {
+                  const meta = bk
+                    ? [bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`,
+                       attendees.length > 0 ? `✓ ${attendees.join(', ')}` : ''].filter(Boolean).join(' · ')
+                    : `${slot.booked_count}/${slot.capacity} booked`
+                  return (
+                    <div key={slot.id} style={{ borderBottom: '1px solid #F4EDE4', background: isDone ? '#FAFAFA' : isCurrent ? '#FFFAF7' : '#fff', borderLeft: isCurrent ? '3px solid #F47920' : '3px solid transparent', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
+                        <div style={{ fontSize: 12, color: isDone ? '#C45A0A' : '#9CA3AF', fontWeight: isDone ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}><span style={{ fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A' }}>{fmt(slot.start_time)}</span> · {meta}</div>
+                      </div>
+                      {bk && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                          <button onClick={() => openAttendance(bk)} title={isDone ? 'Attended — edit' : 'Mark attendance'} aria-label={isDone ? 'Attended — edit attendance' : 'Mark attendance'}
+                            style={{ width: 38, height: 38, borderRadius: 9, border: `1.5px solid ${isDone ? '#F47920' : '#F4C099'}`, background: isDone ? '#FFF0E6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer' }}>
+                            <svg width="17" height="17" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke={isDone ? '#F47920' : '#D6C3B0'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          </button>
+                          <button onClick={() => openNote(bk)} title={noteIds.has(bk.booking_id) ? 'Edit note' : 'Add note'} aria-label={noteIds.has(bk.booking_id) ? 'Edit note' : 'Add note'}
+                            style={{ width: 38, height: 38, borderRadius: 9, background: '#fff', border: '1.5px solid #F4C099', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>{noteIcon(noteIds.has(bk.booking_id))}</button>
+                          <button onClick={() => setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name })} title="Cancel meeting" aria-label="Cancel meeting"
+                            style={{ width: 38, height: 38, borderRadius: 9, background: '#fff', border: '1.5px solid #F4C099', color: '#C4B5A5', cursor: 'pointer', fontSize: 21, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300, lineHeight: 1, padding: 0 }}>×</button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
                 return (
                   <div key={slot.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(68px,9vw,88px)', background: isDone ? '#FAFAFA' : isCurrent ? '#FFFAF7' : '#fff', borderLeft: isCurrent ? '3px solid #F47920' : 'none', transition: 'background .12s' }}>
                     <div style={{ width: 'clamp(66px,8.5vw,86px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 4px', flexShrink: 0 }}>
@@ -433,14 +474,28 @@ export default function TeacherDashboard() {
                         )}
                       </div>
                       {!inSelect && isBooked && bk && (
-                        <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
-                          style={{ fontSize: 'clamp(10px,1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C' }}>Cancel mtg</button>
+                        isMobile ? (
+                          <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
+                            title="Cancel" aria-label="Cancel meeting"
+                            style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontSize: 21, fontWeight: 300, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>×</button>
+                        ) : (
+                          <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
+                            style={{ fontSize: 'clamp(10px,1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', whiteSpace: 'nowrap' }}>Cancel mtg</button>
+                        )
                       )}
                       {!inSelect && !isBooked && (
-                        <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
-                          style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
+                        isMobile ? (
+                          <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
+                            title={isBlocked ? 'Unblock' : 'Block'} aria-label={isBlocked ? 'Unblock slot' : 'Block slot'}
+                            style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: isBlocked ? '#F5F5F4' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke={isBlocked ? '#6B7280' : '#C45A0A'} strokeWidth="1.8" /><line x1="4.8" y1="4.8" x2="15.2" y2="15.2" stroke={isBlocked ? '#6B7280' : '#C45A0A'} strokeWidth="1.8" strokeLinecap="round" /></svg>
+                          </button>
+                        ) : (
+                          <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
+                            style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A', whiteSpace: 'nowrap' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
+                        )
                       )}
-                      <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>
+                      {!isMobile && <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>}
                     </div>
                   )
                 })
@@ -473,8 +528,8 @@ export default function TeacherDashboard() {
 
       {/* VENUE MODAL */}
       {venueModal && (
-        <div onClick={() => setVenueModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', textAlign: 'left', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+        <div onClick={() => setVenueModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 200, padding: 20, overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', marginTop: isMobile ? 12 : 0, textAlign: 'left', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Change venue</div>
             <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(10px,1.4vw,16px)', lineHeight: 1.5 }}>Enter the new room or location</div>
             <input value={venueInput} onChange={e => setVenueInput(e.target.value)} placeholder="e.g. Room 201"
@@ -529,11 +584,11 @@ export default function TeacherDashboard() {
 
       {/* NOTE MODAL */}
       {noteModal && (
-        <div onClick={() => setNoteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(440px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
+        <div onClick={() => setNoteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 200, padding: 20, overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(440px,calc(100vw - 32px))', marginTop: isMobile ? 12 : 0, boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>Note</div>
             <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(12px,1.6vw,16px)' }}>Private to you · {noteModal.name}</div>
-            <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} autoFocus rows={5} placeholder="Write a private note about this meeting…"
+            <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} autoFocus rows={isMobile ? 4 : 5} placeholder="Write a private note about this meeting…"
               style={{ width: '100%', padding: 'clamp(10px,1.4vw,14px)', border: '1.5px solid #F4C099', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
               onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
             <div style={{ display: 'flex', gap: 12, marginTop: 'clamp(14px,2vw,20px)' }}>
