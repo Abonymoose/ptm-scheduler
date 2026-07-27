@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -15,9 +16,76 @@ class TeacherUpdate(BaseModel):
     venue: str | None = None
 
 
+class PtmDateUpdate(BaseModel):
+    ptm_date: date
+
+
 def _require_admin(current_user: dict):
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admins only")
+
+
+@router.get("/ptm-date")
+async def get_ptm_date(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """The admin's school's configured PTM date (YYYY-MM-DD)."""
+    _require_admin(current_user)
+    row = (await db.execute(
+        text("SELECT ptm_date FROM schools WHERE id = :sid"),
+        {"sid": current_user["school_id"]}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="School not found")
+    return {"ptm_date": row.ptm_date.isoformat() if row.ptm_date else None}
+
+
+@router.patch("/ptm-date")
+async def update_ptm_date(
+    body: PtmDateUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Set the school's PTM date AND shift every existing slot to the new date,
+    preserving each slot's time of day. Slots are UPDATED in place (never
+    deleted+recreated), so bookings — which reference slot_id and carry no
+    timestamps of their own — move with their slots automatically. All in one
+    transaction."""
+    _require_admin(current_user)
+    sid = current_user["school_id"]
+
+    row = (await db.execute(
+        text("SELECT ptm_date FROM schools WHERE id = :sid"),
+        {"sid": sid}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="School not found")
+    old_date = row.ptm_date
+    new_date = body.ptm_date
+    delta_days = (new_date - old_date).days if old_date else 0
+
+    await db.execute(
+        text("UPDATE schools SET ptm_date = :d WHERE id = :sid"),
+        {"d": new_date, "sid": sid}
+    )
+
+    # Whole-day shift preserves hours/minutes (and, since slots are stored in UTC,
+    # the exact time of day). No-op when the date is unchanged.
+    slots_shifted = 0
+    if delta_days != 0:
+        res = await db.execute(
+            text("UPDATE slots"
+                 " SET start_time = start_time + make_interval(days => :days),"
+                 "     end_time   = end_time   + make_interval(days => :days)"
+                 " WHERE school_id = :sid"
+                 " RETURNING id"),
+            {"days": delta_days, "sid": sid}
+        )
+        slots_shifted = len(res.fetchall())
+
+    await db.commit()
+    return {"ptm_date": new_date.isoformat(), "slots_shifted": slots_shifted}
 
 
 @router.get("/unbooked-parents")

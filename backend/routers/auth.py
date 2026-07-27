@@ -239,13 +239,18 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
 @router.get("/me")
 async def get_me(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
     result = await db.execute(
-        text("SELECT id, name, email, role, venue, section, grade, family_id, parent_name FROM users WHERE id = :uid"),
+        text("SELECT u.id, u.name, u.email, u.role, u.venue, u.section, u.grade,"
+             " u.family_id, u.parent_name, s.ptm_date"
+             " FROM users u JOIN schools s ON u.school_id = s.id WHERE u.id = :uid"),
         {"uid": current_user["sub"]}
     )
     row = result.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
-    return dict(row._mapping)
+    m = dict(row._mapping)
+    if m.get("ptm_date") is not None:
+        m["ptm_date"] = m["ptm_date"].isoformat()  # 'YYYY-MM-DD'
+    return m
 
 
 @router.patch("/venue")

@@ -32,3 +32,13 @@ export const batchSlotAction = async (slotIds, action) => {
   const res = await axios.post(`${BASE_URL}/slots/batch-action`, { slot_ids: slotIds, action }, authHeader())
   return res.data
 }
+
+export const getPtmDate = async () => {
+  const res = await axios.get(`${BASE_URL}/admin/ptm-date`, authHeader())
+  return res.data
+}
+
+export const setPtmDate = async (ptmDate) => {
+  const res = await axios.patch(`${BASE_URL}/admin/ptm-date`, { ptm_date: ptmDate }, authHeader())
+  return res.data
+}

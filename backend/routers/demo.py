@@ -115,9 +115,21 @@ async def _get_or_create_seed_parent(db: AsyncSession, school_id: str) -> str:
     return uid
 
 
+async def _ptm_start_for_school(db: AsyncSession, school_id: str) -> datetime:
+    """08:10 (UTC) on the school's configured PTM date. Falls back to the module
+    default if the column is somehow null."""
+    row = (await db.execute(
+        text("SELECT ptm_date FROM schools WHERE id = :sid"),
+        {"sid": school_id}
+    )).fetchone()
+    d = row.ptm_date if row and row.ptm_date else PTM_START.date()
+    return datetime(d.year, d.month, d.day, 8, 10, tzinfo=timezone.utc)
+
+
 async def _generate_grid(db: AsyncSession, teacher_id: str, school_id: str) -> int:
+    ptm_start = await _ptm_start_for_school(db, school_id)
     for i in range(SLOTS_PER_TEACHER):
-        start = PTM_START + i * SLOT_DURATION
+        start = ptm_start + i * SLOT_DURATION
         await db.execute(
             text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
                  " VALUES (:id, :tid, :sid, :start, :end, 1)"),
@@ -181,10 +193,11 @@ async def reset_slots(
         {"sid": sid}
     )).fetchall()
 
+    ptm_start = await _ptm_start_for_school(db, sid)
     slots_created = 0
     for t in teachers:
         for i in range(SLOTS_PER_TEACHER):
-            start = PTM_START + i * SLOT_DURATION
+            start = ptm_start + i * SLOT_DURATION
             end = start + SLOT_DURATION
             await db.execute(
                 text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"

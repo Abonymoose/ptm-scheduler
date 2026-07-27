@@ -6,6 +6,7 @@ import { titleName } from '../utils/teacherTitle'
 import { blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
 import { setAttendance as setAttendanceApi } from '../api/bookings'
 import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
+import { formatPtmDate } from '../utils/ptmDate'
 import InfoButton from '../components/InfoButton'
 
 const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
@@ -50,6 +51,7 @@ export default function TeacherDashboard() {
   const [savingAtt, setSavingAtt] = useState(false)
   const [venueModal, setVenueModal] = useState(false)
   const [venueText, setVenueText] = useState('Room TBD')
+  const [ptmDate, setPtmDate] = useState(null)
   const [venueInput, setVenueInput] = useState('')
   const [cancelModal, setCancelModal] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -76,7 +78,7 @@ export default function TeacherDashboard() {
   const longPressTimer = useRef(null)
   const longPressFired = useRef(false)
 
-  useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue) }).catch(() => {}) }, [])
+  useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue); if (me.ptm_date) setPtmDate(me.ptm_date) }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
@@ -214,7 +216,7 @@ export default function TeacherDashboard() {
             <div style={{ width: 'clamp(34px,4.5vw,48px)', height: 'clamp(34px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
-              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM 09 Apr 2026</div>
+              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span id="venue-text">{venueText}</span>
                 <button onClick={() => { setVenueInput(venueText); setVenueModal(true) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit' }}>Change venue</button>

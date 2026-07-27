@@ -16,3 +16,10 @@ export const adminLogin = async (email, password) => {
   const res = await axios.post(`${BASE_URL}/auth/admin-login`, { email, password })
   return res.data
 }
+
+const authHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+
+export const getMe = async () => {
+  const res = await axios.get(`${BASE_URL}/auth/me`, authHeader())
+  return res.data
+}

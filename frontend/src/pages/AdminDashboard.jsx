@@ -4,8 +4,9 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
-import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction } from '../api/admin'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
+import { formatPtmDate } from '../utils/ptmDate'
 import InfoButton from '../components/InfoButton'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
@@ -56,6 +57,10 @@ export default function AdminDashboard() {
   const [seedSections, setSeedSections] = useState(['A', 'B', 'C', 'D'])
   const [demoUsers, setDemoUsers] = useState(null)
   const [viewAsSearch, setViewAsSearch] = useState('')
+  const [ptmDate, setPtmDate] = useState(null)          // ISO 'YYYY-MM-DD'
+  const [ptmDraft, setPtmDraft] = useState('')          // date input value
+  const [ptmConfirm, setPtmConfirm] = useState(false)   // showing the "moves all slots" warning
+  const [ptmSaving, setPtmSaving] = useState(false)
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
@@ -79,8 +84,9 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     try {
-      const [b, s, u] = await Promise.all([getAllBookings(), getAllSlots(), getUnbookedParents()])
+      const [b, s, u, pd] = await Promise.all([getAllBookings(), getAllSlots(), getUnbookedParents(), getPtmDate()])
       setBookings(b); setSlots(s); setUnbooked(u)
+      if (pd.ptm_date) { setPtmDate(pd.ptm_date); setPtmDraft(pd.ptm_date) }
     }
     catch { showToast('Failed to load data') }
     setLoading(false)
@@ -150,6 +156,20 @@ export default function AdminDashboard() {
     } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to seed data.', 'error') }
     setDemoBusy(false)
   }
+  const handleSavePtmDate = async () => {
+    if (!ptmDraft || ptmDraft === ptmDate) { setPtmConfirm(false); return }
+    setPtmSaving(true)
+    demoPrint(`$ set-ptm-date ${ptmDraft}`)
+    try {
+      const r = await setPtmDateApi(ptmDraft)
+      setPtmDate(r.ptm_date); setPtmDraft(r.ptm_date)
+      demoPrint(`PTM date set to ${formatPtmDate(r.ptm_date)}. Shifted ${r.slots_shifted} slot${r.slots_shifted !== 1 ? 's' : ''} (bookings moved with them).`, 'success')
+      await fetchData()
+    } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to set PTM date.', 'error') }
+    setPtmSaving(false)
+    setPtmConfirm(false)
+  }
+
   useEffect(() => {
     if (tab === 'demo' && changelog === null) {
       getChangelog().then(setChangelog).catch(() => setChangelog({ days: [], total: 0, error: true }))
@@ -258,7 +278,7 @@ export default function AdminDashboard() {
             <div style={{ width: 'clamp(28px,3.5vw,44px)', height: 'clamp(28px,3.5vw,44px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(9px,1.1vw,13px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>AD</div>
             <div>
               <div style={{ fontSize: 'clamp(12px,1.5vw,18px)', fontWeight: 600, color: '#fff' }}>Inventure Academy</div>
-              <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0' }}>Admin · PTM 09 Apr 2026</div>
+              <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0' }}>Admin · PTM {formatPtmDate(ptmDate)}</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
@@ -477,6 +497,31 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* PTM date */}
+            <div style={{ margin: 'clamp(12px,1.8vw,18px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>PTM date</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <input type="date" value={ptmDraft} onChange={e => { setPtmDraft(e.target.value); setPtmConfirm(false) }}
+                  style={{ flex: '0 1 180px', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                {!ptmConfirm ? (
+                  <button onClick={() => setPtmConfirm(true)} disabled={demoBusy || ptmSaving || !ptmDraft || ptmDraft === ptmDate}
+                    style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: (demoBusy || ptmSaving || !ptmDraft || ptmDraft === ptmDate) ? 'default' : 'pointer', opacity: (demoBusy || ptmSaving || !ptmDraft || ptmDraft === ptmDate) ? .5 : 1, fontFamily: 'inherit' }}>Set date</button>
+                ) : (
+                  <>
+                    <button onClick={handleSavePtmDate} disabled={ptmSaving}
+                      style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(14px,2vw,20px)', borderRadius: 9, border: 'none', background: '#B45309', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: ptmSaving ? 'default' : 'pointer', opacity: ptmSaving ? .6 : 1, fontFamily: 'inherit' }}>{ptmSaving ? 'Moving…' : 'Confirm — move all slots'}</button>
+                    <button onClick={() => setPtmConfirm(false)} disabled={ptmSaving}
+                      style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(14px,2vw,18px)', borderRadius: 9, border: '1.5px solid #F4C099', background: '#fff', color: '#C45A0A', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                  </>
+                )}
+              </div>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: ptmConfirm ? '#B45309' : '#9CA3AF', marginTop: 6 }}>
+                {ptmConfirm
+                  ? `This shifts every existing slot to ${formatPtmDate(ptmDraft)}, keeping each slot's time of day. Existing bookings move with their slots.`
+                  : `Currently ${formatPtmDate(ptmDate)}. Changing it moves all slots (and their bookings) to the new date.`}
+              </div>
+            </div>
+
             {/* Add teacher */}
             <div style={{ margin: 'clamp(12px,1.8vw,18px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>Add teacher</div>
@@ -625,7 +670,7 @@ export default function AdminDashboard() {
 
         {/* BOTTOM BAR */}
         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · 09 Apr 2026</span>
+          <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · {formatPtmDate(ptmDate)}</span>
         </div>
       </div>
 
