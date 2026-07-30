@@ -201,85 +201,110 @@ export default function Login() {
     )
   }
 
+  // PTM Now brand header — matches the public landing site. Links go to the
+  // landing pages (served at the domain root, separate from the app routes).
+  const navLink = { color: '#4A524D', textDecoration: 'none', fontSize: isMobile ? 13 : 'clamp(13px,1.5vw,15px)', whiteSpace: 'nowrap' }
+
   return (
-    <div style={{ minHeight: isMobile ? '100svh' : '100vh', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '16px' : 'clamp(10px,2vw,28px)', fontFamily: 'system-ui,sans-serif', boxSizing: 'border-box' }}>
-      <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', width: '100%', maxWidth: isMobile ? '400px' : 'clamp(320px,36vw,460px)', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
+    <div style={{ minHeight: isMobile ? '100svh' : '100vh', background: '#FFF8F3', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui,sans-serif' }}>
 
-        <div style={{ padding: isMobile ? '18px 20px' : 'clamp(14px,2vw,26px) clamp(16px,2.5vw,32px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 6 : 'clamp(4px,.6vw,8px)' }}>
-          <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: isMobile ? 42 : 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
-          <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.9)', fontWeight: 600, letterSpacing: '.02em' }}>PTM Scheduler</div>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: isMobile ? '0 14px' : '0 clamp(16px,3vw,32px)', height: 'clamp(54px,7vw,64px)', background: '#fff', borderBottom: '0.5px solid #E9E4DC', flexShrink: 0 }}>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 7 : 10, minWidth: 0, textDecoration: 'none', color: '#1F2421', fontWeight: 600, fontSize: isMobile ? 16 : 'clamp(16px,2vw,18px)' }}>
+          <svg width="30" height="30" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
+            <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52" />
+            <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+            <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+            <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B" />
+            <rect x="10" y="44" width="150" height="14" fill="#D8443B" />
+            <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          PTM Now
+        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 14 : 'clamp(16px,2.5vw,28px)', flexShrink: 0 }}>
+          <a href="/how-it-works" style={navLink}>How it works</a>
+          <a href="/privacy" style={navLink}>Privacy</a>
         </div>
+      </nav>
 
-        <div style={{ padding: isMobile ? '20px' : 'clamp(16px,2.2vw,28px) clamp(20px,2.8vw,36px)', display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 'clamp(12px,1.6vw,20px)' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '16px' : 'clamp(10px,2vw,28px)', boxSizing: 'border-box' }}>
+        <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', width: '100%', maxWidth: isMobile ? '400px' : 'clamp(320px,36vw,460px)', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
 
-          {step === 1 ? (<>
-            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Sign in to your account</div>
+          <div style={{ padding: isMobile ? '18px 20px' : 'clamp(14px,2vw,26px) clamp(16px,2.5vw,32px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 6 : 'clamp(4px,.6vw,8px)' }}>
+            <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: isMobile ? 42 : 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
+            <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.9)', fontWeight: 600, letterSpacing: '.02em' }}>PTM Scheduler</div>
+          </div>
 
-            <div>
-              <label style={label}>Email</label>
-              <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
-                onFocus={focusOn} onBlur={focusOff} style={inp} />
-            </div>
+          <div style={{ padding: isMobile ? '20px' : 'clamp(16px,2.2vw,28px) clamp(20px,2.8vw,36px)', display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 'clamp(12px,1.6vw,20px)' }}>
 
-            {isAdmin && (
+            {step === 1 ? (<>
+              <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Sign in to your account</div>
+
               <div>
-                <label style={label}>Password</label>
-                <input type="password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
+                <label style={label}>Email</label>
+                <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="Enter your email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey}
                   onFocus={focusOn} onBlur={focusOff} style={inp} />
               </div>
-            )}
 
-            {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
+              {isAdmin && (
+                <div>
+                  <label style={label}>Password</label>
+                  <input type="password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
+                    onFocus={focusOn} onBlur={focusOff} style={inp} />
+                </div>
+              )}
 
-            <button onClick={handleSendOtp} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
-              {loading ? 'Sending…' : 'Send OTP'}
-            </button>
-          </>) : (<>
-            <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Enter your code</div>
-            <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#9CA3AF', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
+              {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
 
-            <div style={{ display: 'flex', gap: isMobile ? 8 : 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
-              {digits.map((dgt, i) => (
-                <input
-                  key={i}
-                  ref={el => { inputsRef.current[i] = el }}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
-                  maxLength={1}
-                  value={dgt}
-                  disabled={loading}
-                  onChange={e => handleDigit(i, e.target.value)}
-                  onKeyDown={e => handleOtpKey(i, e)}
-                  onPaste={handleOtpPaste}
-                  onFocus={e => { e.target.select(); e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.2)' }}
-                  onBlur={e => { e.target.style.boxShadow = 'none' }}
-                  style={{
-                    // Width is ALWAYS flex-shrinkable so the six boxes divide the row's inner
-                    // width and can never exceed it — no fixed px that could overflow a narrow
-                    // screen, regardless of breakpoint. maxWidth caps each at the original 52px,
-                    // so on a wide desktop row (with space-between) the layout is identical to the
-                    // previous fixed-52px boxes. Only height/font shrink slightly on mobile.
-                    flex: '1 1 0', minWidth: 0, maxWidth: 52,
-                    height: isMobile ? 48 : 'clamp(46px,14vw,56px)',
-                    textAlign: 'center',
-                    fontSize: isMobile ? 22 : 'clamp(20px,5vw,26px)', fontWeight: 700, color: '#1B3F7A',
-                    border: `2px solid ${shake ? '#DC2626' : '#F4C099'}`, borderRadius: 12, outline: 'none',
-                    background: '#fff', fontFamily: 'inherit', boxSizing: 'border-box', padding: 0,
-                    transition: 'border-color .15s, box-shadow .15s',
-                  }}
-                />
-              ))}
-            </div>
+              <button onClick={handleSendOtp} disabled={loading} style={{ width: '100%', padding: 'clamp(12px,1.5vw,16px)', fontSize: 'clamp(14px,1.6vw,17px)', fontWeight: 700, background: '#F47920', color: '#fff', border: 'none', borderRadius: 10, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .55 : 1, fontFamily: 'inherit', letterSpacing: '-.01em' }}>
+                {loading ? 'Sending…' : 'Send OTP'}
+              </button>
+            </>) : (<>
+              <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Enter your code</div>
+              <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#9CA3AF', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
 
-            {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
+              <div style={{ display: 'flex', gap: isMobile ? 8 : 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
+                {digits.map((dgt, i) => (
+                  <input
+                    key={i}
+                    ref={el => { inputsRef.current[i] = el }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                    maxLength={1}
+                    value={dgt}
+                    disabled={loading}
+                    onChange={e => handleDigit(i, e.target.value)}
+                    onKeyDown={e => handleOtpKey(i, e)}
+                    onPaste={handleOtpPaste}
+                    onFocus={e => { e.target.select(); e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.2)' }}
+                    onBlur={e => { e.target.style.boxShadow = 'none' }}
+                    style={{
+                      // Width is ALWAYS flex-shrinkable so the six boxes divide the row's inner
+                      // width and can never exceed it — no fixed px that could overflow a narrow
+                      // screen, regardless of breakpoint. maxWidth caps each at the original 52px,
+                      // so on a wide desktop row (with space-between) the layout is identical to the
+                      // previous fixed-52px boxes. Only height/font shrink slightly on mobile.
+                      flex: '1 1 0', minWidth: 0, maxWidth: 52,
+                      height: isMobile ? 48 : 'clamp(46px,14vw,56px)',
+                      textAlign: 'center',
+                      fontSize: isMobile ? 22 : 'clamp(20px,5vw,26px)', fontWeight: 700, color: '#1B3F7A',
+                      border: `2px solid ${shake ? '#DC2626' : '#F4C099'}`, borderRadius: 12, outline: 'none',
+                      background: '#fff', fontFamily: 'inherit', boxSizing: 'border-box', padding: 0,
+                      transition: 'border-color .15s, box-shadow .15s',
+                    }}
+                  />
+                ))}
+              </div>
 
-            <button onClick={backToEmail} aria-label="Back to email"
-              style={isMobile
-                ? { alignSelf: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, padding: '10px 20px', background: '#FFF8F3', border: '1.5px solid #F4C099', borderRadius: 22, color: '#C45A0A', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
-                : { background: 'none', border: 'none', color: '#C45A0A', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'center' }}>← Back</button>
-          </>)}
+              {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
 
+              <button onClick={backToEmail} aria-label="Back to email"
+                style={isMobile
+                  ? { alignSelf: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, padding: '10px 20px', background: '#FFF8F3', border: '1.5px solid #F4C099', borderRadius: 22, color: '#C45A0A', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
+                  : { background: 'none', border: 'none', color: '#C45A0A', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', alignSelf: 'center' }}>← Back</button>
+            </>)}
+
+          </div>
         </div>
       </div>
     </div>
