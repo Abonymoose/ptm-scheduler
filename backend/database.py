@@ -13,6 +13,8 @@ DATABASE_URL = DATABASE_URL.split("?")[0]
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
+    pool_pre_ping=True,
+    pool_recycle=300,
     connect_args={"ssl": "require"}
 )
 

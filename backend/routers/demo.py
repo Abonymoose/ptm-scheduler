@@ -128,13 +128,20 @@ async def _ptm_start_for_school(db: AsyncSession, school_id: str) -> datetime:
 
 async def _generate_grid(db: AsyncSession, teacher_id: str, school_id: str) -> int:
     ptm_start = await _ptm_start_for_school(db, school_id)
+    rows, params = [], {}
     for i in range(SLOTS_PER_TEACHER):
         start = ptm_start + i * SLOT_DURATION
-        await db.execute(
-            text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
-                 " VALUES (:id, :tid, :sid, :start, :end, 1)"),
-            {"id": str(uuid.uuid4()), "tid": teacher_id, "sid": school_id, "start": start, "end": start + SLOT_DURATION}
-        )
+        rows.append(f"(:id{i}, :tid{i}, :sid{i}, :start{i}, :end{i}, 1)")
+        params[f"id{i}"] = str(uuid.uuid4())
+        params[f"tid{i}"] = teacher_id
+        params[f"sid{i}"] = school_id
+        params[f"start{i}"] = start
+        params[f"end{i}"] = start + SLOT_DURATION
+    await db.execute(
+        text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
+             " VALUES " + ", ".join(rows)),
+        params,
+    )
     return SLOTS_PER_TEACHER
 
 # Repo root = two levels up from this file (backend/routers/demo.py -> repo/).
@@ -182,31 +189,46 @@ async def reset_slots(
     _require_admin(current_user)
     sid = current_user["school_id"]
 
-    del_res = await db.execute(
-        text("DELETE FROM slots WHERE school_id = :sid RETURNING id"),
-        {"sid": sid}
-    )
-    slots_deleted = len(del_res.fetchall())
+    try:
+        del_res = await db.execute(
+            text("DELETE FROM slots WHERE school_id = :sid RETURNING id"),
+            {"sid": sid}
+        )
+        slots_deleted = len(del_res.fetchall())
 
-    teachers = (await db.execute(
-        text("SELECT id FROM users WHERE role = 'teacher' AND school_id = :sid"),
-        {"sid": sid}
-    )).fetchall()
+        teachers = (await db.execute(
+            text("SELECT id FROM users WHERE role = 'teacher' AND school_id = :sid"),
+            {"sid": sid}
+        )).fetchall()
 
-    ptm_start = await _ptm_start_for_school(db, sid)
-    slots_created = 0
-    for t in teachers:
-        for i in range(SLOTS_PER_TEACHER):
-            start = ptm_start + i * SLOT_DURATION
-            end = start + SLOT_DURATION
+        ptm_start = await _ptm_start_for_school(db, sid)
+
+        # Build every slot row, then insert them all in ONE multi-row statement
+        # instead of one round-trip per slot. Only the numeric row index is
+        # interpolated into the SQL; all values stay bound parameters.
+        rows, params = [], {}
+        for t in teachers:
+            for i in range(SLOTS_PER_TEACHER):
+                start = ptm_start + i * SLOT_DURATION
+                n = len(rows)
+                rows.append(f"(:id{n}, :tid{n}, :sid{n}, :start{n}, :end{n}, 1)")
+                params[f"id{n}"] = str(uuid.uuid4())
+                params[f"tid{n}"] = str(t.id)
+                params[f"sid{n}"] = sid
+                params[f"start{n}"] = start
+                params[f"end{n}"] = start + SLOT_DURATION
+        if rows:
             await db.execute(
                 text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
-                     " VALUES (:id, :tid, :sid, :start, :end, 1)"),
-                {"id": str(uuid.uuid4()), "tid": str(t.id), "sid": sid, "start": start, "end": end}
+                     " VALUES " + ", ".join(rows)),
+                params,
             )
-            slots_created += 1
-    await db.commit()
-    return {"slots_deleted": slots_deleted, "teachers": len(teachers), "slots_created": slots_created}
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to reset slots. No changes were made.")
+
+    return {"slots_deleted": slots_deleted, "teachers": len(teachers), "slots_created": len(rows)}
 
 
 CHANGELOG_MD = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "CHANGELOG_DEMO.md")
