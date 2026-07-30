@@ -52,6 +52,7 @@ const FAIL_REASON = {
 }
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
 
 const DONE_TICK = <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#F47920" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 
@@ -673,7 +674,7 @@ export default function ParentDashboard() {
                   <div key={n.booking_id} style={{ padding: 'clamp(12px,1.6vw,18px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4EDE4' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleName(n.teacher_name)}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmt(n.start_time)}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
                     </div>
                     <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>{[n.student_name, n.section, n.grade != null ? `Gr ${n.grade}` : null].filter(Boolean).join(' · ')}</div>
                     <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}

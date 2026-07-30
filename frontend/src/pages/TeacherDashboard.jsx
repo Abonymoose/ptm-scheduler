@@ -29,6 +29,7 @@ const patchVenue = venue => api.patch('/auth/venue', { venue }).then(r => r.data
 const deleteBooking = id => api.delete(`/bookings/${id}`).then(r => r.data)
 
 const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
 const clock = () => { const n = new Date(); let h = n.getHours(); const m = n.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m < 10 ? '0' : ''}${m} ${ap}` }
 const initials = name => { if (!name) return '??'; const p = name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean); return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase() }
 
@@ -371,7 +372,7 @@ export default function TeacherDashboard() {
                   <div key={n.booking_id} style={{ padding: 'clamp(12px,1.6vw,18px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4EDE4' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.student_name || n.parent_name || 'Meeting'}{n.section ? ` · ${n.section}` : ''}{n.grade != null ? ` · Gr ${n.grade}` : ''}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmt(n.start_time)}</div>
+                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
                     </div>
                     {n.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>Parent: {n.parent_name}</div>}
                     <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}
