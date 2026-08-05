@@ -262,7 +262,7 @@ export default function Login() {
               <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Enter your code</div>
               <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#9CA3AF', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
 
-              <div style={{ display: 'flex', gap: isMobile ? 8 : 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
+              <div style={{ display: 'flex', gap: isMobile ? 8 : 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', minWidth: 0, maxWidth: '100%', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
                 {digits.map((dgt, i) => (
                   <input
                     key={i}
@@ -271,6 +271,7 @@ export default function Login() {
                     inputMode="numeric"
                     autoComplete={i === 0 ? 'one-time-code' : 'off'}
                     maxLength={1}
+                    size={1}
                     value={dgt}
                     disabled={loading}
                     onChange={e => handleDigit(i, e.target.value)}
@@ -285,6 +286,7 @@ export default function Login() {
                       // so on a wide desktop row (with space-between) the layout is identical to the
                       // previous fixed-52px boxes. Only height/font shrink slightly on mobile.
                       flex: '1 1 0', minWidth: 0, maxWidth: 52,
+                      WebkitAppearance: 'none', appearance: 'none',
                       height: isMobile ? 48 : 'clamp(46px,14vw,56px)',
                       textAlign: 'center',
                       fontSize: isMobile ? 22 : 'clamp(20px,5vw,26px)', fontWeight: 700, color: '#1B3F7A',
