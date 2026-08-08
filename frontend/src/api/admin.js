@@ -42,3 +42,13 @@ export const setPtmDate = async (ptmDate) => {
   const res = await axios.patch(`${BASE_URL}/admin/ptm-date`, { ptm_date: ptmDate }, authHeader())
   return res.data
 }
+
+export const getTeacherImpact = async (teacherId) => {
+  const res = await axios.get(`${BASE_URL}/admin/teachers/${teacherId}/impact`, authHeader())
+  return res.data
+}
+
+export const deleteTeacher = async (teacherId) => {
+  const res = await axios.delete(`${BASE_URL}/admin/teachers/${teacherId}`, authHeader())
+  return res.data
+}

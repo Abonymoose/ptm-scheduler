@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
-import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi } from '../api/admin'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
 import InfoButton from '../components/InfoButton'
@@ -34,6 +34,11 @@ export default function AdminDashboard() {
   const [manageSlots, setManageSlots] = useState([])
   const [loadingMSlots, setLoadingMSlots] = useState(false)
   const [savingTeacher, setSavingTeacher] = useState(false)
+  const [removeMode, setRemoveMode] = useState(false)      // remove-teacher confirm open
+  const [removeImpact, setRemoveImpact] = useState(null)   // { teacher_name, slots, booked }
+  const [removeTyped, setRemoveTyped] = useState('')       // typed first-name confirmation
+  const [removingTeacher, setRemovingTeacher] = useState(false)
+  const [removeError, setRemoveError] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(null)
   const [mBulkSel, setMBulkSel] = useState(new Set())
   const [mLastSel, setMLastSel] = useState(null)
@@ -220,6 +225,7 @@ export default function AdminDashboard() {
     setManageTeacher(t)
     setManageForm({ ...splitTitle(t.name || ''), email: t.email || '', subject: t.sub || '', venue: t.venue || '' })
     setConfirmCancel(null)
+    setRemoveMode(false); setRemoveImpact(null); setRemoveTyped(''); setRemoveError(''); setRemovingTeacher(false)
     setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0); setMSelectMode(false)
     setLoadingMSlots(true)
     try { setManageSlots(await getTeacherSlots(t.id)) } catch { showToast('Failed to load slots') }
@@ -236,6 +242,25 @@ export default function AdminDashboard() {
     try { await updateTeacher(manageTeacher.id, payload); showToast('Teacher updated'); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed to save') }
     setSavingTeacher(false)
+  }
+  const removeFirstName = (manageForm.name || '').trim().split(/\s+/)[0] || ''
+  const removeNameOk = removeTyped.trim().toLowerCase() === removeFirstName.toLowerCase()
+  const startRemove = async () => {
+    setRemoveError(''); setRemoveTyped(''); setRemoveImpact(null); setRemoveMode(true)
+    try { setRemoveImpact(await getTeacherImpact(manageTeacher.id)) }
+    catch (err) { setRemoveError(err.response?.data?.detail || 'Failed to load impact') }
+  }
+  const confirmRemove = async () => {
+    if (!manageTeacher || !removeImpact || !removeNameOk) return
+    setRemovingTeacher(true); setRemoveError('')
+    try {
+      const r = await deleteTeacher(manageTeacher.id)
+      const name = removeImpact?.teacher_name || 'Teacher'
+      setManageTeacher(null); setRemoveMode(false)
+      showToast(`Removed ${name} — ${r.slots_removed} slots, ${r.bookings_cancelled} meetings cancelled`)
+      await fetchData()
+    } catch (err) { setRemoveError(err.response?.data?.detail || 'Failed to remove teacher') }
+    setRemovingTeacher(false)
   }
   const doCancelSlot = async (slot) => {
     setConfirmCancel(null)
@@ -778,6 +803,39 @@ export default function AdminDashboard() {
                     </div>
                   )
                 })}
+              </div>
+
+              {/* Danger zone — remove teacher (separated from Save, which is up in the details) */}
+              <div style={{ marginTop: 4, borderTop: '1px solid #F4EDE4', paddingTop: 'clamp(14px,2vw,18px)' }}>
+                {!removeMode ? (
+                  <button onClick={startRemove}
+                    style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, padding: 'clamp(8px,1.1vw,11px) clamp(14px,2vw,20px)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#fff', color: '#B91C1C' }}>
+                    Remove teacher
+                  </button>
+                ) : (
+                  <div style={{ border: '1.5px solid #FCA5A5', background: '#FEF2F2', borderRadius: 12, padding: 'clamp(14px,2vw,18px)' }}>
+                    <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 800, color: '#B91C1C', marginBottom: 8 }}>Remove teacher</div>
+                    {removeImpact === null && !removeError ? (
+                      <div style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>Checking impact…</div>
+                    ) : (<>
+                      {removeImpact && (
+                        <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#7F1D1D', lineHeight: 1.5, marginBottom: 12 }}>
+                          This will <strong>permanently delete {removeImpact.teacher_name}</strong>, removing their <strong>{removeImpact.slots} slot{removeImpact.slots !== 1 ? 's' : ''}</strong> and cancelling <strong>{removeImpact.booked} booked meeting{removeImpact.booked !== 1 ? 's' : ''}</strong>. This can’t be undone.
+                        </div>
+                      )}
+                      <div style={{ fontSize: 'clamp(11px,1.2vw,13px)', fontWeight: 700, color: '#B91C1C', marginBottom: 5 }}>Type the teacher’s first name (<strong>{removeFirstName}</strong>) to confirm</div>
+                      <input value={removeTyped} onChange={e => setRemoveTyped(e.target.value)} placeholder={removeFirstName} autoFocus
+                        style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #FCA5A5', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', boxSizing: 'border-box', marginBottom: 12 }} />
+                      {removeError && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#B91C1C', marginBottom: 10 }}>{removeError}</div>}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => { setRemoveMode(false); setRemoveTyped(''); setRemoveError('') }} disabled={removingTeacher}
+                          style={{ flex: 1, padding: 'clamp(9px,1.2vw,12px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+                        <button onClick={confirmRemove} disabled={removingTeacher || !removeImpact || !removeNameOk}
+                          style={{ flex: 1, padding: 'clamp(9px,1.2vw,12px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit', cursor: (removingTeacher || !removeImpact || !removeNameOk) ? 'not-allowed' : 'pointer', opacity: (removingTeacher || !removeImpact || !removeNameOk) ? .5 : 1 }}>{removingTeacher ? 'Removing…' : 'Delete teacher'}</button>
+                      </div>
+                    </>)}
+                  </div>
+                )}
               </div>
             </div>
           </div>

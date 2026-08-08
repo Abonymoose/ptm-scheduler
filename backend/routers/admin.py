@@ -222,6 +222,75 @@ async def update_teacher(
     return dict(row._mapping)
 
 
+@router.get("/teachers/{teacher_id}/impact")
+async def get_teacher_impact(
+    teacher_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Counts for the remove-teacher confirmation: total slots and confirmed
+    bookings that would be destroyed. Target must be a teacher in the admin's school."""
+    _require_admin(current_user)
+    row = (await db.execute(
+        text("SELECT name FROM users WHERE id = :tid AND role = 'teacher' AND school_id = :sid"),
+        {"tid": teacher_id, "sid": current_user["school_id"]}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    slots = (await db.execute(
+        text("SELECT COUNT(*) FROM slots WHERE teacher_id = :tid"),
+        {"tid": teacher_id}
+    )).scalar()
+    booked = (await db.execute(
+        text("SELECT COUNT(*) FROM bookings b JOIN slots s ON b.slot_id = s.id"
+             " WHERE s.teacher_id = :tid AND b.status = 'confirmed'"),
+        {"tid": teacher_id}
+    )).scalar()
+    return {"teacher_name": row.name, "slots": slots, "booked": booked}
+
+
+@router.delete("/teachers/{teacher_id}")
+async def delete_teacher(
+    teacher_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Permanently remove a teacher and everything hanging off them. The user row
+    delete cascades slots -> bookings -> meeting_notes; we delete the teacher's
+    authored notes first because meeting_notes.author_id is ON DELETE NO ACTION.
+    One transaction; rolls back on any failure. Teacher must be in the admin's school."""
+    _require_admin(current_user)
+    row = (await db.execute(
+        text("SELECT id FROM users WHERE id = :tid AND role = 'teacher' AND school_id = :sid"),
+        {"tid": teacher_id, "sid": current_user["school_id"]}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    try:
+        # Counts (before deletion) for the response.
+        slots_removed = (await db.execute(
+            text("SELECT COUNT(*) FROM slots WHERE teacher_id = :tid"),
+            {"tid": teacher_id}
+        )).scalar()
+        bookings_cancelled = (await db.execute(
+            text("SELECT COUNT(*) FROM bookings b JOIN slots s ON b.slot_id = s.id"
+                 " WHERE s.teacher_id = :tid AND b.status = 'confirmed'"),
+            {"tid": teacher_id}
+        )).scalar()
+
+        # Notes authored by this teacher (author_id FK is NO ACTION, so clear first).
+        await db.execute(text("DELETE FROM meeting_notes WHERE author_id = :tid"), {"tid": teacher_id})
+        # Deleting the user cascades slots -> bookings -> (booking-linked) notes.
+        await db.execute(text("DELETE FROM users WHERE id = :tid"), {"tid": teacher_id})
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to remove teacher. No changes were made.")
+
+    return {"deleted": True, "slots_removed": slots_removed, "bookings_cancelled": bookings_cancelled}
+
+
 @router.delete("/slots/{slot_id}")
 async def delete_slot(
     slot_id: str,
