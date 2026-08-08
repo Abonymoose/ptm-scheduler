@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,6 +6,7 @@ from sqlalchemy import text
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
+from routers.demo import _generate_grid
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -14,6 +16,12 @@ class TeacherUpdate(BaseModel):
     email: str
     subject: str | None = None
     venue: str | None = None
+
+
+class TeacherCreate(BaseModel):
+    name: str
+    email: str
+    subject: str | None = None
 
 
 class PtmDateUpdate(BaseModel):
@@ -220,6 +228,34 @@ async def update_teacher(
     )
     row = result.fetchone()
     return dict(row._mapping)
+
+
+@router.post("/teachers")
+async def create_teacher(
+    body: TeacherCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a real teacher in the admin's school + generate their 45-slot grid.
+    Same logic as /demo/add-teacher, exposed on the normal admin route."""
+    _require_admin(current_user)
+    sid = current_user["school_id"]
+    email = body.email.strip().lower()
+    name = body.name.strip()
+    if not name or not email:
+        raise HTTPException(status_code=400, detail="Name and email are required")
+    dup = (await db.execute(text("SELECT 1 FROM users WHERE email = :e"), {"e": email})).fetchone()
+    if dup:
+        raise HTTPException(status_code=400, detail=f"A user with email {email} already exists")
+    tid = str(uuid.uuid4())
+    await db.execute(
+        text("INSERT INTO users (id, school_id, name, email, hashed_password, role, subject)"
+             " VALUES (:id, :sid, :n, :e, 'x', 'teacher', :subj)"),
+        {"id": tid, "sid": sid, "n": name, "e": email, "subj": body.subject}
+    )
+    slots = await _generate_grid(db, tid, sid)
+    await db.commit()
+    return {"id": tid, "name": name, "email": email, "subject": body.subject, "slots_created": slots}
 
 
 @router.get("/teachers/{teacher_id}/impact")

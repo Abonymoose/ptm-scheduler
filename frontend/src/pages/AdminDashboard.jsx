@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
-import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher } from '../api/admin'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
+import { getMe } from '../api/auth'
 import InfoButton from '../components/InfoButton'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
@@ -66,13 +67,18 @@ export default function AdminDashboard() {
   const [ptmDraft, setPtmDraft] = useState('')          // date input value
   const [ptmConfirm, setPtmConfirm] = useState(false)   // showing the "moves all slots" warning
   const [ptmSaving, setPtmSaving] = useState(false)
+  const [adminEmail, setAdminEmail] = useState('')        // for Demo-tab gating
+  const [ptmModalOpen, setPtmModalOpen] = useState(false) // Overview "change PTM date" modal
+  const [ovAddOpen, setOvAddOpen] = useState(false)       // Overview add-teacher form
+  const [ovAddForm, setOvAddForm] = useState({ title: 'Ms.', name: '', email: '', subject: '' })
+  const [ovAddBusy, setOvAddBusy] = useState(false)
   const mMouseDown = useRef(false)
   const mDragAnchor = useRef(null)
   const mDragMoved = useRef(false)
   const mLongPress = useRef(null)
   const mLongPressFired = useRef(false)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData(); getMe().then(me => setAdminEmail(me.email || '')).catch(() => {}) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
       const s = document.createElement('style')
@@ -162,17 +168,31 @@ export default function AdminDashboard() {
     setDemoBusy(false)
   }
   const handleSavePtmDate = async () => {
-    if (!ptmDraft || ptmDraft === ptmDate) { setPtmConfirm(false); return }
+    if (!ptmDraft || ptmDraft === ptmDate) { setPtmConfirm(false); setPtmModalOpen(false); return }
     setPtmSaving(true)
     demoPrint(`$ set-ptm-date ${ptmDraft}`)
     try {
       const r = await setPtmDateApi(ptmDraft)
       setPtmDate(r.ptm_date); setPtmDraft(r.ptm_date)
       demoPrint(`PTM date set to ${formatPtmDate(r.ptm_date)}. Shifted ${r.slots_shifted} slot${r.slots_shifted !== 1 ? 's' : ''} (bookings moved with them).`, 'success')
+      showToast(`PTM date set to ${formatPtmDate(r.ptm_date)} · ${r.slots_shifted} slots moved`)
       await fetchData()
-    } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to set PTM date.', 'error') }
+      setPtmConfirm(false); setPtmModalOpen(false)
+    } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to set PTM date.', 'error'); showToast(err.response?.data?.detail || 'Failed to set PTM date') }
     setPtmSaving(false)
-    setPtmConfirm(false)
+  }
+  const isDemoAdmin = adminEmail === 'demo@inventureacademy.com'
+  const handleOverviewAddTeacher = async () => {
+    if (!ovAddForm.name.trim() || !ovAddForm.email.trim()) { showToast('Name and email are required'); return }
+    setOvAddBusy(true)
+    try {
+      const r = await createTeacherAdmin({ name: combineTitle(ovAddForm.title, ovAddForm.name), email: ovAddForm.email.trim(), subject: ovAddForm.subject.trim() || null })
+      showToast(`Added ${titleName(r.name)} · ${r.slots_created} slots`)
+      setOvAddForm({ title: ovAddForm.title, name: '', email: '', subject: '' })
+      setOvAddOpen(false)
+      await fetchData()
+    } catch (err) { showToast(err.response?.data?.detail || 'Failed to add teacher') }
+    setOvAddBusy(false)
   }
 
   useEffect(() => {
@@ -303,7 +323,11 @@ export default function AdminDashboard() {
             <div style={{ width: 'clamp(28px,3.5vw,44px)', height: 'clamp(28px,3.5vw,44px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(9px,1.1vw,13px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>AD</div>
             <div>
               <div style={{ fontSize: 'clamp(12px,1.5vw,18px)', fontWeight: 600, color: '#fff' }}>Inventure Academy</div>
-              <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0' }}>Admin · PTM {formatPtmDate(ptmDate)}</div>
+              <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Admin · PTM {formatPtmDate(ptmDate)}</span>
+                <button onClick={() => { setPtmDraft(ptmDate || ''); setPtmConfirm(false); setPtmModalOpen(true) }}
+                  style={{ fontSize: 'clamp(8px,1vw,11px)', fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,.25)', border: '1px solid rgba(255,255,255,.5)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Edit date</button>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
@@ -324,7 +348,7 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['demo','Demo']].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`], ...(isDemoAdmin ? [['demo','Demo']] : [])].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
@@ -335,11 +359,30 @@ export default function AdminDashboard() {
             <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #F4C099', flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'clamp(6px,1vw,10px)', gap: 8 }}>
                 <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em' }}>Teachers &amp; fill rate</div>
-                <input
-                  type="text" placeholder="Search name or subject…" value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)}
-                  style={{ padding: 'clamp(5px,.7vw,8px) clamp(10px,1.3vw,14px)', fontSize: 'clamp(11px,1.3vw,14px)', border: '1.5px solid #F4C099', borderRadius: 'clamp(6px,.8vw,10px)', outline: 'none', fontFamily: 'system-ui,sans-serif', color: '#1B3F7A', width: 'clamp(130px,18vw,200px)', boxSizing: 'border-box' }}
-                  onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="text" placeholder="Search name or subject…" value={teacherSearch} onChange={e => setTeacherSearch(e.target.value)}
+                    style={{ padding: 'clamp(5px,.7vw,8px) clamp(10px,1.3vw,14px)', fontSize: 'clamp(11px,1.3vw,14px)', border: '1.5px solid #F4C099', borderRadius: 'clamp(6px,.8vw,10px)', outline: 'none', fontFamily: 'system-ui,sans-serif', color: '#1B3F7A', width: 'clamp(120px,16vw,190px)', boxSizing: 'border-box' }}
+                    onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
+                  <button onClick={() => setOvAddOpen(o => !o)} style={{ flexShrink: 0, fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, padding: 'clamp(5px,.7vw,8px) clamp(10px,1.4vw,14px)', borderRadius: 'clamp(6px,.8vw,10px)', border: 'none', background: '#1B3F7A', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{ovAddOpen ? 'Close' : '+ Add teacher'}</button>
+                </div>
               </div>
+              {ovAddOpen && (
+                <div style={{ border: '1px solid #F4C099', borderRadius: 10, padding: 'clamp(10px,1.4vw,14px)', marginBottom: 'clamp(6px,1vw,10px)' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <select value={ovAddForm.title} onChange={e => setOvAddForm(f => ({ ...f, title: e.target.value }))}
+                      style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', background: '#fff', boxSizing: 'border-box' }}>
+                      {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    {[['name', 'Name'], ['email', 'Email'], ['subject', 'Subject (optional)']].map(([k, ph]) => (
+                      <input key={k} value={ovAddForm[k]} onChange={e => setOvAddForm(f => ({ ...f, [k]: e.target.value }))} placeholder={ph}
+                        style={{ flex: '1 1 140px', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
+                    ))}
+                    <button onClick={handleOverviewAddTeacher} disabled={ovAddBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: ovAddBusy ? 'default' : 'pointer', opacity: ovAddBusy ? .6 : 1, fontFamily: 'inherit' }}>{ovAddBusy ? 'Adding…' : 'Add'}</button>
+                  </div>
+                  <div style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#9CA3AF', marginTop: 6 }}>Creates a teacher with a fresh 45-slot grid on the PTM date.</div>
+                </div>
+              )}
               {loading ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>Loading…</div>
               : filteredTeachers.length === 0 ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>{teacherSearch ? 'No teachers match.' : 'No teachers yet'}</div>
               : filteredTeachers.map((t, i) => {
@@ -490,7 +533,7 @@ export default function AdminDashboard() {
         )}
 
         {/* DEMO */}
-        {tab === 'demo' && (
+        {tab === 'demo' && isDemoAdmin && (
           <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Terminal panel */}
             <div style={{ background: '#1B3F7A', margin: 'clamp(10px,1.5vw,16px)', borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
@@ -887,6 +930,27 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setDemoConfirm(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={() => runDemoAction(demoConfirm)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>{demoConfirm === 'wipe' ? 'Wipe bookings' : demoConfirm === 'wipeseed' ? 'Wipe demo data' : 'Reset slots'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHANGE PTM DATE (Overview) */}
+      {ptmModalOpen && (
+        <div onClick={() => setPtmModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,28px)', width: '100%', maxWidth: 'min(420px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
+            <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 6 }}>Change PTM date</div>
+            <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginBottom: 14 }}>Currently {formatPtmDate(ptmDate)}. Changing it moves all slots (and their bookings) to the new date.</div>
+            <input type="date" value={ptmDraft} onChange={e => { setPtmDraft(e.target.value); setPtmConfirm(false) }}
+              style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
+            {ptmConfirm && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#B45309', marginBottom: 12 }}>This shifts every existing slot to {formatPtmDate(ptmDraft)}, keeping each slot’s time of day. Existing bookings move with their slots.</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setPtmModalOpen(false)} disabled={ptmSaving} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+              {!ptmConfirm ? (
+                <button onClick={() => setPtmConfirm(true)} disabled={!ptmDraft || ptmDraft === ptmDate} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', cursor: (!ptmDraft || ptmDraft === ptmDate) ? 'not-allowed' : 'pointer', opacity: (!ptmDraft || ptmDraft === ptmDate) ? .5 : 1 }}>Set date</button>
+              ) : (
+                <button onClick={handleSavePtmDate} disabled={ptmSaving} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, border: 'none', background: '#B45309', color: '#fff', fontFamily: 'inherit', cursor: ptmSaving ? 'default' : 'pointer', opacity: ptmSaving ? .6 : 1 }}>{ptmSaving ? 'Moving…' : 'Confirm — move all slots'}</button>
+              )}
             </div>
           </div>
         </div>

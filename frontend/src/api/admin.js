@@ -52,3 +52,8 @@ export const deleteTeacher = async (teacherId) => {
   const res = await axios.delete(`${BASE_URL}/admin/teachers/${teacherId}`, authHeader())
   return res.data
 }
+
+export const addTeacher = async (payload) => {
+  const res = await axios.post(`${BASE_URL}/admin/teachers`, payload, authHeader())
+  return res.data
+}
