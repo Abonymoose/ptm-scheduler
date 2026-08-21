@@ -40,7 +40,7 @@ function useIsMobile() {
   return m
 }
 
-export default function Login() {
+export default function Login({ branded = false } = {}) {
   const { loginUser } = useAuth()
   const isMobile = useIsMobile()
   const navigate = useNavigate()
@@ -208,6 +208,8 @@ export default function Login() {
   return (
     <div style={{ minHeight: isMobile ? '100svh' : '100vh', background: '#FFF8F3', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui,sans-serif' }}>
 
+      {/* Branded login pages have a bare header — no icon, wordmark, or nav links. */}
+      {branded ? null : (
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: isMobile ? '0 14px' : '0 clamp(16px,3vw,32px)', height: 'clamp(54px,7vw,64px)', background: '#fff', borderBottom: '0.5px solid #E9E4DC', flexShrink: 0 }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 7 : 10, minWidth: 0, textDecoration: 'none', color: '#1F2421', fontWeight: 600, fontSize: isMobile ? 16 : 'clamp(16px,2vw,18px)' }}>
           <svg width="30" height="30" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -225,6 +227,7 @@ export default function Login() {
           <a href="/privacy" style={navLink}>Privacy</a>
         </div>
       </nav>
+      )}
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '16px' : 'clamp(10px,2vw,28px)', boxSizing: 'border-box' }}>
         <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', width: '100%', maxWidth: isMobile ? '400px' : 'clamp(320px,36vw,460px)', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
@@ -309,6 +312,25 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Branded login footer: "Powered by [small PTM Now icon] PTM Now" + Privacy. */}
+      {branded && (
+        <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(12px,2vw,20px)', padding: 'clamp(12px,2vw,18px)', background: '#fff', borderTop: '0.5px solid #E9E4DC', flexShrink: 0, fontSize: 'clamp(12px,1.4vw,14px)', color: '#4A524D', flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            Powered by
+            <svg width="18" height="18" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
+              <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52" />
+              <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+              <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+              <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B" />
+              <rect x="10" y="44" width="150" height="14" fill="#D8443B" />
+              <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <strong style={{ fontWeight: 700, color: '#1F2421' }}>PTM Now</strong>
+          </span>
+          <a href="/privacy" style={{ color: '#4A524D', textDecoration: 'none' }}>Privacy</a>
+        </footer>
+      )}
     </div>
   )
 }

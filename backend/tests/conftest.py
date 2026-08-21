@@ -78,6 +78,7 @@ DEMO_ID = str(uuid.uuid4())
 DEMO_EMAIL = "demo@inventureacademy.com"
 
 INVITE_CODE = "TEST-2026"
+SCHOOL_SLUG = "test-academy"
 ADMIN_PASSWORD = "admin123"
 PARENT_PASSWORD = "parent123"
 
@@ -100,8 +101,8 @@ async def _reset_and_seed():
             "TRUNCATE meeting_notes, bookings, slots, otps, users, schools RESTART IDENTITY CASCADE"
         ))
         await conn.execute(
-            text("INSERT INTO schools (id, name, invite_code) VALUES (:id, :n, :c)"),
-            {"id": SCHOOL_ID, "n": "Test Academy", "c": INVITE_CODE},
+            text("INSERT INTO schools (id, name, invite_code, slug) VALUES (:id, :n, :c, :s)"),
+            {"id": SCHOOL_ID, "n": "Test Academy", "c": INVITE_CODE, "s": SCHOOL_SLUG},
         )
         users = [
             {"id": ADMIN_ID, "name": "Admin User", "email": "admin@test.edu",
@@ -165,6 +166,7 @@ def seed():
     asyncio.run(_reset_and_seed())
     return {
         "school_id": SCHOOL_ID,
+        "school_slug": SCHOOL_SLUG,
         "invite_code": INVITE_CODE,
         "admin_password": ADMIN_PASSWORD,
         "ids": {"admin": ADMIN_ID, "t1": T1_ID, "t2": T2_ID, "parent": PARENT_ID, "parent2": PARENT2_ID, "demo": DEMO_ID},

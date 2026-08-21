@@ -1,6 +1,8 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from './context/AuthContext'
 import Login from './pages/Login'
+import { getSchoolBySlug } from './api/auth'
 import ParentDashboard from './pages/ParentDashboard'
 import TeacherDashboard from './pages/TeacherDashboard'
 import AdminDashboard from './pages/AdminDashboard'
@@ -14,6 +16,28 @@ function ProtectedRoute({ children, role }) {
   // This also makes the impersonation swap land cleanly instead of bouncing.
   if (role && user.role !== role) return <Navigate to={homeFor(user.role)} />
   return children
+}
+
+// Branded per-school login at /:slug (e.g. /inventure). Looks the school up by
+// slug: a known slug renders the branded Login (bare header + footer), an unknown
+// slug falls back to the normal login page. Renders nothing until the lookup
+// resolves so the header doesn't flip.
+//
+// Landing paths (/privacy, /how-it-works, /faq, /) never reach here — nginx serves
+// them via `location =` exact matches that outrank the SPA fallback, so React
+// never mounts for them.
+function BrandedLogin() {
+  const { slug } = useParams()
+  const [state, setState] = useState('loading') // 'loading' | 'branded' | 'plain'
+  useEffect(() => {
+    let alive = true
+    getSchoolBySlug(slug)
+      .then(() => { if (alive) setState('branded') })
+      .catch(() => { if (alive) setState('plain') })
+    return () => { alive = false }
+  }, [slug])
+  if (state === 'loading') return null
+  return <Login branded={state === 'branded'} />
 }
 
 // Persistent, obvious banner shown on every dashboard while impersonating.
@@ -42,6 +66,7 @@ export default function App() {
         <Route path="/parent" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
         <Route path="/teacher" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/:slug" element={<BrandedLogin />} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </>

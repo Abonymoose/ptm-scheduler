@@ -17,6 +17,12 @@ export const adminLogin = async (email, password) => {
   return res.data
 }
 
+// Public — powers branded login pages. Rejects (404) on an unknown slug.
+export const getSchoolBySlug = async (slug) => {
+  const res = await axios.get(`${BASE_URL}/schools/by-slug/${slug}`)
+  return res.data
+}
+
 const authHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
 
 export const getMe = async () => {
