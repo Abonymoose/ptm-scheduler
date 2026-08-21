@@ -14,12 +14,34 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def generate_otp() -> str:
-    """Random 6-digit login code. Only random when an email provider is
-    configured (MSG91_AUTH_KEY set); otherwise a fixed 000000 so local dev and
-    the test suite work without sending real email."""
-    if os.getenv("MSG91_AUTH_KEY"):
-        return f"{secrets.randbelow(1_000_000):06d}"
-    return "000000"
+    """Random 6-digit login code. Always random — no dev/test fallback."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+# Max OTP requests allowed per email address within the sliding window.
+OTP_RATE_LIMIT = 3
+OTP_RATE_WINDOW_MINUTES = 15
+
+
+async def enforce_otp_rate_limit(db: AsyncSession, email: str) -> None:
+    """Raise HTTP 429 if this email has requested too many OTPs recently.
+
+    Counts rows in the otps table created within the last
+    OTP_RATE_WINDOW_MINUTES; caps at OTP_RATE_LIMIT. Guards our email quota and
+    keeps a single address from being used to spam login codes."""
+    result = await db.execute(
+        text(
+            "SELECT COUNT(*) FROM otps"
+            " WHERE email = :email"
+            f" AND created_at > NOW() - INTERVAL '{OTP_RATE_WINDOW_MINUTES} minutes'"
+        ),
+        {"email": email},
+    )
+    if (result.scalar() or 0) >= OTP_RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login code requests. Please wait a few minutes and try again.",
+        )
 
 class SignupRequest(BaseModel):
     name: str
@@ -123,7 +145,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/request-otp")
 async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        text("SELECT id, role FROM users WHERE email = :email"),
+        text("SELECT id, role, name FROM users WHERE email = :email"),
         {"email": body.email}
     )
     user = result.fetchone()
@@ -132,6 +154,7 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="Admins use password login")
 
+    await enforce_otp_rate_limit(db, body.email)
     code = generate_otp()
     await db.execute(
         text(
@@ -141,8 +164,8 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
         {"email": body.email, "code": code}
     )
     await db.commit()
-    # DB owns verification; MSG91 only delivers. Off-thread so we don't block the loop.
-    sent = await asyncio.to_thread(send_otp_email, body.email, code)
+    # DB owns verification; SendGrid only delivers. Off-thread so we don't block the loop.
+    sent = await asyncio.to_thread(send_otp_email, body.email, user.name, code)
     if not sent:
         raise HTTPException(status_code=502, detail="Couldn't send the login code. Please try again.")
     return {"message": "OTP sent"}
@@ -212,7 +235,7 @@ async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
 @router.post("/admin-login")
 async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        text("SELECT id, hashed_password, role FROM users WHERE email = :email"),
+        text("SELECT id, hashed_password, role, name FROM users WHERE email = :email"),
         {"email": body.email}
     )
     user = result.fetchone()
@@ -221,6 +244,7 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
     if user.role != "admin":
         raise HTTPException(status_code=400, detail="Not an admin account")
 
+    await enforce_otp_rate_limit(db, body.email)
     code = generate_otp()
     await db.execute(
         text(
@@ -230,7 +254,7 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
         {"email": body.email, "code": code}
     )
     await db.commit()
-    sent = await asyncio.to_thread(send_otp_email, body.email, code)
+    sent = await asyncio.to_thread(send_otp_email, body.email, user.name, code)
     if not sent:
         raise HTTPException(status_code=502, detail="Couldn't send the login code. Please try again.")
     return {"message": "OTP sent to admin email"}

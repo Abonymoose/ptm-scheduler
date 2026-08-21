@@ -36,6 +36,10 @@ if not TEST_DATABASE_URL:
 # Guard: make the app point at the test DB, and never let a stray .env prod URL win.
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
+# email_service raises at import if this is unset (prod refuses to boot without a
+# real key). A dummy value lets the app import; tests never actually send because
+# send_otp_email is mocked by an autouse fixture below.
+os.environ.setdefault("SENDGRID_API_KEY", "test-key-not-for-production")
 
 # Quiet SQLAlchemy's echo=True so test output stays readable.
 import logging
@@ -50,12 +54,9 @@ from fastapi.testclient import TestClient
 from main import app                       # noqa: E402
 from auth import create_access_token, hash_password  # noqa: E402
 
-# Safety: tests must never send a real email. Even if the dev machine has a
-# provider key in its environment/.env, force it off so OTP stays 000000 and
-# send_otp_email() only logs. (database.py's load_dotenv runs during the import
-# above, so we pop AFTER it.)
-os.environ.pop("MSG91_AUTH_KEY", None)
-# Same for the demo secret — tests set it per-case via monkeypatch; default off.
+# Safety: tests must never send a real email. send_otp_email is mocked per-test
+# by the autouse `no_real_email` fixture below.
+# The demo secret — tests set it per-case via monkeypatch; default off.
 os.environ.pop("DEMO_SECRET_CODE", None)
 
 # --- A dedicated seeding engine (NullPool → a fresh connection per asyncio.run,
@@ -149,6 +150,13 @@ def client():
     with TestClient(app) as c:
         yield c
     asyncio.run(seed_engine.dispose())
+
+
+@pytest.fixture(autouse=True)
+def no_real_email(monkeypatch):
+    """Never hit SendGrid in tests. The dummy SENDGRID_API_KEY would 403, which
+    would make request_otp/admin-login return 502. Stub the sender to succeed."""
+    monkeypatch.setattr("routers.auth.send_otp_email", lambda *a, **kw: True)
 
 
 @pytest.fixture(autouse=True)

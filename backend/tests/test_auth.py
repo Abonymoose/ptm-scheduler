@@ -4,6 +4,18 @@ from sqlalchemy import text
 from conftest import auth, seed_engine
 
 
+def _latest_otp(email):
+    """Read the most recent OTP code for an email straight from the otps table.
+    OTPs are now always random, so tests must read the real code, not assume one."""
+    async def _q():
+        async with seed_engine.connect() as c:
+            return (await c.execute(
+                text("SELECT code FROM otps WHERE email = :e ORDER BY created_at DESC LIMIT 1"),
+                {"e": email},
+            )).scalar()
+    return asyncio.run(_q())
+
+
 # --- /auth/login -------------------------------------------------------------
 def test_login_rejects_parent(client, seed):
     r = client.post("/auth/login", json={"email": seed["emails"]["parent"], "password": "x"})
@@ -45,11 +57,42 @@ def test_request_otp_admin_rejected(client, seed):
     assert r.status_code == 400
 
 
+# --- /auth/request-otp rate limiting -----------------------------------------
+def test_request_otp_rate_limited_after_three(client, seed):
+    email = seed["emails"]["parent"]
+    for _ in range(3):
+        assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+    r = client.post("/auth/request-otp", json={"email": email})
+    assert r.status_code == 429
+    assert "Too many" in r.json()["detail"]
+
+
+def test_request_otp_rate_limit_per_email(client, seed):
+    # Exhaust one parent's limit; a different parent is unaffected.
+    email = seed["emails"]["parent"]
+    other = seed["emails"]["parent2"]
+    for _ in range(3):
+        client.post("/auth/request-otp", json={"email": email})
+    assert client.post("/auth/request-otp", json={"email": email}).status_code == 429
+    assert client.post("/auth/request-otp", json={"email": other}).status_code == 200
+
+
+def test_admin_login_rate_limited_after_three(client, seed):
+    email = seed["emails"]["admin"]
+    pw = seed["admin_password"]
+    for _ in range(3):
+        assert client.post("/auth/admin-login", json={"email": email, "password": pw}).status_code == 200
+    r = client.post("/auth/admin-login", json={"email": email, "password": pw})
+    assert r.status_code == 429
+    assert "Too many" in r.json()["detail"]
+
+
 # --- /auth/verify-otp --------------------------------------------------------
 def test_verify_otp_success(client, seed):
     email = seed["emails"]["parent"]
     client.post("/auth/request-otp", json={"email": email})
-    r = client.post("/auth/verify-otp", json={"email": email, "code": "000000"})
+    code = _latest_otp(email)
+    r = client.post("/auth/verify-otp", json={"email": email, "code": code})
     assert r.status_code == 200
     body = r.json()
     assert "access_token" in body and body["role"] == "parent"
@@ -58,15 +101,18 @@ def test_verify_otp_success(client, seed):
 def test_verify_otp_wrong_code(client, seed):
     email = seed["emails"]["parent"]
     client.post("/auth/request-otp", json={"email": email})
-    r = client.post("/auth/verify-otp", json={"email": email, "code": "999999"})
+    real = _latest_otp(email)
+    wrong = "000000" if real != "000000" else "111111"
+    r = client.post("/auth/verify-otp", json={"email": email, "code": wrong})
     assert r.status_code == 400
 
 
 def test_verify_otp_reused(client, seed):
     email = seed["emails"]["parent"]
     client.post("/auth/request-otp", json={"email": email})
-    assert client.post("/auth/verify-otp", json={"email": email, "code": "000000"}).status_code == 200
-    again = client.post("/auth/verify-otp", json={"email": email, "code": "000000"})
+    code = _latest_otp(email)
+    assert client.post("/auth/verify-otp", json={"email": email, "code": code}).status_code == 200
+    again = client.post("/auth/verify-otp", json={"email": email, "code": code})
     assert again.status_code == 400
 
 
