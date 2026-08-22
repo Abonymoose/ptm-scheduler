@@ -26,6 +26,13 @@ const EGG_MAX_LEN = Math.max(...EGG_CODES.map(c => c.length))
 // own-property lookup only (so "constructor" etc. can't match)
 const eggUrlFor = code => (Object.prototype.hasOwnProperty.call(EGG_GAMES, code) ? EGG_GAMES[code] : null)
 
+// Resend UI on the code step. The server enforces both limits for real (30s
+// cooldown, 3-per-15-min cap) — these mirror them client-side purely so the
+// button's label/disabled state look right; a stale client guess never lets
+// anything through the server wouldn't already allow or block on its own.
+const RESEND_COOLDOWN_SECONDS = 30
+const MAX_RESENDS = 3
+
 // Phone-portrait breakpoint. Desktop/tablet (>640px) keeps the original layout
 // untouched; only <=640px opts into the mobile-specific styles below.
 function useIsMobile() {
@@ -55,6 +62,16 @@ export default function Login({ branded = false } = {}) {
   const [egg, setEgg] = useState(null)       // easter-egg game URL (null = off)
   const inputsRef = useRef([])
   const eggKeys = useRef('')                 // raw keystroke buffer (OTP UI strips non-digits)
+
+  // Resend button state. cooldownEndsAt is an absolute timestamp (not a
+  // counting-down number) so the display effect below only depends on it —
+  // typing in the code boxes updates unrelated state and can't tear down or
+  // reset this interval.
+  const [cooldownEndsAt, setCooldownEndsAt] = useState(null)
+  const [remaining, setRemaining] = useState(0)
+  const [resendCount, setResendCount] = useState(0)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendStatus, setResendStatus] = useState('')  // transient "New code sent"
 
   const redirectByRole = (token) => {
     loginUser(token)
@@ -155,6 +172,31 @@ export default function Login({ branded = false } = {}) {
     if (txt.length === 6) submitOtp(txt)
   }
 
+  const handleResend = async () => {
+    if (resendLoading || remaining > 0 || resendCount >= MAX_RESENDS) return
+    setError('')
+    setResendStatus('')
+    setResendLoading(true)
+    try {
+      await requestOtp(email)
+      setResendCount(c => c + 1)
+      setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000)
+      setResendStatus('New code sent')
+      setTimeout(() => setResendStatus(''), 3000)
+    } catch (err) {
+      if (err.response?.status === 429) {
+        // Show the server's own message (it knows the real seconds remaining)
+        // rather than a generic error, and restart our own countdown so the
+        // button can't be hammered again immediately.
+        setError(err.response?.data?.detail || 'Please wait before requesting a new code.')
+        setCooldownEndsAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000)
+      } else {
+        setError(err.response?.data?.detail || 'Could not resend the code. Please try again.')
+      }
+    }
+    setResendLoading(false)
+  }
+
   const backToEmail = () => { setStep(1); setDigits(Array(6).fill('')); setError(''); setShake(false); eggKeys.current = '' }
 
   const onKey = e => { if (e.key === 'Enter') handleSendOtp() }
@@ -167,7 +209,33 @@ export default function Login({ branded = false } = {}) {
       document.head.appendChild(s)
     }
   }, [])
-  useEffect(() => { if (step === 2) { eggKeys.current = ''; setTimeout(() => inputsRef.current[0]?.focus(), 0) } }, [step])
+  useEffect(() => {
+    if (step === 2) {
+      eggKeys.current = ''
+      setTimeout(() => inputsRef.current[0]?.focus(), 0)
+      // Fresh resend budget/cooldown each time the code step is (re)entered —
+      // the code that was just sent already started its own 30s server-side
+      // cooldown, so the resend button should reflect that from the start.
+      setResendCount(0)
+      setResendStatus('')
+      // Runs inside a useEffect callback (after commit), never during
+      // render, so "impure during render" doesn't apply despite the rule
+      // firing on it here.
+      // eslint-disable-next-line react-hooks/purity
+      const cooldownEnd = Date.now() + RESEND_COOLDOWN_SECONDS * 1000
+      setCooldownEndsAt(cooldownEnd)
+    }
+  }, [step])
+  // Ticks the resend countdown display. Depends only on cooldownEndsAt (an
+  // absolute timestamp set on step-2 entry and on each resend) — never on
+  // digits/email/etc — so typing the code can't restart or drop this interval.
+  useEffect(() => {
+    if (!cooldownEndsAt) { setRemaining(0); return }
+    const tick = () => setRemaining(Math.max(0, Math.ceil((cooldownEndsAt - Date.now()) / 1000)))
+    tick()
+    const id = setInterval(tick, 250)
+    return () => clearInterval(id)
+  }, [cooldownEndsAt])
   // Easter-egg exit: Escape closes the game (the × button is the reliable exit once
   // focus is inside the cross-origin iframe).
   useEffect(() => {
@@ -236,21 +304,25 @@ export default function Login({ branded = false } = {}) {
             <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: isMobile ? 42 : 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
             {branded ? (
               // Subtle credit line — reads as an attribution, not a second brand.
-              // Solid (not translucent) dark brown: translucent white on this
-              // orange tops out at ~2.8:1 even at full opacity, which fails WCAG
-              // AA (4.5:1) for small text. #5A2400 hits 4.51:1 while staying
-              // small/unbold, per the "subtle, not a second brand" brief.
-              <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#5A2400', fontWeight: 500, letterSpacing: '.02em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
+              // Solid white text: deliberately accepted at 2.76:1 (below AA's
+              // 4.5:1) — this is a credit line, not functional text, and
+              // white reads correctly against the orange header where a
+              // darker accepted-AA color would look muddy here.
+              <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#FFFFFF', fontWeight: 500, letterSpacing: '.02em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
                 PTM Scheduler
                 <span aria-hidden="true">·</span>
                 Powered by
+                {/* White monochrome mark: the coral square clashes against the
+                    orange header. The checkmark stays visible as an orange
+                    "cutout" (background color) rather than white-on-white,
+                    which would otherwise erase it entirely. */}
                 <svg width="14" height="14" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
-                  <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52" />
-                  <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E" />
-                  <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E" />
-                  <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B" />
-                  <rect x="10" y="44" width="150" height="14" fill="#D8443B" />
-                  <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="10" y="24" width="150" height="140" rx="26" fill="#fff" />
+                  <rect x="36" y="10" width="16" height="34" rx="8" fill="#fff" />
+                  <rect x="118" y="10" width="16" height="34" rx="8" fill="#fff" />
+                  <rect x="10" y="24" width="150" height="34" rx="26" fill="#fff" />
+                  <rect x="10" y="44" width="150" height="14" fill="#fff" />
+                  <path d="M54 106 L76 130 L118 78" fill="none" stroke="#F47920" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <a href="/" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}>PTM Now</a>
               </div>
@@ -321,6 +393,32 @@ export default function Login({ branded = false } = {}) {
                     }}
                   />
                 ))}
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                {resendCount >= MAX_RESENDS ? (
+                  <div style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF', fontWeight: 600, lineHeight: 1.4 }}>
+                    Too many requests. Please try again in a few minutes.
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={remaining > 0 || resendLoading}
+                    style={{
+                      background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
+                      fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 600,
+                      color: (remaining > 0 || resendLoading) ? '#9CA3AF' : '#C45A0A',
+                      cursor: (remaining > 0 || resendLoading) ? 'not-allowed' : 'pointer',
+                      textDecoration: (remaining > 0 || resendLoading) ? 'none' : 'underline',
+                    }}
+                  >
+                    {remaining > 0 ? `Resend code in ${remaining}s` : 'Resend code'}
+                  </button>
+                )}
+                {resendStatus && (
+                  <div style={{ marginTop: 4, fontSize: 'clamp(11px,1.3vw,13px)', color: '#16A34A', fontWeight: 600 }}>{resendStatus}</div>
+                )}
               </div>
 
               {error && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>{error}</div>}
