@@ -30,7 +30,7 @@ if not _API_KEY:
 
 # PTM Now coral mark, inlined so the email needs no external image request.
 _LOGO_SVG = (
-    '<svg width="32" height="32" viewBox="0 0 170 170" xmlns="http://www.w3.org/2000/svg">'
+    '<svg width="40" height="40" viewBox="0 0 170 170" xmlns="http://www.w3.org/2000/svg">'
     '<rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52"/>'
     '<rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E"/>'
     '<rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E"/>'
@@ -58,28 +58,63 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
     subject = "Your PTM Now verification code"
     display_code = _display_code(code)
 
+    # Plain-text kept in sync with the HTML: same wording, same order.
     plain_text_content = (
         f"Hi {name},\n\n"
-        f"Your PTM Now verification code is {display_code}.\n\n"
-        f"This code expires in 10 minutes.\n\n"
+        f"Enter this code to sign in to PTM Now:\n\n"
+        f"{display_code}\n\n"
+        f"This code expires in 10 minutes and can only be used once.\n\n"
+        f"Don't share this code with anyone. PTM Now and Inventure Academy "
+        f"will never ask you for it.\n\n"
         f"If you didn't request this, you can safely ignore this email.\n\n"
-        f"— PTM Now"
+        f"Thanks,\n"
+        f"The PTM Now Team"
     )
 
-    # Deliberately minimal: no external images/fonts, no buttons, no footer
-    # links, no tracking pixel, no unsubscribe — that kind of weight is what
-    # gets transactional mail misclassified as bulk. Inline CSS only.
+    # Standard transactional-email pattern (GitHub/Proton/Roblox/Twilio style):
+    # tinted page background, a white bordered card inset and centered, code
+    # as the visual anchor in a light block. Table-based layout throughout —
+    # Outlook's Word rendering engine doesn't reliably center/size divs, only
+    # tables. Deliberately minimal otherwise: no external images, no buttons,
+    # no tracking pixel, no unsubscribe, inline CSS only.
     html_content = f"""\
-<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#ffffff;">
-  <div style="margin-bottom:24px;">{_LOGO_SVG}</div>
-  <p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#1F2421;">Hi {name},</p>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#1F2421;">Your PTM Now verification code is:</p>
-  <div style="background:#FFF8F3;border-radius:12px;padding:20px;text-align:center;margin:0 0 20px;">
-    <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#1B3F7A;">{display_code}</span>
-  </div>
-  <p style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#4A524D;">This code expires in 10 minutes.</p>
-  <p style="margin:0;font-size:14px;line-height:1.5;color:#4A524D;">If you didn't request this, you can safely ignore this email.</p>
-</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F4F5;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #E5E5E5;border-radius:8px;">
+        <tr>
+          <td style="padding:40px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="padding-bottom:28px;">{_LOGO_SVG}</td>
+              </tr>
+            </table>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#18181B;">Hi {name},</p>
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#18181B;">Enter this code to sign in to PTM Now:</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+              <tr>
+                <td align="center" style="background:#F7F7F8;border-radius:8px;padding:22px 16px;">
+                  <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#18181B;">{display_code}</span>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#3F3F46;">This code expires in 10 minutes and can only be used once.</p>
+            <p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#18181B;font-weight:700;">Don't share this code with anyone. PTM Now and Inventure Academy will never ask you for it.</p>
+            <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#3F3F46;">If you didn't request this, you can safely ignore this email.</p>
+            <p style="margin:0;font-size:14px;line-height:1.5;color:#3F3F46;">Thanks,<br>The PTM Now Team</p>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+        <tr>
+          <td align="center" style="padding:20px 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#71717A;">
+            PTM Now &middot; Parent-teacher meeting scheduling for Inventure Academy, Bangalore
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 """
 
     message = Mail(
