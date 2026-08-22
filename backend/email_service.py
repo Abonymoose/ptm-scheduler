@@ -75,6 +75,9 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
     <td align="center" style="padding:40px 16px;">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #E5E5E5;border-radius:8px;">
         <tr>
+          <td style="background:#EE5A52;border-radius:8px 8px 0 0;font-size:4px;line-height:4px;">&nbsp;</td>
+        </tr>
+        <tr>
           <td style="padding:40px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
               <tr>
@@ -89,7 +92,7 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
               <tr>
                 <td align="center" style="background:#F7F7F8;border-radius:8px;padding:22px 16px;">
-                  <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#18181B;">{display_code}</span>
+                  <span style="font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#EE5A52;">{display_code}</span>
                 </td>
               </tr>
             </table>
