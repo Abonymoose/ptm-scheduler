@@ -62,6 +62,14 @@ export default function Login({ branded = false } = {}) {
   const [egg, setEgg] = useState(null)       // easter-egg game URL (null = off)
   const inputsRef = useRef([])
   const eggKeys = useRef('')                 // raw keystroke buffer (OTP UI strips non-digits)
+  // Re-entrancy guards for the two OTP-issuing buttons. `loading`/`resendLoading`
+  // state already disables them visually, but state updates don't reach the DOM
+  // until the next render commits — a second click landing in that window would
+  // still fire the handler. Refs are synchronous (no render delay), so checking
+  // one as the very first line closes that gap; a double-click can never produce
+  // two in-flight requests.
+  const sendingRef = useRef(false)
+  const resendingRef = useRef(false)
 
   // Resend button state. cooldownEndsAt is an absolute timestamp (not a
   // counting-down number) so the display effect below only depends on it —
@@ -82,6 +90,7 @@ export default function Login({ branded = false } = {}) {
   }
 
   const handleSendOtp = async () => {
+    if (sendingRef.current) return  // synchronous re-entrancy guard, before anything else
     setError('')
     if (!email) { setError('Please enter your email.'); return }
     // Easter egg: advance to the code step looking exactly normal — no backend call.
@@ -90,6 +99,7 @@ export default function Login({ branded = false } = {}) {
     // to code entry; the typed code is checked against DEMO_SECRET_CODE in verify-otp.
     if (email === DEMO_EMAIL) { setStep(2); return }
     if (isAdmin && !password) { setError('Please enter your password.'); return }
+    sendingRef.current = true
     setLoading(true)
     try {
       if (isAdmin) {
@@ -107,6 +117,7 @@ export default function Login({ branded = false } = {}) {
         setError(detail || 'Could not send the code. Please try again.')
       }
     }
+    sendingRef.current = false
     setLoading(false)
   }
 
@@ -173,7 +184,9 @@ export default function Login({ branded = false } = {}) {
   }
 
   const handleResend = async () => {
-    if (resendLoading || remaining > 0 || resendCount >= MAX_RESENDS) return
+    if (resendingRef.current) return  // synchronous re-entrancy guard, before anything else
+    if (remaining > 0 || resendCount >= MAX_RESENDS) return
+    resendingRef.current = true
     setError('')
     setResendStatus('')
     setResendLoading(true)
@@ -194,6 +207,7 @@ export default function Login({ branded = false } = {}) {
         setError(err.response?.data?.detail || 'Could not resend the code. Please try again.')
       }
     }
+    resendingRef.current = false
     setResendLoading(false)
   }
 

@@ -1,5 +1,6 @@
 """Auth + OTP endpoint coverage."""
 import asyncio
+import threading
 from sqlalchemy import text
 from conftest import auth, seed_engine
 
@@ -122,6 +123,46 @@ def test_request_otp_resend_after_cooldown_succeeds(client, seed):
     assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
     _backdate_latest_otp(email, 31)
     assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+
+
+# --- concurrency: double-click must not send two emails ----------------------
+def test_request_otp_concurrent_requests_send_exactly_one_email(client, seed, monkeypatch):
+    """Two genuinely concurrent requests for the same email (fired from two
+    threads against the shared TestClient, which keeps one event loop/portal
+    across requests — see the `client` fixture — so these actually interleave
+    at await points, not just run sequentially). Regression test for the
+    double-click race: before the per-email advisory lock, both requests
+    could pass the cooldown check before either committed its INSERT."""
+    email = seed["emails"]["parent"]
+
+    call_count = {"n": 0}
+    def counting_send(*a, **kw):
+        call_count["n"] += 1
+        return True
+    monkeypatch.setattr("routers.auth.send_otp_email", counting_send)
+
+    results = []
+    def fire():
+        results.append(client.post("/auth/request-otp", json={"email": email}))
+
+    t1 = threading.Thread(target=fire)
+    t2 = threading.Thread(target=fire)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    # Exactly one wins (200), the other is correctly cooldown-blocked (429) —
+    # never both succeeding, which is what the race used to allow.
+    assert sorted(r.status_code for r in results) == [200, 429]
+    assert call_count["n"] == 1
+
+    async def _count_otps():
+        async with seed_engine.connect() as c:
+            return (await c.execute(
+                text("SELECT COUNT(*) FROM otps WHERE email = :e"), {"e": email},
+            )).scalar()
+    assert asyncio.run(_count_otps()) == 1
 
 
 def test_admin_login_resend_within_cooldown_blocked(client, seed):

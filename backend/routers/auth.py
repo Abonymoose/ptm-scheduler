@@ -32,6 +32,27 @@ OTP_RESEND_COOLDOWN_SECONDS = 30
 OTP_MAX_ATTEMPTS = 5
 
 
+async def lock_otp_email(db: AsyncSession, email: str) -> None:
+    """Per-email advisory lock, transaction-scoped (auto-released on commit
+    or rollback) — serializes concurrent OTP-issuing requests for the SAME
+    email so the rate-limit/cooldown checks below and the eventual INSERT
+    can't race. This is the real fix for double-click-sends-two-emails: a
+    bare "INSERT ... WHERE NOT EXISTS (...)" is NOT atomic against two
+    concurrent transactions under Postgres's default READ COMMITTED
+    isolation, even combined into one statement — a plain SELECT-based
+    existence check takes no lock, so two simultaneous requests can each
+    see "no recent code" before either commits, and both insert. This is
+    different from /verify-otp's attempt counter, which IS safe as a bare
+    atomic UPDATE: that targets an EXISTING row, and Postgres's row-level
+    locking genuinely serializes concurrent UPDATEs on the same row. Here
+    there's no existing row to lock — the lock has to be explicit.
+    Different emails aren't serialized against each other."""
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:email)::bigint)"),
+        {"email": email},
+    )
+
+
 async def enforce_otp_rate_limit(db: AsyncSession, email: str) -> None:
     """Raise HTTP 429 if this email has requested too many OTPs recently.
 
@@ -195,6 +216,9 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="Admins use password login")
 
+    # Everything from here through the INSERT is one serialized critical
+    # section per email — closes the double-click-sends-two-emails race.
+    await lock_otp_email(db, body.email)
     await enforce_otp_rate_limit(db, body.email)
     await enforce_otp_resend_cooldown(db, body.email)
     await invalidate_outstanding_otps(db, body.email)
@@ -313,6 +337,9 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
     if user.role != "admin":
         raise HTTPException(status_code=400, detail="Not an admin account")
 
+    # Everything from here through the INSERT is one serialized critical
+    # section per email — closes the double-click-sends-two-emails race.
+    await lock_otp_email(db, body.email)
     await enforce_otp_rate_limit(db, body.email)
     await enforce_otp_resend_cooldown(db, body.email)
     await invalidate_outstanding_otps(db, body.email)
