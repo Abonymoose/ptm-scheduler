@@ -11,6 +11,7 @@ Env vars:
 """
 import os
 import logging
+from datetime import datetime, timedelta, timezone
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
@@ -33,6 +34,23 @@ if not _API_KEY:
 # itself (not just CSS) since some clients ignore CSS sizing on images.
 _LOGO_URL = "https://ptmnow.com/email-logo.png"
 
+# Fixed UTC+5:30 offset, not zoneinfo/"Asia/Kolkata": IST has no daylight
+# saving, so a fixed offset is exact — and it sidesteps zoneinfo needing the
+# `tzdata` package on Windows (no system IANA database there), which prod
+# (Linux) wouldn't hit but this also needs to run under local Windows dev.
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _send_time_ist() -> str:
+    """'7:24 PM' in IST, regardless of the server's own timezone (prod runs
+    UTC) — parents are in India, so a UTC timestamp next to the email's own
+    received time would look wrong. Built manually rather than via a %-I /
+    %#I strftime flag: those aren't portable between the Linux prod server
+    and Windows dev machines this also needs to run on."""
+    now = datetime.now(_IST)
+    hour12 = now.strftime("%I").lstrip("0") or "12"
+    return f"{hour12}:{now.strftime('%M %p')}"
+
 
 def _display_code(code: str) -> str:
     """Purely visual grouping for the email body — '482917' -> '482 917'. The
@@ -47,7 +65,9 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
     Blocking (uses the sync SendGrid client) — callers in async request handlers
     should invoke this via `asyncio.to_thread(...)` so the event loop isn't blocked.
     """
-    subject = "Your PTM Now verification code"
+    # Send time in the subject (not the code) so Gmail stops threading
+    # consecutive codes together as one conversation.
+    subject = f"Your PTM Now verification code ({_send_time_ist()})"
     display_code = _display_code(code)
 
     # Plain-text kept in sync with the HTML: same wording, same order.
