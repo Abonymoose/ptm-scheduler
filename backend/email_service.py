@@ -28,18 +28,10 @@ if not _API_KEY:
         "API key; set SENDGRID_API_KEY in the environment before starting."
     )
 
-# PTM Now coral mark, inlined so the email needs no external image request.
-_LOGO_SVG = (
-    '<svg width="40" height="40" viewBox="0 0 170 170" xmlns="http://www.w3.org/2000/svg">'
-    '<rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52"/>'
-    '<rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E"/>'
-    '<rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E"/>'
-    '<rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B"/>'
-    '<rect x="10" y="44" width="150" height="14" fill="#D8443B"/>'
-    '<path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" stroke-width="16" '
-    'stroke-linecap="round" stroke-linejoin="round"/>'
-    '</svg>'
-)
+# Hosted, not inline: Gmail strips inline <svg> from HTML email, which is why
+# an inline mark never rendered there. width/height are set on the <img> tag
+# itself (not just CSS) since some clients ignore CSS sizing on images.
+_LOGO_URL = "https://ptmnow.com/email-logo.png"
 
 
 def _display_code(code: str) -> str:
@@ -84,9 +76,12 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #E5E5E5;border-radius:8px;">
         <tr>
           <td style="padding:40px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
               <tr>
-                <td align="center" style="padding-bottom:28px;">{_LOGO_SVG}</td>
+                <td align="center">
+                  <img src="{_LOGO_URL}" width="32" height="32" alt="" style="display:inline-block;border:0;vertical-align:middle;">
+                  <span style="font-size:20px;font-weight:700;color:#18181B;vertical-align:middle;padding-left:8px;">PTM Now</span>
+                </td>
               </tr>
             </table>
             <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#18181B;">Hi {name},</p>
