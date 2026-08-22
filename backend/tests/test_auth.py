@@ -16,6 +16,24 @@ def _latest_otp(email):
     return asyncio.run(_q())
 
 
+def _backdate_latest_otp(email, seconds):
+    """Push the most-recently-inserted otp row's created_at back, so the
+    resend-cooldown check sees it as older than it is — lets tests fire
+    several requests without real sleeping. Same out-of-band seed_engine
+    pattern as _latest_otp / test_verify_otp_expired's direct insert."""
+    async def _q():
+        async with seed_engine.begin() as c:
+            await c.execute(
+                text(
+                    "UPDATE otps SET created_at = created_at - INTERVAL '1 second' * :s"
+                    " WHERE id = (SELECT id FROM otps WHERE email = :e"
+                    " ORDER BY created_at DESC LIMIT 1)"
+                ),
+                {"e": email, "s": seconds},
+            )
+    asyncio.run(_q())
+
+
 # --- /auth/login -------------------------------------------------------------
 def test_login_rejects_parent(client, seed):
     r = client.post("/auth/login", json={"email": seed["emails"]["parent"], "password": "x"})
@@ -62,6 +80,7 @@ def test_request_otp_rate_limited_after_three(client, seed):
     email = seed["emails"]["parent"]
     for _ in range(3):
         assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+        _backdate_latest_otp(email, 31)  # clear resend cooldown between calls
     r = client.post("/auth/request-otp", json={"email": email})
     assert r.status_code == 429
     assert "Too many" in r.json()["detail"]
@@ -73,6 +92,7 @@ def test_request_otp_rate_limit_per_email(client, seed):
     other = seed["emails"]["parent2"]
     for _ in range(3):
         client.post("/auth/request-otp", json={"email": email})
+        _backdate_latest_otp(email, 31)  # clear resend cooldown between calls
     assert client.post("/auth/request-otp", json={"email": email}).status_code == 429
     assert client.post("/auth/request-otp", json={"email": other}).status_code == 200
 
@@ -82,9 +102,51 @@ def test_admin_login_rate_limited_after_three(client, seed):
     pw = seed["admin_password"]
     for _ in range(3):
         assert client.post("/auth/admin-login", json={"email": email, "password": pw}).status_code == 200
+        _backdate_latest_otp(email, 31)  # clear resend cooldown between calls
     r = client.post("/auth/admin-login", json={"email": email, "password": pw})
     assert r.status_code == 429
     assert "Too many" in r.json()["detail"]
+
+
+# --- /auth/request-otp resend cooldown ---------------------------------------
+def test_request_otp_resend_within_cooldown_blocked(client, seed):
+    email = seed["emails"]["parent"]
+    assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+    r = client.post("/auth/request-otp", json={"email": email})
+    assert r.status_code == 429
+    assert "seconds" in r.json()["detail"].lower()
+
+
+def test_request_otp_resend_after_cooldown_succeeds(client, seed):
+    email = seed["emails"]["parent"]
+    assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+    _backdate_latest_otp(email, 31)
+    assert client.post("/auth/request-otp", json={"email": email}).status_code == 200
+
+
+def test_admin_login_resend_within_cooldown_blocked(client, seed):
+    email = seed["emails"]["admin"]
+    pw = seed["admin_password"]
+    assert client.post("/auth/admin-login", json={"email": email, "password": pw}).status_code == 200
+    r = client.post("/auth/admin-login", json={"email": email, "password": pw})
+    assert r.status_code == 429
+    assert "seconds" in r.json()["detail"].lower()
+
+
+# --- /auth/request-otp invalidates outstanding codes -------------------------
+def test_request_new_otp_invalidates_previous_code(client, seed):
+    email = seed["emails"]["parent"]
+    client.post("/auth/request-otp", json={"email": email})
+    old_code = _latest_otp(email)
+    _backdate_latest_otp(email, 31)  # clear resend cooldown so the 2nd request succeeds
+    client.post("/auth/request-otp", json={"email": email})
+    new_code = _latest_otp(email)
+    # Old code must no longer verify — the new request invalidated it.
+    r_old = client.post("/auth/verify-otp", json={"email": email, "code": old_code})
+    assert r_old.status_code == 400
+    # New code still works.
+    r_new = client.post("/auth/verify-otp", json={"email": email, "code": new_code})
+    assert r_new.status_code == 200
 
 
 # --- /auth/verify-otp --------------------------------------------------------
@@ -129,6 +191,24 @@ def test_verify_otp_expired(client, seed):
     asyncio.run(_insert_expired())
     r = client.post("/auth/verify-otp", json={"email": email, "code": "000000"})
     assert r.status_code == 400
+
+
+def test_verify_otp_fifth_wrong_attempt_invalidates_code(client, seed):
+    email = seed["emails"]["parent"]
+    client.post("/auth/request-otp", json={"email": email})
+    real = _latest_otp(email)
+    wrong = "000000" if real != "000000" else "111111"
+    for _ in range(4):
+        r = client.post("/auth/verify-otp", json={"email": email, "code": wrong})
+        assert r.status_code == 400
+    # 5th wrong attempt: invalidates the code and says so.
+    r5 = client.post("/auth/verify-otp", json={"email": email, "code": wrong})
+    assert r5.status_code == 400
+    assert "request a new code" in r5.json()["detail"].lower()
+    # Even the correct code now fails — the row was invalidated, not just
+    # this wrong guess rejected.
+    r_correct = client.post("/auth/verify-otp", json={"email": email, "code": real})
+    assert r_correct.status_code == 400
 
 
 # --- /auth/admin-login -------------------------------------------------------

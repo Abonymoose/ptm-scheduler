@@ -22,6 +22,15 @@ def generate_otp() -> str:
 OTP_RATE_LIMIT = 3
 OTP_RATE_WINDOW_MINUTES = 15
 
+# Minimum gap between two OTP requests for the same email (separate from, and
+# in addition to, the 15-minute cap above — this catches rapid-fire resends
+# within that window rather than the count over the whole window).
+OTP_RESEND_COOLDOWN_SECONDS = 30
+
+# Wrong verification guesses allowed against one issued code before it's
+# invalidated outright.
+OTP_MAX_ATTEMPTS = 5
+
 
 async def enforce_otp_rate_limit(db: AsyncSession, email: str) -> None:
     """Raise HTTP 429 if this email has requested too many OTPs recently.
@@ -42,6 +51,38 @@ async def enforce_otp_rate_limit(db: AsyncSession, email: str) -> None:
             status_code=429,
             detail="Too many login code requests. Please wait a few minutes and try again.",
         )
+
+
+async def enforce_otp_resend_cooldown(db: AsyncSession, email: str) -> None:
+    """Raise HTTP 429 if a code was requested for this email within the last
+    OTP_RESEND_COOLDOWN_SECONDS. Computed DB-side (not in Python) to avoid
+    app/DB clock skew. Looks at the most recent row regardless of used/expired
+    state — this guards request frequency, not code validity."""
+    result = await db.execute(
+        text(
+            "SELECT GREATEST(0, CEIL(EXTRACT(EPOCH FROM"
+            f" (created_at + INTERVAL '{OTP_RESEND_COOLDOWN_SECONDS} seconds' - NOW()))))"
+            " AS remaining FROM otps WHERE email = :email"
+            " ORDER BY created_at DESC LIMIT 1"
+        ),
+        {"email": email},
+    )
+    row = result.fetchone()
+    if row is not None and row.remaining and row.remaining > 0:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Please wait {int(row.remaining)} seconds before requesting a new code.",
+        )
+
+
+async def invalidate_outstanding_otps(db: AsyncSession, email: str) -> None:
+    """Mark all previous unused codes for this email as used, so only the
+    newest one can verify. Must run strictly before the new row is inserted —
+    otherwise this would invalidate the code being minted."""
+    await db.execute(
+        text("UPDATE otps SET used = true WHERE email = :email AND used = false"),
+        {"email": email},
+    )
 
 class SignupRequest(BaseModel):
     name: str
@@ -155,6 +196,8 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=400, detail="Admins use password login")
 
     await enforce_otp_rate_limit(db, body.email)
+    await enforce_otp_resend_cooldown(db, body.email)
+    await invalidate_outstanding_otps(db, body.email)
     code = generate_otp()
     await db.execute(
         text(
@@ -178,7 +221,9 @@ DEMO_EMAIL = "demo@inventureacademy.com"
 async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
     # Demo login: only active when DEMO_SECRET_CODE is set (prod). The code is
     # checked against the env secret, NOT the otps table. Disabled otherwise, so
-    # tests/local fall through to the normal OTP flow below.
+    # tests/local fall through to the normal OTP flow below. Never touches
+    # otps, so it's exempt from attempt-limiting below — by design, not an
+    # oversight.
     demo_secret = os.getenv("DEMO_SECRET_CODE")
     if demo_secret and body.email == DEMO_EMAIL:
         if body.code != demo_secret:
@@ -199,14 +244,38 @@ async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
 
     result = await db.execute(
         text(
-            "SELECT id, code FROM otps"
+            "SELECT id, code, attempts FROM otps"
             " WHERE email = :email AND used = false AND expires_at > NOW()"
             " ORDER BY created_at DESC LIMIT 1"
         ),
         {"email": body.email}
     )
     otp = result.fetchone()
-    if not otp or otp.code != body.code:
+    if not otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+
+    if otp.code != body.code:
+        # Atomic UPDATE ... RETURNING: increments and (in the same statement,
+        # once the post-increment count reaches the cap) invalidates the code
+        # in one round trip, so two concurrent wrong guesses can't race and
+        # silently lose an increment the way a separate SELECT-then-UPDATE
+        # would.
+        attempt_result = await db.execute(
+            text(
+                "UPDATE otps SET attempts = attempts + 1,"
+                " used = CASE WHEN attempts + 1 >= :max THEN true ELSE used END"
+                " WHERE id = :id AND used = false"
+                " RETURNING attempts, used"
+            ),
+            {"id": str(otp.id), "max": OTP_MAX_ATTEMPTS},
+        )
+        attempt_row = attempt_result.fetchone()
+        await db.commit()
+        if attempt_row is not None and attempt_row.used:
+            raise HTTPException(
+                status_code=400,
+                detail="Too many incorrect attempts. Please request a new code.",
+            )
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     await db.execute(
@@ -245,6 +314,8 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=400, detail="Not an admin account")
 
     await enforce_otp_rate_limit(db, body.email)
+    await enforce_otp_resend_cooldown(db, body.email)
+    await invalidate_outstanding_otps(db, body.email)
     code = generate_otp()
     await db.execute(
         text(

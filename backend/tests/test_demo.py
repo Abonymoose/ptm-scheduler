@@ -19,6 +19,19 @@ def _seed_parent_id():
     return asyncio.run(_q())
 
 
+def _latest_otp(email):
+    """Read the most recent OTP code for an email straight from the otps table.
+    OTPs are always random, so tests must read the real code, not assume one.
+    Mirrors test_auth.py's helper of the same name."""
+    async def _q():
+        async with seed_engine.connect() as c:
+            return (await c.execute(
+                text("SELECT code FROM otps WHERE email = :e ORDER BY created_at DESC LIMIT 1"),
+                {"e": email},
+            )).scalar()
+    return asyncio.run(_q())
+
+
 def _book(client, seed, slot="A"):
     r = client.post("/bookings/", json={"slot_id": seed["slots"][slot], "student_name": "Kid", "section": "7C"},
                     headers=auth(seed["tokens"]["parent"]))
@@ -299,7 +312,7 @@ def test_impersonate_different_school_forbidden(client, seed):
 
     async def _mk():
         async with seed_engine.begin() as c:
-            await c.execute(text("INSERT INTO schools (id, name, invite_code) VALUES (:i,'Other','OTHER-1')"), {"i": other_school})
+            await c.execute(text("INSERT INTO schools (id, name, invite_code, slug) VALUES (:i,'Other','OTHER-1','other-school')"), {"i": other_school})
             await c.execute(text("INSERT INTO users (id, school_id, name, email, hashed_password, role)"
                                  " VALUES (:i,:s,'Other Teacher','other@x.edu','x','teacher')"),
                             {"i": other_user, "s": other_school})
@@ -365,7 +378,8 @@ def test_demo_secret_does_not_affect_other_emails(client, seed, monkeypatch):
     # A normal user still uses the otps table even when the demo secret is set.
     monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")
     client.post("/auth/request-otp", json={"email": seed["emails"]["parent"]})
-    ok = client.post("/auth/verify-otp", json={"email": seed["emails"]["parent"], "code": "000000"})
+    real_code = _latest_otp(seed["emails"]["parent"])
+    ok = client.post("/auth/verify-otp", json={"email": seed["emails"]["parent"], "code": real_code})
     assert ok.status_code == 200 and ok.json()["role"] == "parent"
     # The demo secret must NOT log a normal user in.
     bad = client.post("/auth/verify-otp", json={"email": seed["emails"]["parent"], "code": "LETME6"})
