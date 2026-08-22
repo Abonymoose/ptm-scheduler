@@ -236,7 +236,11 @@ export default function Login({ branded = false } = {}) {
             <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: isMobile ? 42 : 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
             {branded ? (
               // Subtle credit line — reads as an attribution, not a second brand.
-              <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: 'rgba(255,255,255,.72)', fontWeight: 500, letterSpacing: '.02em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
+              // Solid (not translucent) dark brown: translucent white on this
+              // orange tops out at ~2.8:1 even at full opacity, which fails WCAG
+              // AA (4.5:1) for small text. #5A2400 hits 4.51:1 while staying
+              // small/unbold, per the "subtle, not a second brand" brief.
+              <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#5A2400', fontWeight: 500, letterSpacing: '.02em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
                 PTM Scheduler
                 <span aria-hidden="true">·</span>
                 Powered by
@@ -281,7 +285,7 @@ export default function Login({ branded = false } = {}) {
               </button>
             </>) : (<>
               <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', letterSpacing: '-.02em', lineHeight: 1.15 }}>Enter your code</div>
-              <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#9CA3AF', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
+              <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: '#6B7280', marginTop: -8 }}>Enter the 6-digit code sent to <span style={{ color: '#1B3F7A', fontWeight: 600 }}>{email}</span></div>
 
               <div style={{ display: 'flex', gap: isMobile ? 8 : 'clamp(6px,1.5vw,10px)', justifyContent: 'space-between', minWidth: 0, maxWidth: '100%', animation: shake ? 'otp-shake .45s' : 'none', opacity: loading ? .6 : 1 }}>
                 {digits.map((dgt, i) => (

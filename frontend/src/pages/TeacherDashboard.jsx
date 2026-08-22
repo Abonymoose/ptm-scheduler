@@ -241,7 +241,7 @@ export default function TeacherDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
             <div style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
-            <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            <button onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             {!isMobile && <img src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />}
           </div>
         </div>
@@ -267,9 +267,9 @@ export default function TeacherDashboard() {
         {tab === 's' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, minHeight: 'clamp(44px,5.5vw,58px)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked<InfoButton text="Record who attended the meeting: Mother, Father, or Other." label="About attendance" /></span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked<InfoButton text="Record who attended the meeting: Mother, Father, or Other." label="About attendance" /></span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#9CA3AF', fontWeight: 500 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#6B7280', fontWeight: 500 }}>
                   <span>Highlight next</span>
                   <label style={{ position: 'relative', width: 'clamp(36px,4.5vw,46px)', height: 'clamp(20px,2.5vw,26px)', cursor: 'pointer', flexShrink: 0 }}>
                     <input type="checkbox" checked={hlNext} onChange={e => setHlNext(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
@@ -281,7 +281,7 @@ export default function TeacherDashboard() {
               </div>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
               : upcomingSlots.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>No meetings yet</div>
               : upcomingSlots.map((slot, i) => {
                 const bk = slot.bookings?.length > 0 ? slot.bookings[0] : null
@@ -297,7 +297,7 @@ export default function TeacherDashboard() {
                     <div key={slot.id} style={{ borderBottom: '1px solid #F4EDE4', background: isDone ? '#FAFAFA' : isCurrent ? '#FFFAF7' : '#fff', borderLeft: isCurrent ? '3px solid #F47920' : '3px solid transparent', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
-                        <div style={{ fontSize: 12, color: isDone ? '#C45A0A' : '#9CA3AF', fontWeight: isDone ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}><span style={{ fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A' }}>{fmt(slot.start_time)}</span> · {meta}</div>
+                        <div style={{ fontSize: 12, color: isDone ? '#C45A0A' : '#6B7280', fontWeight: isDone ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}><span style={{ fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A' }}>{fmt(slot.start_time)}</span> · {meta}</div>
                       </div>
                       {bk && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
@@ -324,7 +324,7 @@ export default function TeacherDashboard() {
                       <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.5vw,17px)', fontWeight: 700, flexShrink: 0, background: '#fff', border: '2px solid #F4C099', color: '#F47920', opacity: isDone ? .4 : 1 }}>{bk ? initials(bk.student_name || bk.parent_name) : '—'}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
-                        <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#9CA3AF', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
+                        <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
                         {attendees.length > 0 && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#C45A0A', fontWeight: 600, marginTop: 2 }}>✓ {attendees.join(', ')}</div>}
                       </div>
                     </div>
@@ -358,10 +358,10 @@ export default function TeacherDashboard() {
               <input value={notesSearch} onChange={e => setNotesSearch(e.target.value)} placeholder="Search notes, student, parent, grade…"
                 style={{ flex: 1, padding: 'clamp(8px,1vw,12px) clamp(12px,1.5vw,16px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }}
                 onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
-              {notesSearch && <button onClick={() => setNotesSearch('')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 12px', borderRadius: 10, background: '#fff', color: '#9CA3AF', border: '1.5px solid #E5D5C5', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>}
+              {notesSearch && <button onClick={() => setNotesSearch('')} style={{ fontSize: 13, fontWeight: 600, padding: '8px 12px', borderRadius: 10, background: '#fff', color: '#6B7280', border: '1.5px solid #E5D5C5', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>}
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              {loading ? <div style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
               : notes.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 500 }}>No notes yet. Tap the note icon on a meeting to add one.</div>
               : filteredNotes.length === 0 ? <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 500 }}>No notes match “{notesSearch}”.</div>
               : filteredNotes.map(n => {
@@ -374,7 +374,7 @@ export default function TeacherDashboard() {
                       <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.student_name || n.parent_name || 'Meeting'}{n.section ? ` · ${n.section}` : ''}{n.grade != null ? ` · Gr ${n.grade}` : ''}</div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
                     </div>
-                    {n.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#9CA3AF', marginTop: 1 }}>Parent: {n.parent_name}</div>}
+                    {n.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>Parent: {n.parent_name}</div>}
                     <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}
                       placeholder="Write a note…"
                       style={{ width: '100%', marginTop: 8, padding: 'clamp(8px,1vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
@@ -396,14 +396,14 @@ export default function TeacherDashboard() {
             {/* Summary bar */}
             <div style={{ padding: '10px 20px', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: '#C45A0A' }}>{bookedSlots.length} booked</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{freeSlots.length} free</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: '#9CA3AF' }}>{blockedSlots.length} blocked<InfoButton text="Marks a slot unavailable so parents can't book it — useful for breaks or lunch." label="About blocking slots" /></span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#6B7280' }}>{freeSlots.length} free</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: '#6B7280' }}>{blockedSlots.length} blocked<InfoButton text="Marks a slot unavailable so parents can't book it — useful for breaks or lunch." label="About blocking slots" /></span>
             </div>
 
             {/* Vertical slot list */}
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {loading
-              ? <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              ? <div style={{ padding: 40, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
               : sortedSlots.length === 0
               ? <div style={{ padding: 40, textAlign: 'center', color: '#C4B5A5', fontSize: 17 }}>No slots yet</div>
               : sortedSlots.map((slot, idx) => {
@@ -461,17 +461,17 @@ export default function TeacherDashboard() {
                         userSelect: 'none',
                       }}
                     >
-                      <div style={{ width: 'clamp(66px,9vw,86px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#9CA3AF' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
+                      <div style={{ width: 'clamp(66px,9vw,86px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, color: isBlocked ? '#6B7280' : '#1B3F7A', flexShrink: 0, letterSpacing: '-.02em' }}>{fmt(slot.start_time)}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         {isBlocked ? (
-                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 600 }}>Blocked — unavailable</div>
+                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#6B7280', fontWeight: 600 }}>Blocked — unavailable</div>
                         ) : isBooked ? (
                           <>
                             <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
-                            {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
+                            {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#6B7280', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
                           </>
                         ) : (
-                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#9CA3AF', fontWeight: 500 }}>Free</div>
+                          <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#6B7280', fontWeight: 500 }}>Free</div>
                         )}
                       </div>
                       {!inSelect && isBooked && bk && (
@@ -496,7 +496,7 @@ export default function TeacherDashboard() {
                             style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A', whiteSpace: 'nowrap' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
                         )
                       )}
-                      {!isMobile && <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#9CA3AF' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>}
+                      {!isMobile && <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#6B7280' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>}
                     </div>
                   )
                 })
@@ -511,7 +511,7 @@ export default function TeacherDashboard() {
                   {[['block','Block'],['unblock','Unblock'],['cancel','Cancel slots']].map(([action, label]) => (
                     <button key={action} disabled={bulking} onClick={() => handleBulkAction(action)} style={{ fontSize: 13, padding: '6px 14px', borderRadius: 50, cursor: bulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: bulking ? .6 : 1 }}>{label}</button>
                   ))}
-                  <button onClick={() => { setBulkSel(new Set()); setLastSel(null); setSelectMode(false) }} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit', marginLeft: 'auto' }}>Done</button>
+                  <button onClick={() => { setBulkSel(new Set()); setLastSel(null); setSelectMode(false) }} style={{ fontSize: 13, padding: '6px 12px', borderRadius: 50, cursor: 'pointer', fontWeight: 600, border: '1.5px solid #E5D5C5', background: '#fff', color: '#6B7280', fontFamily: 'inherit', marginLeft: 'auto' }}>Done</button>
                 </div>
               </div>
             ) : null}
@@ -532,12 +532,12 @@ export default function TeacherDashboard() {
         <div onClick={() => setVenueModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 200, padding: 20, overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', marginTop: isMobile ? 12 : 0, textAlign: 'left', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Change venue</div>
-            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(10px,1.4vw,16px)', lineHeight: 1.5 }}>Enter the new room or location</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', marginBottom: 'clamp(10px,1.4vw,16px)', lineHeight: 1.5 }}>Enter the new room or location</div>
             <input value={venueInput} onChange={e => setVenueInput(e.target.value)} placeholder="e.g. Room 201"
               style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', border: '2px solid #F4C099', borderRadius: 12, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', marginBottom: 'clamp(16px,2.5vw,24px)', boxSizing: 'border-box' }}
               onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setVenueModal(false)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+              <button onClick={() => setVenueModal(false)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
               <button onClick={async () => { if (venueInput.trim()) { const v = venueInput.trim(); setVenueText(v); try { await patchVenue(v); showToast('Venue updated') } catch { showToast('Venue saved locally') } } setVenueModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Save</button>
             </div>
           </div>
@@ -549,7 +549,7 @@ export default function TeacherDashboard() {
         <div onClick={() => setAttModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,36px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>Mark attendance</div>
-            <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', color: '#9CA3AF', marginBottom: 'clamp(16px,2.2vw,22px)' }}>Who attended {attModal.name}'s meeting?</div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', color: '#6B7280', marginBottom: 'clamp(16px,2.2vw,22px)' }}>Who attended {attModal.name}'s meeting?</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 'clamp(18px,2.5vw,26px)' }}>
               {ATTENDEE_OPTIONS.map(who => {
                 const on = attSel.includes(who)
@@ -562,7 +562,7 @@ export default function TeacherDashboard() {
               })}
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => saveAttendance(true)} disabled={savingAtt} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Clear</button>
+              <button onClick={() => saveAttendance(true)} disabled={savingAtt} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Clear</button>
               <button onClick={() => saveAttendance(false)} disabled={savingAtt} style={{ flex: 2, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: savingAtt ? 'not-allowed' : 'pointer', opacity: savingAtt ? .6 : 1, border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>{savingAtt ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
@@ -574,9 +574,9 @@ export default function TeacherDashboard() {
         <div onClick={() => setCancelModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Cancel this meeting?</div>
-            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel meeting with {cancelModal.name}?</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>Cancel meeting with {cancelModal.name}?</div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+              <button onClick={() => setCancelModal(null)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
               <button onClick={() => { handleCancelBooking(cancelModal.booking_id); setCancelModal(null) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Cancel</button>
             </div>
           </div>
@@ -588,12 +588,12 @@ export default function TeacherDashboard() {
         <div onClick={() => setNoteModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 200, padding: 20, overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(440px,calc(100vw - 32px))', marginTop: isMobile ? 12 : 0, boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>Note</div>
-            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(12px,1.6vw,16px)' }}>Private to you · {noteModal.name}</div>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(12px,1.6vw,16px)' }}>Private to you · {noteModal.name}</div>
             <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} autoFocus rows={isMobile ? 4 : 5} placeholder="Write a private note about this meeting…"
               style={{ width: '100%', padding: 'clamp(10px,1.4vw,14px)', border: '1.5px solid #F4C099', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
               onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
             <div style={{ display: 'flex', gap: 12, marginTop: 'clamp(14px,2vw,20px)' }}>
-              <button onClick={() => setNoteModal(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Close</button>
+              <button onClick={() => setNoteModal(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Close</button>
               <button onClick={handleSaveNote} disabled={savingNote} style={{ flex: 2, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.7vw,17px)', fontWeight: 700, cursor: savingNote ? 'not-allowed' : 'pointer', opacity: savingNote ? .6 : 1, border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>{savingNote ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
@@ -605,9 +605,9 @@ export default function TeacherDashboard() {
         <div onClick={() => setBulkCancelConfirm(0)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
             <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Cancel {bulkSel.size} slot{bulkSel.size !== 1 ? 's' : ''}?</div>
-            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#9CA3AF', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>This will cancel {bulkCancelConfirm} parent meeting{bulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
+            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', marginBottom: 'clamp(20px,3vw,30px)', lineHeight: 1.5 }}>This will cancel {bulkCancelConfirm} parent meeting{bulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+              <button onClick={() => setBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
               <button onClick={() => handleBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Cancel slots</button>
             </div>
           </div>

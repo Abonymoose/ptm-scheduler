@@ -53,14 +53,20 @@ export default function InfoButton({ text, label = 'More info', size = 15 }) {
         aria-label={label}
         title="What's this?"
         style={{
+          position: 'relative',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: size + 6, height: size + 6, padding: 0, flexShrink: 0,
-          background: 'none', border: 'none', cursor: 'pointer', color: '#B7ADA2',
+          background: 'none', border: 'none', cursor: 'pointer', color: '#8A8178',
           verticalAlign: 'middle', lineHeight: 0,
         }}
         onMouseEnter={e => (e.currentTarget.style.color = '#F47920')}
-        onMouseLeave={e => (e.currentTarget.style.color = '#B7ADA2')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#8A8178')}
       >
+        {/* Invisible hit-area, larger than the visible icon (WCAG 2.5.5, 44px).
+            Absolutely positioned so it doesn't grow the button's own box —
+            this is used inline next to short text labels, and a visually
+            44px-tall button there would distort the surrounding line. */}
+        <span aria-hidden="true" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 44, height: 44 }} />
         <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" />
           <circle cx="8" cy="4.7" r="0.95" fill="currentColor" />
@@ -78,7 +84,7 @@ export default function InfoButton({ text, label = 'More info', size = 15 }) {
             zIndex: 100001,
             width: 240, maxWidth: 'calc(100vw - 16px)', background: '#fff', color: '#374151',
             borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,.18)', border: '1px solid #F0E4D4',
-            padding: '12px 32px 12px 14px', fontSize: 13, lineHeight: 1.5, fontWeight: 500,
+            padding: '12px 32px 12px 14px', fontSize: 14, lineHeight: 1.5, fontWeight: 500,
           }}>
             {text}
             <button
@@ -87,7 +93,7 @@ export default function InfoButton({ text, label = 'More info', size = 15 }) {
               aria-label="Close"
               style={{
                 position: 'absolute', top: 6, right: 8, background: 'none', border: 'none',
-                cursor: 'pointer', color: '#9CA3AF', fontSize: 18, lineHeight: 1, padding: 2,
+                cursor: 'pointer', color: '#8A8178', fontSize: 18, lineHeight: 1, padding: 2,
               }}
             >×</button>
           </div>

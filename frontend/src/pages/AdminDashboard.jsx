@@ -331,7 +331,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
-            <button onClick={logoutUser} style={{fontSize:'clamp(10px,1.2vw,13px)',fontWeight:600,padding:'clamp(4px,.8vw,8px) clamp(10px,1.5vw,16px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            <button onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
             <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
         </div>
@@ -341,7 +341,7 @@ export default function AdminDashboard() {
           {[{ label: 'Teachers', value: teachers.length }, { label: 'Bookings', value: totalBookings }, { label: 'Total slots', value: totalSlots }, { label: 'Avg fill rate', value: `${avgFill}%` }].map((s, i) => (
             <div key={i} style={{ flex: 1, padding: 'clamp(6px,1vw,12px) 0', textAlign: 'center', borderRight: i < 3 ? '1px solid #F4C099' : 'none' }}>
               <div style={{ fontSize: 'clamp(16px,2.2vw,26px)', fontWeight: 700, color: '#1B3F7A' }}>{s.value}</div>
-              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#9CA3AF', marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#6B7280', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -349,7 +349,7 @@ export default function AdminDashboard() {
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
           {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`], ...(isDemoAdmin ? [['demo','Demo']] : [])].map(([key, lbl]) => (
-            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#9CA3AF', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
+            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#6B7280', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
 
@@ -380,11 +380,11 @@ export default function AdminDashboard() {
                     ))}
                     <button onClick={handleOverviewAddTeacher} disabled={ovAddBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: ovAddBusy ? 'default' : 'pointer', opacity: ovAddBusy ? .6 : 1, fontFamily: 'inherit' }}>{ovAddBusy ? 'Adding…' : 'Add'}</button>
                   </div>
-                  <div style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#9CA3AF', marginTop: 6 }}>Creates a teacher with a fresh 45-slot grid on the PTM date.</div>
+                  <div style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#6B7280', marginTop: 6 }}>Creates a teacher with a fresh 45-slot grid on the PTM date.</div>
                 </div>
               )}
-              {loading ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>Loading…</div>
-              : filteredTeachers.length === 0 ? <div style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>{teacherSearch ? 'No teachers match.' : 'No teachers yet'}</div>
+              {loading ? <div style={{ padding: 20, color: '#6B7280', textAlign: 'center' }}>Loading…</div>
+              : filteredTeachers.length === 0 ? <div style={{ padding: 20, color: '#6B7280', textAlign: 'center' }}>{teacherSearch ? 'No teachers match.' : 'No teachers yet'}</div>
               : filteredTeachers.map((t, i) => {
                 const pct = t.slots.length > 0 ? Math.round(t.booked/t.slots.length*100) : 0
                 const isOpen = openTeacher === i
@@ -398,14 +398,14 @@ export default function AdminDashboard() {
                         <div style={{ width: 'clamp(22px,2.8vw,34px)', height: 'clamp(22px,2.8vw,34px)', borderRadius: '50%', background: '#FFF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(8px,1vw,12px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>{getInit(t.name)}</div>
                         <div>
                           <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(t.name)}</div>
-                          <div style={{ fontSize: 'clamp(8px,1vw,12px)', color: '#9CA3AF' }}>{t.sub && `${t.sub} · `}{t.slots.length} slots</div>
+                          <div style={{ fontSize: 'clamp(8px,1vw,12px)', color: '#6B7280' }}>{t.sub && `${t.sub} · `}{t.slots.length} slots</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(5px,.8vw,10px)' }}>
                         <div style={{ width: 'clamp(60px,8vw,100px)', height: 5, background: '#FDE9D4', borderRadius: 2, overflow: 'hidden' }}>
                           <div style={{ height: '100%', background: '#F47920', borderRadius: 2, width: `${pct}%` }} />
                         </div>
-                        <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', color: '#9CA3AF', minWidth: 32, textAlign: 'right', fontWeight: 600 }}>{pct}%</div>
+                        <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', color: '#6B7280', minWidth: 32, textAlign: 'right', fontWeight: 600 }}>{pct}%</div>
                         <span style={{ fontSize: 'clamp(14px,1.8vw,20px)', color: '#F47920', display: 'inline-block', transition: 'transform .2s', transform: isOpen ? 'rotate(90deg)' : 'none', marginLeft: 4 }}>›</span>
                       </div>
                     </div>
@@ -414,7 +414,7 @@ export default function AdminDashboard() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(4px,.6vw,8px)', marginBottom: 'clamp(6px,1vw,10px)' }}>
                           {[['Venue', t.venue || '—'], ['Email', t.email || '—'], ['Booked', `${t.booked} / ${t.slots.length}`], ['Free', t.slots.length - t.booked]].map(([label, val]) => (
                             <div key={label}>
-                              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#9CA3AF', marginBottom: 1 }}>{label}</div>
+                              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#6B7280', marginBottom: 1 }}>{label}</div>
                               <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', color: '#374151' }}>{val}</div>
                             </div>
                           ))}
@@ -441,8 +441,8 @@ export default function AdminDashboard() {
               <button onClick={() => setSearch('')} style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 600, padding: 'clamp(5px,.8vw,9px) clamp(10px,1.5vw,16px)', borderRadius: 'clamp(7px,1vw,11px)', background: '#fff', color: '#F47920', border: '1px solid #F4C099', cursor: 'pointer', fontFamily: 'inherit' }}>Filter</button>
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
-              {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
-              : filteredBookings.length === 0 ? <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 'clamp(13px,1.6vw,17px)', marginTop: 40 }}>{search ? 'No results.' : 'No bookings yet.'}</div>
+              {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
+              : filteredBookings.length === 0 ? <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 'clamp(13px,1.6vw,17px)', marginTop: 40 }}>{search ? 'No results.' : 'No bookings yet.'}</div>
               : filteredBookings.map((bk, i) => {
                 const isCancelled = bk.status === 'cancelled'
                 const isOpen = openBooking === bk.id
@@ -453,16 +453,16 @@ export default function AdminDashboard() {
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(5px,.8vw,9px) clamp(8px,1.2vw,14px)', borderRadius: isOpen ? 'clamp(5px,.8vw,8px) clamp(5px,.8vw,8px) 0 0' : 'clamp(5px,.8vw,8px)', border: `1px solid ${isOpen ? '#F47920' : '#FDE9D4'}`, marginBottom: isOpen ? 0 : 3, background: isOpen ? '#FFF0E6' : '#FFF8F3', cursor: 'pointer', opacity: isCancelled ? .65 : 1, transition: 'background .15s' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ minWidth: 48, textAlign: 'center', background: isCancelled ? '#F3F4F6' : '#FFF0E6', borderRadius: 6, padding: '4px 6px', flexShrink: 0 }}>
-                          <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 800, color: isCancelled ? '#9CA3AF' : '#C45A0A', lineHeight: 1.1 }}>{bk.start_time ? fmt(bk.start_time) : '—'}</div>
+                          <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', fontWeight: 800, color: isCancelled ? '#6B7280' : '#C45A0A', lineHeight: 1.1 }}>{bk.start_time ? fmt(bk.start_time) : '—'}</div>
                         </div>
                         <div>
                           <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.student_name}{bk.section ? ` · ${bk.section}` : ''}</div>
-                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF' }}>{bk.parent_name ? `${bk.parent_name} · ` : ''}with {titleName(bk.teacher_name)}</div>
+                          <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#6B7280' }}>{bk.parent_name ? `${bk.parent_name} · ` : ''}with {titleName(bk.teacher_name)}</div>
                           <div style={{ fontSize: 'clamp(8px,1vw,12px)', marginTop: 1, fontWeight: 600, color: bk.attendance?.length ? '#C45A0A' : '#C4B5A5' }}>{bk.attendance?.length ? `Attended: ${bk.attendance.join(', ')}` : 'Not shown'}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 'clamp(8px,1vw,12px)', padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: isCancelled ? '#F3F4F6' : '#FFF0E6', color: isCancelled ? '#9CA3AF' : '#C45A0A', fontWeight: 600 }}>{isCancelled ? 'Cancelled' : 'Confirmed'}</span>
+                        <span style={{ fontSize: 'clamp(8px,1vw,12px)', padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: isCancelled ? '#F3F4F6' : '#FFF0E6', color: isCancelled ? '#6B7280' : '#C45A0A', fontWeight: 600 }}>{isCancelled ? 'Cancelled' : 'Confirmed'}</span>
                         <span style={{ fontSize: 'clamp(14px,1.8vw,20px)', color: '#9CA3AF', display: 'inline-block', transition: 'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
                       </div>
                     </div>
@@ -471,14 +471,14 @@ export default function AdminDashboard() {
                         <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', borderBottom: '1px solid #FDE9D4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
                             <div style={{ fontSize: 'clamp(13px,1.6vw,18px)', fontWeight: 700, color: '#1B3F7A' }}>{bk.student_name}{bk.section ? ` · ${bk.section}` : ''}</div>
-                            <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#9CA3AF', marginTop: 2 }}>{bk.parent_name ? `Parent: ${bk.parent_name} · ` : ''}{ph.length} booking{ph.length !== 1 ? 's' : ''}</div>
+                            <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#6B7280', marginTop: 2 }}>{bk.parent_name ? `Parent: ${bk.parent_name} · ` : ''}{ph.length} booking{ph.length !== 1 ? 's' : ''}</div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', borderBottom: '1px solid #FDE9D4' }}>
                           {[{ label: 'Bookings', value: ph.filter(b=>b.status!=='cancelled').length }, { label: 'Cancelled', value: ph.filter(b=>b.status==='cancelled').length }, { label: 'Teachers', value: new Set(ph.map(b=>b.teacher_name)).size }].map((s,i) => (
                             <div key={i} style={{ flex: 1, padding: 'clamp(6px,1vw,10px) 0', textAlign: 'center', borderRight: i < 2 ? '1px solid #FDE9D4' : 'none' }}>
                               <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: '#F47920' }}>{s.value}</div>
-                              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#9CA3AF', marginTop: 1 }}>{s.label}</div>
+                              <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#6B7280', marginTop: 1 }}>{s.label}</div>
                             </div>
                           ))}
                         </div>
@@ -486,9 +486,9 @@ export default function AdminDashboard() {
                           <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 'clamp(6px,1vw,10px)' }}>PTM history</div>
                           {ph.map((b, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(4px,.7vw,8px) 0', borderBottom: i < ph.length-1 ? '1px solid #FDE9D4' : 'none', fontSize: 'clamp(10px,1.2vw,14px)' }}>
-                              <div style={{ color: '#9CA3AF', minWidth: 'clamp(80px,10vw,120px)' }}>{b.start_time ? fmtDate(b.start_time) : '—'}</div>
+                              <div style={{ color: '#6B7280', minWidth: 'clamp(80px,10vw,120px)' }}>{b.start_time ? fmtDate(b.start_time) : '—'}</div>
                               <div style={{ color: '#1B3F7A', fontWeight: 600, flex: 1, padding: '0 clamp(6px,1vw,10px)' }}>{titleName(b.teacher_name)}</div>
-                              <span style={{ fontSize: 'clamp(8px,1vw,11px)', fontWeight: 700, padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: b.status === 'cancelled' ? '#F3F4F6' : '#DCFCE7', color: b.status === 'cancelled' ? '#9CA3AF' : '#166534' }}>{b.status === 'cancelled' ? 'Cancelled' : 'Attended'}</span>
+                              <span style={{ fontSize: 'clamp(8px,1vw,11px)', fontWeight: 700, padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: b.status === 'cancelled' ? '#F3F4F6' : '#DCFCE7', color: b.status === 'cancelled' ? '#6B7280' : '#166534' }}>{b.status === 'cancelled' ? 'Cancelled' : 'Attended'}</span>
                             </div>
                           ))}
                         </div>
@@ -511,7 +511,7 @@ export default function AdminDashboard() {
               <InfoButton text="Parents who haven't confirmed any meeting yet." label="About hasn't booked" />
             </div>
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(8px,1.2vw,14px)' }}>
-              {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+              {loading ? <div style={{ padding: 20, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
               : unbooked.count === 0 ? (
                 <div style={{ textAlign: 'center', color: '#16A34A', fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 600, marginTop: 'clamp(32px,6vw,60px)' }}>
                   All parents have booked 🎉
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, color: '#1B3F7A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.parent_name}{p.student_name && p.student_name !== p.parent_name ? ` · ${p.student_name}` : ''}{p.section ? ` (${p.section})` : ''}
                     </div>
-                    <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
+                    <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.email}</div>
                   </div>
                   <span style={{ fontSize: 'clamp(8px,1vw,11px)', padding: '2px clamp(6px,1vw,10px)', borderRadius: 10, background: '#FEF2F2', color: '#B91C1C', fontWeight: 600, flexShrink: 0 }}>No booking</span>
                 </div>
@@ -583,7 +583,7 @@ export default function AdminDashboard() {
                   </>
                 )}
               </div>
-              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: ptmConfirm ? '#B45309' : '#9CA3AF', marginTop: 6 }}>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: ptmConfirm ? '#B45309' : '#6B7280', marginTop: 6 }}>
                 {ptmConfirm
                   ? `This shifts every existing slot to ${formatPtmDate(ptmDraft)}, keeping each slot's time of day. Existing bookings move with their slots.`
                   : `Currently ${formatPtmDate(ptmDate)}. Changing it moves all slots (and their bookings) to the new date.`}
@@ -604,7 +604,7 @@ export default function AdminDashboard() {
                 ))}
                 <button onClick={handleAddTeacher} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Add</button>
               </div>
-              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#9CA3AF', marginTop: 6 }}>Creates a real teacher with a fresh 45-slot grid.</div>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginTop: 6 }}>Creates a real teacher with a fresh 45-slot grid.</div>
             </div>
 
             {/* Seed data + wipe demo data */}
@@ -619,13 +619,13 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   <input type="number" min={0} max={100} value={seedFill} onChange={e => setSeedFill(e.target.value)}
                     style={{ width: 64, padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
-                  <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>% full</span>
+                  <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#6B7280' }}>% full</span>
                 </div>
                 <button onClick={handleSeedData} disabled={demoBusy} style={{ flexShrink: 0, padding: 'clamp(8px,1vw,11px) clamp(16px,2.2vw,24px)', borderRadius: 9, border: 'none', background: '#1B3F7A', color: '#fff', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', cursor: demoBusy ? 'default' : 'pointer', opacity: demoBusy ? .6 : 1, fontFamily: 'inherit' }}>Seed</button>
               </div>
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,18px)', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', fontWeight: 600 }}>Grades</span>
+                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#6B7280', fontWeight: 600 }}>Grades</span>
                   <input type="number" min={1} max={12} value={seedGradeMin} onChange={e => setSeedGradeMin(e.target.value)}
                     style={{ width: 48, padding: 'clamp(6px,.9vw,9px)', border: '1.5px solid #F4C099', borderRadius: 8, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
                   <span style={{ color: '#9CA3AF' }}>–</span>
@@ -633,13 +633,13 @@ export default function AdminDashboard() {
                     style={{ width: 48, padding: 'clamp(6px,.9vw,9px)', border: '1.5px solid #F4C099', borderRadius: 8, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF', fontWeight: 600 }}>Sections</span>
+                  <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#6B7280', fontWeight: 600 }}>Sections</span>
                   {['A', 'B', 'C', 'D', 'E'].map(letter => {
                     const on = seedSections.includes(letter)
                     return (
                       <button key={letter} type="button"
                         onClick={() => setSeedSections(prev => prev.includes(letter) ? prev.filter(l => l !== letter) : [...prev, letter])}
-                        style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', border: `1.5px solid ${on ? '#1B3F7A' : '#F4C099'}`, background: on ? '#1B3F7A' : '#fff', color: on ? '#fff' : '#9CA3AF' }}>{letter}</button>
+                        style={{ width: 30, height: 30, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 'clamp(12px,1.4vw,14px)', border: `1.5px solid ${on ? '#1B3F7A' : '#F4C099'}`, background: on ? '#1B3F7A' : '#fff', color: on ? '#fff' : '#6B7280' }}>{letter}</button>
                     )
                   })}
                 </div>
@@ -653,7 +653,7 @@ export default function AdminDashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <input type="number" min={0} max={100} value={seedRealisticPct} onChange={e => setSeedRealisticPct(e.target.value)}
                       style={{ width: 64, padding: 'clamp(6px,.9vw,10px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box' }} />
-                    <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#9CA3AF' }}>% get attendance + a note</span>
+                    <span style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#6B7280' }}>% get attendance + a note</span>
                   </div>
                 )}
               </div>
@@ -666,15 +666,15 @@ export default function AdminDashboard() {
             {/* View as (impersonate) */}
             <div style={{ margin: 'clamp(10px,1.4vw,14px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 2 }}>View as</div>
-              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#9CA3AF', marginBottom: 8 }}>Open a teacher's or parent's dashboard as them (60-min session, with a banner).</div>
+              <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginBottom: 8 }}>Open a teacher's or parent's dashboard as them (60-min session, with a banner).</div>
               <input value={viewAsSearch} onChange={e => setViewAsSearch(e.target.value)} placeholder="Search teachers &amp; parents…"
                 style={{ width: '100%', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
               <div className="custom-scroll" style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {demoUsers === null ? <div style={{ color: '#9CA3AF', fontSize: 13, padding: '6px 0' }}>Loading…</div>
+                {demoUsers === null ? <div style={{ color: '#6B7280', fontSize: 13, padding: '6px 0' }}>Loading…</div>
                 : (() => {
                     const q = viewAsSearch.trim().toLowerCase()
                     const list = demoUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q))
-                    if (list.length === 0) return <div style={{ color: '#9CA3AF', fontSize: 13, padding: '6px 0' }}>No matches.</div>
+                    if (list.length === 0) return <div style={{ color: '#6B7280', fontSize: 13, padding: '6px 0' }}>No matches.</div>
                     return list.map(u => (
                       <div key={u.id} onClick={() => handleImpersonate(u)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 'clamp(7px,1vw,10px) clamp(6px,1vw,10px)', borderRadius: 8, cursor: 'pointer', borderBottom: '1px solid #FDE9D4' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#FFF8F3'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -689,12 +689,12 @@ export default function AdminDashboard() {
             {/* What's new */}
             <div style={{ padding: 'clamp(14px,2vw,20px) clamp(14px,2vw,22px)' }}>
               <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 'clamp(8px,1.2vw,12px)' }}>What's new</div>
-              {changelog === null ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading changelog…</div>
-              : changelog.error ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>Changelog unavailable.</div>
+              {changelog === null ? <div style={{ color: '#6B7280', fontSize: 14 }}>Loading changelog…</div>
+              : changelog.error ? <div style={{ color: '#6B7280', fontSize: 14 }}>Changelog unavailable.</div>
               : (<>
                 {/* Hand-written, teacher-facing notes (primary) */}
                 {(changelog.notes || []).length === 0
-                  ? <div style={{ color: '#9CA3AF', fontSize: 14 }}>No release notes yet.</div>
+                  ? <div style={{ color: '#6B7280', fontSize: 14 }}>No release notes yet.</div>
                   : (changelog.notes || []).map((sec, si) => (
                     <div key={si} style={{ marginBottom: 'clamp(12px,1.8vw,18px)' }}>
                       <div style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 6 }}>{sec.heading}</div>
@@ -709,14 +709,14 @@ export default function AdminDashboard() {
 
                 {/* Git commits (secondary, collapsed) */}
                 <div style={{ marginTop: 'clamp(8px,1.2vw,14px)', borderTop: '1px solid #F4EDE4', paddingTop: 'clamp(8px,1.2vw,12px)' }}>
-                  <button onClick={() => setGitOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  <button onClick={() => setGitOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '.04em' }}>
                     <span style={{ display: 'inline-block', transition: 'transform .15s', transform: gitOpen ? 'rotate(90deg)' : 'none' }}>▸</span>
                     Developer changelog (git){changelog.total ? ` · ${changelog.total}` : ''}
                   </button>
                   {gitOpen && (
                     <div style={{ marginTop: 'clamp(8px,1.2vw,12px)' }}>
-                      {changelog.git_error ? <div style={{ color: '#9CA3AF', fontSize: 13 }}>Git log unavailable.</div>
-                      : changelog.days.length === 0 ? <div style={{ color: '#9CA3AF', fontSize: 13 }}>No commits in the last 7 days.</div>
+                      {changelog.git_error ? <div style={{ color: '#6B7280', fontSize: 13 }}>Git log unavailable.</div>
+                      : changelog.days.length === 0 ? <div style={{ color: '#6B7280', fontSize: 13 }}>No commits in the last 7 days.</div>
                       : changelog.days.map(day => (
                         <div key={day.date} style={{ marginBottom: 'clamp(8px,1.2vw,14px)' }}>
                           <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 4 }}>{day.date}</div>
@@ -784,12 +784,12 @@ export default function AdminDashboard() {
                       {[['block','Block'],['unblock','Unblock'],['cancel','Remove']].map(([action, label]) => (
                         <button key={action} disabled={mBulking} onClick={() => handleManageBulkAction(action)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 50, cursor: mBulking ? 'default' : 'pointer', fontWeight: 600, border: action === 'cancel' ? '1.5px solid #FCA5A5' : '1.5px solid #F4C099', background: action === 'cancel' ? '#FEF2F2' : '#fff', color: action === 'cancel' ? '#B91C1C' : '#1B3F7A', fontFamily: 'inherit', opacity: mBulking ? .6 : 1 }}>{label}</button>
                       ))}
-                      <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null); setMSelectMode(false) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Done</button>
+                      <button onClick={() => { setMBulkSel(new Set()); setMLastSel(null); setMSelectMode(false) }} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 50, cursor: 'pointer', fontWeight: 700, border: '1.5px solid #E5D5C5', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Done</button>
                     </div>
                   )}
                 </div>
-                {loadingMSlots ? <div style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
-                : manageSlots.length === 0 ? <div style={{ padding: 16, textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>No slots</div>
+                {loadingMSlots ? <div style={{ padding: 20, textAlign: 'center', color: '#6B7280' }}>Loading…</div>
+                : manageSlots.length === 0 ? <div style={{ padding: 16, textAlign: 'center', color: '#6B7280', fontSize: 14 }}>No slots</div>
                 : manageSlots.map((s, idx) => {
                   const isMSel = mBulkSel.has(s.id)
                   const inMSelect = mSelectMode || mBulkSel.size > 0
@@ -833,8 +833,8 @@ export default function AdminDashboard() {
                       onTouchMove={() => { clearTimeout(mLongPress.current) }}
                       style={{ display: 'flex', alignItems: 'center', gap: 7, padding: 'clamp(7px,1vw,10px) 0', borderBottom: '1px solid #F4EDE4', cursor: 'pointer', background: isMSel ? '#EFF6FF' : '#fff', borderLeft: isMSel ? '3px solid #1B3F7A' : '3px solid transparent', paddingLeft: isMSel ? 4 : 7, userSelect: 'none', transition: 'background .1s' }}
                     >
-                      <div style={{ width: 'clamp(64px,8vw,80px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#9CA3AF' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
-                      <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#9CA3AF', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ width: 'clamp(64px,8vw,80px)', textAlign: 'center', whiteSpace: 'nowrap', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, color: s.state === 'blocked' ? '#6B7280' : '#1B3F7A', flexShrink: 0 }}>{fmt(s.start_time)}</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 'clamp(11px,1.3vw,14px)', color: s.state === 'booked' ? '#1B3F7A' : '#6B7280', fontWeight: s.state === 'booked' ? 600 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {s.state === 'booked' ? `Booked — ${s.student_name || s.parent_name}${s.section ? ` (${s.section})` : ''}` : s.state === 'blocked' ? 'Blocked' : 'Free'}
                       </div>
                       {!inMSelect && s.state !== 'booked' && (
@@ -859,7 +859,7 @@ export default function AdminDashboard() {
                   <div style={{ border: '1.5px solid #FCA5A5', background: '#FEF2F2', borderRadius: 12, padding: 'clamp(14px,2vw,18px)' }}>
                     <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 800, color: '#B91C1C', marginBottom: 8 }}>Remove teacher</div>
                     {removeImpact === null && !removeError ? (
-                      <div style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#9CA3AF' }}>Checking impact…</div>
+                      <div style={{ fontSize: 'clamp(12px,1.4vw,14px)', color: '#6B7280' }}>Checking impact…</div>
                     ) : (<>
                       {removeImpact && (
                         <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#7F1D1D', lineHeight: 1.5, marginBottom: 12 }}>
@@ -872,7 +872,7 @@ export default function AdminDashboard() {
                       {removeError && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#B91C1C', marginBottom: 10 }}>{removeError}</div>}
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button onClick={() => { setRemoveMode(false); setRemoveTyped(''); setRemoveError('') }} disabled={removingTeacher}
-                          style={{ flex: 1, padding: 'clamp(9px,1.2vw,12px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+                          style={{ flex: 1, padding: 'clamp(9px,1.2vw,12px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Cancel</button>
                         <button onClick={confirmRemove} disabled={removingTeacher || !removeImpact || !removeNameOk}
                           style={{ flex: 1, padding: 'clamp(9px,1.2vw,12px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit', cursor: (removingTeacher || !removeImpact || !removeNameOk) ? 'not-allowed' : 'pointer', opacity: (removingTeacher || !removeImpact || !removeNameOk) ? .5 : 1 }}>{removingTeacher ? 'Removing…' : 'Delete teacher'}</button>
                       </div>
@@ -888,9 +888,9 @@ export default function AdminDashboard() {
             <div onClick={e => { e.stopPropagation(); setConfirmCancel(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
                 <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel this meeting?</div>
-                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => setConfirmCancel(null)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+                  <button onClick={() => setConfirmCancel(null)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
                   <button onClick={() => doCancelSlot(confirmCancel)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Continue</button>
                 </div>
               </div>
@@ -902,9 +902,9 @@ export default function AdminDashboard() {
             <div onClick={e => { e.stopPropagation(); setMBulkCancelConfirm(0) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
                 <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel {mBulkSel.size} slot{mBulkSel.size !== 1 ? 's' : ''}?</div>
-                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {mBulkCancelConfirm} parent meeting{mBulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {mBulkCancelConfirm} parent meeting{mBulkCancelConfirm !== 1 ? 's' : ''} and remove the slots. Continue?</div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => setMBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Back</button>
+                  <button onClick={() => setMBulkCancelConfirm(0)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
                   <button onClick={() => handleManageBulkAction('cancel')} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Remove slots</button>
                 </div>
               </div>
@@ -920,7 +920,7 @@ export default function AdminDashboard() {
             <div style={{ fontSize: 'clamp(16px,2.1vw,22px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 10 }}>
               {demoConfirm === 'wipe' ? 'Wipe all bookings?' : demoConfirm === 'wipeseed' ? 'Wipe demo data?' : 'Reset all slots?'}
             </div>
-            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#9CA3AF', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>
               {demoConfirm === 'wipe'
                 ? 'This permanently deletes EVERY booking (including cancelled meetings and blocked slots) for your school. Slots stay; they just become free.'
                 : demoConfirm === 'wipeseed'
@@ -928,7 +928,7 @@ export default function AdminDashboard() {
                 : 'This deletes ALL slots for your school (and any bookings on them) and regenerates a fresh 45-slot grid per teacher. This cannot be undone.'}
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setDemoConfirm(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setDemoConfirm(null)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={() => runDemoAction(demoConfirm)} style={{ flex: 1, padding: 'clamp(11px,1.5vw,15px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>{demoConfirm === 'wipe' ? 'Wipe bookings' : demoConfirm === 'wipeseed' ? 'Wipe demo data' : 'Reset slots'}</button>
             </div>
           </div>
@@ -940,12 +940,12 @@ export default function AdminDashboard() {
         <div onClick={() => setPtmModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,28px)', width: '100%', maxWidth: 'min(420px,calc(100vw - 32px))', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
             <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 6 }}>Change PTM date</div>
-            <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#9CA3AF', marginBottom: 14 }}>Currently {formatPtmDate(ptmDate)}. Changing it moves all slots (and their bookings) to the new date.</div>
+            <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', marginBottom: 14 }}>Currently {formatPtmDate(ptmDate)}. Changing it moves all slots (and their bookings) to the new date.</div>
             <input type="date" value={ptmDraft} onChange={e => { setPtmDraft(e.target.value); setPtmConfirm(false) }}
               style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
             {ptmConfirm && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#B45309', marginBottom: 12 }}>This shifts every existing slot to {formatPtmDate(ptmDraft)}, keeping each slot’s time of day. Existing bookings move with their slots.</div>}
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setPtmModalOpen(false)} disabled={ptmSaving} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#9CA3AF', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setPtmModalOpen(false)} disabled={ptmSaving} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, cursor: 'pointer', border: '1.5px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Cancel</button>
               {!ptmConfirm ? (
                 <button onClick={() => setPtmConfirm(true)} disabled={!ptmDraft || ptmDraft === ptmDate} style={{ flex: 1, padding: 'clamp(10px,1.4vw,13px)', borderRadius: 10, fontSize: 'clamp(12px,1.5vw,15px)', fontWeight: 700, border: 'none', background: '#1B3F7A', color: '#fff', fontFamily: 'inherit', cursor: (!ptmDraft || ptmDraft === ptmDate) ? 'not-allowed' : 'pointer', opacity: (!ptmDraft || ptmDraft === ptmDate) ? .5 : 1 }}>Set date</button>
               ) : (
