@@ -8,6 +8,11 @@ Env vars:
 - SENDGRID_API_KEY : required. Its absence raises at import (startup) time, so
                      the app refuses to boot rather than silently failing to
                      deliver login codes.
+- EMAIL_OVERRIDE_TO : optional. When set, EVERY outbound email (all types,
+                     for all time — see `_send`) is redirected to this
+                     address instead of its real recipient. For testing
+                     against the prod users table without mailing real
+                     Inventure staff. Absent means normal behaviour, always.
 """
 import os
 import logging
@@ -27,6 +32,17 @@ if not _API_KEY:
     raise RuntimeError(
         "SENDGRID_API_KEY is not set. OTP email delivery requires a SendGrid "
         "API key; set SENDGRID_API_KEY in the environment before starting."
+    )
+
+# One-time, loud, at process startup — so this can't sit forgotten on prod.
+# The actual per-send redirect logic in `_send` re-reads the env var fresh on
+# every call rather than trusting this frozen value, so it can never go stale
+# within a long-running process and toggling it in tests needs no reload.
+if os.getenv("EMAIL_OVERRIDE_TO"):
+    logger.warning(
+        "EMAIL OVERRIDE ACTIVE — all mail redirects to %s. This MUST be "
+        "unset before real use.",
+        os.getenv("EMAIL_OVERRIDE_TO"),
     )
 
 # Hosted, not inline: Gmail strips inline <svg> from HTML email, which is why
@@ -57,6 +73,58 @@ def _display_code(code: str) -> str:
     stored/verified code (passed to this module and compared elsewhere) is
     never touched; only this rendered copy is spaced."""
     return f"{code[:3]} {code[3:]}"
+
+
+def _send(to_email: str, subject: str, plain_text_content: str, html_content: str) -> bool:
+    """Single choke point for every outbound email. Every email type must
+    call this rather than building its own SendGrid Mail/send — that's what
+    makes the EMAIL_OVERRIDE_TO redirect below impossible to bypass by
+    accident when a new email type (e.g. cancellations) is added later.
+
+    When EMAIL_OVERRIDE_TO is set, every send goes to that address instead
+    of `to_email`, no exceptions: the subject is prefixed with the intended
+    recipient and a banner naming them is prepended to both bodies. Absent
+    (the default) means exactly today's behaviour — real recipient, no
+    redirect, ever.
+    """
+    override_to = os.getenv("EMAIL_OVERRIDE_TO")
+    actual_to = to_email
+    if override_to:
+        actual_to = override_to
+        subject = f"[TEST → {to_email}] {subject}"
+        plain_text_content = f"[TEST MODE] Intended recipient: {to_email}\n\n" + plain_text_content
+        banner_html = (
+            '<p style="margin:0 0 16px;padding:10px 14px;background:#FEF3C7;'
+            'border:1px solid #FDE68A;border-radius:6px;font-size:13px;'
+            "color:#78350F;font-family:-apple-system,BlinkMacSystemFont,"
+            "'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">"
+            f"TEST MODE — intended recipient: {to_email}</p>"
+        )
+        html_content = banner_html + html_content
+        logger.warning(
+            "Email redirected by EMAIL_OVERRIDE_TO: intended %s, actually sent to %s",
+            to_email, actual_to,
+        )
+
+    message = Mail(
+        from_email=(FROM_EMAIL, FROM_NAME),
+        to_emails=actual_to,
+        subject=subject,
+        plain_text_content=plain_text_content,
+        html_content=html_content,
+    )
+    try:
+        resp = SendGridAPIClient(_API_KEY).send(message)
+    except Exception as exc:  # network error, auth failure, etc.
+        logger.error("SendGrid email to %s failed (request error): %s", actual_to, exc)
+        return False
+
+    if resp.status_code // 100 == 2:
+        logger.info("SendGrid email sent to %s (HTTP %s)", actual_to, resp.status_code)
+        return True
+
+    logger.error("SendGrid email to %s failed: HTTP %s", actual_to, resp.status_code)
+    return False
 
 
 def send_otp_email(to_email: str, name: str, code: str) -> bool:
@@ -135,22 +203,4 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
 </table>
 """
 
-    message = Mail(
-        from_email=(FROM_EMAIL, FROM_NAME),
-        to_emails=to_email,
-        subject=subject,
-        plain_text_content=plain_text_content,
-        html_content=html_content,
-    )
-    try:
-        resp = SendGridAPIClient(_API_KEY).send(message)
-    except Exception as exc:  # network error, auth failure, etc.
-        logger.error("SendGrid OTP email to %s failed (request error): %s", to_email, exc)
-        return False
-
-    if resp.status_code // 100 == 2:
-        logger.info("SendGrid OTP email sent to %s (HTTP %s)", to_email, resp.status_code)
-        return True
-
-    logger.error("SendGrid OTP email to %s failed: HTTP %s", to_email, resp.status_code)
-    return False
+    return _send(to_email, subject, plain_text_content, html_content)
