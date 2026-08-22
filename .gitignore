@@ -29,5 +29,8 @@ dist-ssr/
 *.suo
 *.sw?
 
+# Local Claude Code preview/dev-server launcher config — machine-specific
+.claude/launch.json
+
 ptmnow-build-plan.md
 ptmnow-build-plan.txt
