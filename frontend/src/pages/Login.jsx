@@ -234,7 +234,25 @@ export default function Login({ branded = false } = {}) {
 
           <div style={{ padding: isMobile ? '18px 20px' : 'clamp(14px,2vw,26px) clamp(16px,2.5vw,32px)', background: '#F47920', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isMobile ? 6 : 'clamp(4px,.6vw,8px)' }}>
             <img src={LOGO_LARGE} alt="Inventure Academy" style={{ height: isMobile ? 42 : 'clamp(38px,5vw,56px)', width: 'auto', display: 'block', filter: 'brightness(0) invert(1)' }} />
-            <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.9)', fontWeight: 600, letterSpacing: '.02em' }}>PTM Scheduler</div>
+            {branded ? (
+              // Subtle credit line — reads as an attribution, not a second brand.
+              <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: 'rgba(255,255,255,.72)', fontWeight: 500, letterSpacing: '.02em', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
+                PTM Scheduler
+                <span aria-hidden="true">·</span>
+                Powered by
+                <svg width="14" height="14" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52" />
+                  <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+                  <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E" />
+                  <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B" />
+                  <rect x="10" y="44" width="150" height="14" fill="#D8443B" />
+                  <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <a href="/" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}>PTM Now</a>
+              </div>
+            ) : (
+              <div style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: 'rgba(255,255,255,.9)', fontWeight: 600, letterSpacing: '.02em' }}>PTM Scheduler</div>
+            )}
           </div>
 
           <div style={{ padding: isMobile ? '20px' : 'clamp(16px,2.2vw,28px) clamp(20px,2.8vw,36px)', display: 'flex', flexDirection: 'column', gap: isMobile ? 14 : 'clamp(12px,1.6vw,20px)' }}>
@@ -312,25 +330,6 @@ export default function Login({ branded = false } = {}) {
           </div>
         </div>
       </div>
-
-      {/* Branded login footer: "Powered by [small PTM Now icon] PTM Now" + Privacy. */}
-      {branded && (
-        <footer style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(12px,2vw,20px)', padding: 'clamp(12px,2vw,18px)', background: '#fff', borderTop: '0.5px solid #E9E4DC', flexShrink: 0, fontSize: 'clamp(12px,1.4vw,14px)', color: '#4A524D', flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            Powered by
-            <svg width="18" height="18" viewBox="0 0 170 170" aria-hidden="true" style={{ flexShrink: 0 }}>
-              <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52" />
-              <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E" />
-              <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E" />
-              <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B" />
-              <rect x="10" y="44" width="150" height="14" fill="#D8443B" />
-              <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <strong style={{ fontWeight: 700, color: '#1F2421' }}>PTM Now</strong>
-          </span>
-          <a href="/privacy" style={{ color: '#4A524D', textDecoration: 'none' }}>Privacy</a>
-        </footer>
-      )}
     </div>
   )
 }
