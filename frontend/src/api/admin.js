@@ -13,8 +13,11 @@ export const updateTeacher = async (teacherId, data) => {
   return res.data
 }
 
-export const cancelSlot = async (slotId) => {
-  const res = await axios.delete(`${BASE_URL}/admin/slots/${slotId}`, authHeader())
+export const cancelSlot = async (slotId, { notifyParent = true, notifyTeacher = true } = {}) => {
+  const res = await axios.delete(`${BASE_URL}/admin/slots/${slotId}`, {
+    ...authHeader(),
+    data: { notify_parent: notifyParent, notify_teacher: notifyTeacher },
+  })
   return res.data
 }
 

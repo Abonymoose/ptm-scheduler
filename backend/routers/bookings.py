@@ -5,8 +5,13 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
+from email_service import send_cancellation_email
 from collections import defaultdict
 import uuid
+import asyncio
+import logging
+
+logger = logging.getLogger("ptm.bookings")
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -382,10 +387,19 @@ async def cancel_booking(
     if current_user["role"] not in ("parent", "teacher"):
         raise HTTPException(status_code=403, detail="Only parents or teachers can cancel bookings")
 
+    # Full details captured up front (while the booking still has status
+    # != 'cancelled') so there's everything needed for the notification
+    # email without a second query after the UPDATE.
     result = await db.execute(
         text(
-            "SELECT b.id, b.parent_id, b.status, s.teacher_id"
-            " FROM bookings b JOIN slots s ON b.slot_id = s.id"
+            "SELECT b.id, b.parent_id, b.status, b.student_name, b.section,"
+            " s.teacher_id, s.start_time,"
+            " t.name AS teacher_name, t.subject AS teacher_subject, t.email AS teacher_email,"
+            " p.name AS parent_login_name, p.parent_name, p.email AS parent_email"
+            " FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " JOIN users t ON s.teacher_id = t.id"
+            " JOIN users p ON b.parent_id = p.id"
             " WHERE b.id = :bid"
         ),
         {"bid": booking_id}
@@ -407,6 +421,40 @@ async def cancel_booking(
         {"bid": booking_id}
     )
     await db.commit()
+
+    # Notify the OTHER party — never whoever just clicked cancel. A failed
+    # send must not undo the cancellation (already committed above), so this
+    # is fire-and-log, never fire-and-raise. Off-thread: same reasoning as
+    # OTP email, the sync SendGrid client would otherwise block the loop.
+    actor_is_teacher = current_user["role"] == "teacher"
+    try:
+        if actor_is_teacher:
+            sent = await asyncio.to_thread(
+                send_cancellation_email,
+                booking.parent_email,
+                booking.parent_name or booking.parent_login_name,
+                "parent",
+                booking.teacher_name, booking.teacher_subject,
+                booking.student_name, booking.section,
+                booking.start_time,
+                "the teacher",
+            )
+        else:
+            sent = await asyncio.to_thread(
+                send_cancellation_email,
+                booking.teacher_email,
+                booking.teacher_name,
+                "teacher",
+                booking.teacher_name, booking.teacher_subject,
+                booking.student_name, booking.section,
+                booking.start_time,
+                "the parent",
+            )
+        if not sent:
+            logger.error("Cancellation notification failed to send for booking %s", booking_id)
+    except Exception:
+        logger.exception("Cancellation notification raised for booking %s", booking_id)
+
     return {"message": "Booking cancelled"}
 
 

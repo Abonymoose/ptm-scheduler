@@ -127,6 +127,53 @@ def _send(to_email: str, subject: str, plain_text_content: str, html_content: st
     return False
 
 
+_BODY_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+
+
+def _email_card(inner_html: str) -> str:
+    """Wraps arbitrary inner content in the one shared visual shell every PTM
+    Now email uses: tinted page background, a white bordered card inset and
+    centered, a coral top bar, the hosted logo + wordmark. Every email type
+    calls this rather than building its own outer markup, so a design change
+    (or a Gmail/Outlook rendering fix) only has to happen in one place.
+    Table-based layout throughout — Outlook's Word rendering engine doesn't
+    reliably center/size divs, only tables.
+    """
+    return f"""\
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F4F5;">
+  <tr>
+    <td align="center" style="padding:40px 16px;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #E5E5E5;border-radius:8px;">
+        <tr>
+          <td style="background:#EE5A52;border-radius:8px 8px 0 0;font-size:4px;line-height:4px;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="padding:40px 32px;font-family:{_BODY_FONT};">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
+              <tr>
+                <td align="center">
+                  <img src="{_LOGO_URL}" width="32" height="32" alt="" style="display:inline-block;border:0;vertical-align:middle;">
+                  <span style="font-size:20px;font-weight:700;color:#18181B;vertical-align:middle;padding-left:8px;">PTM Now</span>
+                </td>
+              </tr>
+            </table>
+            {inner_html}
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+        <tr>
+          <td align="center" style="padding:20px 16px 0;font-family:{_BODY_FONT};font-size:12px;line-height:1.5;color:#71717A;">
+            PTM Now &middot; Parent-teacher meeting scheduling for Inventure Academy, Bangalore
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+"""
+
+
 def send_otp_email(to_email: str, name: str, code: str) -> bool:
     """Deliver a login OTP via SendGrid. Returns True on success, False on failure.
 
@@ -151,30 +198,7 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
         f"The PTM Now Team"
     )
 
-    # Standard transactional-email pattern (GitHub/Proton/Roblox/Twilio style):
-    # tinted page background, a white bordered card inset and centered, code
-    # as the visual anchor in a light block. Table-based layout throughout —
-    # Outlook's Word rendering engine doesn't reliably center/size divs, only
-    # tables. Deliberately minimal otherwise: no external images, no buttons,
-    # no tracking pixel, no unsubscribe, inline CSS only.
-    html_content = f"""\
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4F4F5;">
-  <tr>
-    <td align="center" style="padding:40px 16px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #E5E5E5;border-radius:8px;">
-        <tr>
-          <td style="background:#EE5A52;border-radius:8px 8px 0 0;font-size:4px;line-height:4px;">&nbsp;</td>
-        </tr>
-        <tr>
-          <td style="padding:40px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;">
-              <tr>
-                <td align="center">
-                  <img src="{_LOGO_URL}" width="32" height="32" alt="" style="display:inline-block;border:0;vertical-align:middle;">
-                  <span style="font-size:20px;font-weight:700;color:#18181B;vertical-align:middle;padding-left:8px;">PTM Now</span>
-                </td>
-              </tr>
-            </table>
+    inner_html = f"""\
             <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#18181B;">Hi {name},</p>
             <p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#18181B;">Enter this code to sign in to PTM Now:</p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
@@ -187,20 +211,81 @@ def send_otp_email(to_email: str, name: str, code: str) -> bool:
             <p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#3F3F46;">This code expires in 10 minutes and can only be used once.</p>
             <p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#18181B;font-weight:700;">Don't share this code with anyone. PTM Now and Inventure Academy will never ask you for it.</p>
             <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#3F3F46;">If you didn't request this, you can safely ignore this email.</p>
-            <p style="margin:0;font-size:14px;line-height:1.5;color:#3F3F46;">Thanks,<br>The PTM Now Team</p>
-          </td>
-        </tr>
-      </table>
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
-        <tr>
-          <td align="center" style="padding:20px 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.5;color:#71717A;">
-            PTM Now &middot; Parent-teacher meeting scheduling for Inventure Academy, Bangalore
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-"""
+            <p style="margin:0;font-size:14px;line-height:1.5;color:#3F3F46;">Thanks,<br>The PTM Now Team</p>"""
 
-    return _send(to_email, subject, plain_text_content, html_content)
+    return _send(to_email, subject, plain_text_content, _email_card(inner_html))
+
+
+def _format_slot_datetime(start_time: datetime) -> str:
+    """'Thursday, 9 Apr, 8:10 AM' — identifies which booking a cancellation
+    email is about. Uses the datetime's own stored hour/minute/day fields
+    directly, with NO timezone conversion: slot times are inserted elsewhere
+    in this codebase as naive local (IST) clock values merely labelled UTC
+    (see routers/demo.py's PTM_START, "# 08:10 on PTM day"), not real
+    UTC instants — the same convention the frontend's `fmt()` relies on.
+    Converting via .astimezone() here would silently shift the displayed
+    time by 5:30 and make this email wrong. This mirrors _send_time_ist's
+    manual, platform-portable hour formatting (no %-d/%-I strftime flags)."""
+    day = start_time.strftime("%d").lstrip("0")
+    hour12 = start_time.strftime("%I").lstrip("0") or "12"
+    return f"{start_time.strftime('%A')}, {day} {start_time.strftime('%b')}, {hour12}:{start_time.strftime('%M %p')}"
+
+
+def send_cancellation_email(
+    to_email: str,
+    recipient_name: str,
+    recipient_role: str,  # "teacher" or "parent" -- selects subject/closing line
+    teacher_name: str,
+    teacher_subject: str | None,
+    student_name: str,
+    section: str | None,
+    start_time: datetime,
+    cancelled_by: str,  # "the parent" / "the teacher" / "the school" -- never a specific admin's name
+) -> bool:
+    """Notify the other party in a booking that it was cancelled. Never sent
+    to whoever performed the cancellation — callers decide that, this
+    function just sends to whoever it's told to. Blocking, same as
+    send_otp_email — call via asyncio.to_thread from async handlers."""
+    when = _format_slot_datetime(start_time)
+    is_teacher = recipient_role == "teacher"
+    counterpart = student_name if is_teacher else teacher_name
+    subject = f"Your PTM booking with {counterpart} was cancelled"
+    closing = (
+        "This slot is now free and available for rebooking."
+        if is_teacher else
+        "You can book another slot if one is available."
+    )
+    teacher_line = f"{teacher_name} ({teacher_subject})" if teacher_subject else teacher_name
+    student_line = f"{student_name} ({section})" if section else student_name
+
+    plain_text_content = (
+        f"Hi {recipient_name},\n\n"
+        f"The following meeting has been cancelled:\n\n"
+        f"Teacher: {teacher_line}\n"
+        f"Student: {student_line}\n"
+        f"When: {when}\n"
+        f"Cancelled by: {cancelled_by}\n\n"
+        f"{closing}\n\n"
+        f"Thanks,\n"
+        f"The PTM Now Team"
+    )
+
+    inner_html = f"""\
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#18181B;">Hi {recipient_name},</p>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#18181B;">The following meeting has been cancelled:</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+              <tr>
+                <td style="background:#F7F7F8;border-radius:8px;padding:18px 20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td style="font-size:14px;line-height:1.9;color:#3F3F46;"><strong style="color:#18181B;">Teacher:</strong> {teacher_line}</td></tr>
+                    <tr><td style="font-size:14px;line-height:1.9;color:#3F3F46;"><strong style="color:#18181B;">Student:</strong> {student_line}</td></tr>
+                    <tr><td style="font-size:14px;line-height:1.9;color:#3F3F46;"><strong style="color:#18181B;">When:</strong> {when}</td></tr>
+                    <tr><td style="font-size:14px;line-height:1.9;color:#3F3F46;"><strong style="color:#18181B;">Cancelled by:</strong> {cancelled_by}</td></tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#3F3F46;">{closing}</p>
+            <p style="margin:0;font-size:14px;line-height:1.5;color:#3F3F46;">Thanks,<br>The PTM Now Team</p>"""
+
+    return _send(to_email, subject, plain_text_content, _email_card(inner_html))

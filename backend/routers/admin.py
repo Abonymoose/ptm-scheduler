@@ -1,4 +1,6 @@
 import uuid
+import asyncio
+import logging
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,9 +8,11 @@ from sqlalchemy import text
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
+from email_service import send_cancellation_email
 from routers.demo import _generate_grid
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger("ptm.admin")
 
 
 class TeacherUpdate(BaseModel):
@@ -26,6 +30,15 @@ class TeacherCreate(BaseModel):
 
 class PtmDateUpdate(BaseModel):
     ptm_date: date
+
+
+class CancelSlotOptions(BaseModel):
+    # Both default True to match the confirm dialog's checkboxes, which are
+    # checked by default. A client (or a plain DELETE with no body at all)
+    # that sends neither still notifies both parties, same as today's
+    # cancel-without-asking behaviour.
+    notify_parent: bool = True
+    notify_teacher: bool = True
 
 
 def _require_admin(current_user: dict):
@@ -330,10 +343,13 @@ async def delete_teacher(
 @router.delete("/slots/{slot_id}")
 async def delete_slot(
     slot_id: str,
+    body: CancelSlotOptions | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     _require_admin(current_user)
+    notify_parent = body.notify_parent if body else True
+    notify_teacher = body.notify_teacher if body else True
 
     result = await db.execute(
         text("SELECT id, school_id FROM slots WHERE id = :sid FOR UPDATE"),
@@ -345,15 +361,64 @@ async def delete_slot(
     if str(slot.school_id) != current_user["school_id"]:
         raise HTTPException(status_code=403, detail="Not your school")
 
-    # Was there a real meeting here? (for the response flag)
+    # Full details of every confirmed booking on this slot, captured before
+    # the DELETE cascades it all away -- there's no second chance to look
+    # this up afterward. (Normally at most one; the query doesn't assume it.)
     result = await db.execute(
-        text("SELECT COUNT(*) FROM bookings WHERE slot_id = :sid AND status = 'confirmed'"),
+        text(
+            "SELECT b.id, b.student_name, b.section,"
+            " s.start_time,"
+            " t.name AS teacher_name, t.subject AS teacher_subject, t.email AS teacher_email,"
+            " p.name AS parent_login_name, p.parent_name, p.email AS parent_email"
+            " FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " JOIN users t ON s.teacher_id = t.id"
+            " JOIN users p ON b.parent_id = p.id"
+            " WHERE b.slot_id = :sid AND b.status = 'confirmed'"
+        ),
         {"sid": slot_id}
     )
-    had_confirmed = result.scalar() > 0
+    confirmed_bookings = result.fetchall()
+    had_confirmed = len(confirmed_bookings) > 0
 
     # Deleting the slot cascades to its bookings (confirmed/blocked markers alike),
     # so no orphan rows remain. Atomic single transaction.
     await db.execute(text("DELETE FROM slots WHERE id = :sid"), {"sid": slot_id})
     await db.commit()
+
+    # Notifications after commit, per the requested checkboxes. Cancelled-by
+    # is always "the school" here -- never the specific admin's name. A
+    # failed send is logged, never raised: the deletion already committed
+    # above and must not be undone by a mail failure.
+    for bk in confirmed_bookings:
+        try:
+            if notify_parent:
+                sent = await asyncio.to_thread(
+                    send_cancellation_email,
+                    bk.parent_email,
+                    bk.parent_name or bk.parent_login_name,
+                    "parent",
+                    bk.teacher_name, bk.teacher_subject,
+                    bk.student_name, bk.section,
+                    bk.start_time,
+                    "the school",
+                )
+                if not sent:
+                    logger.error("Admin-cancel parent notification failed for booking %s", bk.id)
+            if notify_teacher:
+                sent = await asyncio.to_thread(
+                    send_cancellation_email,
+                    bk.teacher_email,
+                    bk.teacher_name,
+                    "teacher",
+                    bk.teacher_name, bk.teacher_subject,
+                    bk.student_name, bk.section,
+                    bk.start_time,
+                    "the school",
+                )
+                if not sent:
+                    logger.error("Admin-cancel teacher notification failed for booking %s", bk.id)
+        except Exception:
+            logger.exception("Admin-cancel notification raised for booking %s", bk.id)
+
     return {"cancelled_booking": had_confirmed}

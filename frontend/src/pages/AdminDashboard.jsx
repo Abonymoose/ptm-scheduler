@@ -41,6 +41,8 @@ export default function AdminDashboard() {
   const [removingTeacher, setRemovingTeacher] = useState(false)
   const [removeError, setRemoveError] = useState('')
   const [confirmCancel, setConfirmCancel] = useState(null)
+  const [cancelNotifyParent, setCancelNotifyParent] = useState(true)
+  const [cancelNotifyTeacher, setCancelNotifyTeacher] = useState(true)
   const [mBulkSel, setMBulkSel] = useState(new Set())
   const [mLastSel, setMLastSel] = useState(null)
   const [mBulkCancelConfirm, setMBulkCancelConfirm] = useState(0)
@@ -284,10 +286,19 @@ export default function AdminDashboard() {
   }
   const doCancelSlot = async (slot) => {
     setConfirmCancel(null)
-    try { const r = await cancelSlot(slot.id); showToast(r.cancelled_booking ? 'Meeting cancelled & slot removed' : 'Slot removed'); await reloadManageSlots(); await fetchData() }
+    try {
+      const r = await cancelSlot(slot.id, { notifyParent: cancelNotifyParent, notifyTeacher: cancelNotifyTeacher })
+      showToast(r.cancelled_booking ? 'Meeting cancelled & slot removed' : 'Slot removed')
+      await reloadManageSlots(); await fetchData()
+    }
     catch (err) { showToast(err.response?.data?.detail || 'Failed to cancel slot') }
   }
-  const onCancelSlotClick = (slot) => { slot.state === 'booked' ? setConfirmCancel(slot) : doCancelSlot(slot) }
+  const onCancelSlotClick = (slot) => {
+    if (slot.state !== 'booked') { doCancelSlot(slot); return }
+    setCancelNotifyParent(true)
+    setCancelNotifyTeacher(true)
+    setConfirmCancel(slot)
+  }
   const toggleBlock = async (slot) => {
     try { await (slot.state === 'blocked' ? unblockSlot(slot.id) : blockSlot(slot.id)); await reloadManageSlots(); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed') }
@@ -888,7 +899,17 @@ export default function AdminDashboard() {
             <div onClick={e => { e.stopPropagation(); setConfirmCancel(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: 20 }}>
               <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
                 <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel this meeting?</div>
-                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(18px,2.5vw,26px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
+                <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(14px,2vw,18px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', marginBottom: 'clamp(18px,2.5vw,26px)', paddingLeft: 4 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,14px)', color: '#1B3F7A', fontWeight: 600, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={cancelNotifyParent} onChange={e => setCancelNotifyParent(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                    Notify parent
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,14px)', color: '#1B3F7A', fontWeight: 600, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={cancelNotifyTeacher} onChange={e => setCancelNotifyTeacher(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                    Notify teacher
+                  </label>
+                </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button onClick={() => setConfirmCancel(null)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
                   <button onClick={() => doCancelSlot(confirmCancel)} style={{ flex: 1, padding: 'clamp(10px,1.4vw,14px)', borderRadius: 12, fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#B91C1C', color: '#fff', fontFamily: 'inherit' }}>Continue</button>
