@@ -900,14 +900,19 @@ export default function AdminDashboard() {
               <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(20px,3vw,32px)', width: '100%', maxWidth: 'min(360px,calc(100vw - 32px))', textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
                 <div style={{ fontSize: 'clamp(15px,2vw,20px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>Cancel this meeting?</div>
                 <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginBottom: 'clamp(14px,2vw,18px)', lineHeight: 1.5 }}>This will cancel {confirmCancel.student_name || confirmCancel.parent_name}'s meeting. Continue?</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', marginBottom: 'clamp(18px,2.5vw,26px)', paddingLeft: 4 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,14px)', color: '#1B3F7A', fontWeight: 600, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={cancelNotifyParent} onChange={e => setCancelNotifyParent(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
-                    Notify parent
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 'clamp(18px,2.5vw,26px)' }}>
+                  {/* Matches the seed panel's checkbox exactly (16px, navy accentColor,
+                      same label typography/spacing) — see seedRealistic above. minHeight:44
+                      on the label is the one addition: this dialog is used on a phone during
+                      a live PTM, so the whole row (not just the 16px box) needs to be a real
+                      tap target. */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 44, cursor: 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" checked={cancelNotifyParent} onChange={e => setCancelNotifyParent(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#1B3F7A', cursor: 'pointer', flexShrink: 0 }} />
+                    <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 600, color: '#1B3F7A' }}>Notify parent</span>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,14px)', color: '#1B3F7A', fontWeight: 600, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={cancelNotifyTeacher} onChange={e => setCancelNotifyTeacher(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
-                    Notify teacher
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 44, cursor: 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" checked={cancelNotifyTeacher} onChange={e => setCancelNotifyTeacher(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#1B3F7A', cursor: 'pointer', flexShrink: 0 }} />
+                    <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 600, color: '#1B3F7A' }}>Notify teacher</span>
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
