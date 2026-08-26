@@ -8,6 +8,7 @@ import { setAttendance as setAttendanceApi } from '../api/bookings'
 import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
 import { formatPtmDate } from '../utils/ptmDate'
 import InfoButton from '../components/InfoButton'
+import ScheduleExport from '../components/export/ScheduleExport'
 
 const ATTENDEE_OPTIONS = ['Mother', 'Father', 'Other']
 
@@ -68,6 +69,8 @@ export default function TeacherDashboard() {
   const [venueModal, setVenueModal] = useState(false)
   const [venueText, setVenueText] = useState('Room TBD')
   const [ptmDate, setPtmDate] = useState(null)
+  const [mySubject, setMySubject] = useState('')
+  const [myRoom, setMyRoom] = useState('')
   const [venueInput, setVenueInput] = useState('')
   const [cancelModal, setCancelModal] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -94,7 +97,7 @@ export default function TeacherDashboard() {
   const longPressTimer = useRef(null)
   const longPressFired = useRef(false)
 
-  useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue); if (me.ptm_date) setPtmDate(me.ptm_date) }).catch(() => {}) }, [])
+  useEffect(() => { fetchData(); getMe().then(me => { if (me.venue) setVenueText(me.venue); if (me.ptm_date) setPtmDate(me.ptm_date); setMySubject(me.subject || ''); setMyRoom(me.room || '') }).catch(() => {}) }, [])
   useEffect(() => { const t = setInterval(() => setTime(clock()), 1000); return () => clearInterval(t) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
@@ -207,6 +210,17 @@ export default function TeacherDashboard() {
   const markedCount = bookedSlots.filter(s => (s.bookings?.[0]?.attendance?.length || 0) > 0).length
 
   const upcomingSlots = [...slots.filter(s => s.booked_count > 0)].sort((a,b) => new Date(a.start_time) - new Date(b.start_time))
+  // /slots/mine nests each booking under `bookings[0]`; the export components
+  // (shared with the admin export endpoint, which already returns this flat
+  // shape) want a flat state/student_name/parent_name per slot instead.
+  const exportSlots = [...slots].sort((a,b) => new Date(a.start_time) - new Date(b.start_time)).map(s => {
+    const bk = s.bookings?.[0] || null
+    return {
+      id: s.id, start_time: s.start_time, end_time: s.end_time,
+      state: s.is_blocked ? 'blocked' : (s.booked_count > 0 ? 'booked' : 'free'),
+      student_name: bk?.student_name, section: bk?.section, parent_name: bk?.parent_name,
+    }
+  })
 
   // vertical list for manage tab — all slots sorted by start time
   const sortedSlots = [...slots].sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
@@ -269,6 +283,19 @@ export default function TeacherDashboard() {
             <div style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, minHeight: 'clamp(44px,5.5vw,58px)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', fontWeight: 500 }}>{markedCount} of {upcomingSlots.length} marked<InfoButton text="Record who attended the meeting: Mother, Father, or Other." label="About attendance" /></span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                {exportSlots.length > 0 && (
+                  <ScheduleExport
+                    kind="teacher"
+                    filename={`${(user?.name || 'day-sheet').replace(/\s+/g, '-')}-ptm-day-sheet.png`}
+                    data={{
+                      teacherName: user?.name || '',
+                      subject: mySubject,
+                      room: myRoom,
+                      ptmDate,
+                      slots: exportSlots,
+                    }}
+                  />
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'clamp(12px,1.4vw,16px)', color: '#6B7280', fontWeight: 500 }}>
                   <span>Highlight next</span>
                   <label style={{ position: 'relative', width: 'clamp(36px,4.5vw,46px)', height: 'clamp(20px,2.5vw,26px)', cursor: 'pointer', flexShrink: 0 }}>

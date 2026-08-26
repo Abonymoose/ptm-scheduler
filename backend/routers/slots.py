@@ -105,14 +105,14 @@ async def get_all_slots(
         text(
             "SELECT s.id, s.start_time, s.end_time, s.capacity,"
             " s.teacher_id, u.name as teacher_name, u.email as teacher_email,"
-            " u.subject as subject, u.venue as venue,"
+            " u.subject as subject, u.venue as venue, u.room as room, u.room_location as room_location,"
             " COUNT(b.id) FILTER (WHERE b.status = 'confirmed') as booked_count,"
             " COALESCE(BOOL_OR(b.status = 'blocked'), false) as is_blocked"
             " FROM slots s"
             " JOIN users u ON s.teacher_id = u.id"
             " LEFT JOIN bookings b ON s.id = b.slot_id AND b.status != 'cancelled'"
             " WHERE s.school_id = :sid"
-            " GROUP BY s.id, s.teacher_id, u.name, u.email, u.subject, u.venue"
+            " GROUP BY s.id, s.teacher_id, u.name, u.email, u.subject, u.venue, u.room, u.room_location"
             " ORDER BY s.start_time"
         ),
         {"sid": current_user["school_id"]}

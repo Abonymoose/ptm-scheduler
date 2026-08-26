@@ -1,0 +1,21 @@
+/* Print stylesheet for schedule exports. Only an element flagged .print-sheet
+   (frontend/src/components/export/PrintSheet.jsx) is visible when printed --
+   nav, tab bar, buttons and all dashboard chrome are hidden. Mirrors the
+   @media print block in frontend/reference/export-mockups-v6.html. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: auto !important;
+    box-shadow: none !important;
+    margin: 0;
+  }
+}

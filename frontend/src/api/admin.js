@@ -60,3 +60,13 @@ export const addTeacher = async (payload) => {
   const res = await axios.post(`${BASE_URL}/admin/teachers`, payload, authHeader())
   return res.data
 }
+
+export const getTeacherExport = async (teacherId) => {
+  const res = await axios.get(`${BASE_URL}/admin/teachers/${teacherId}/export`, authHeader())
+  return res.data
+}
+
+export const getParentExport = async (parentId) => {
+  const res = await axios.get(`${BASE_URL}/admin/parents/${parentId}/export`, authHeader())
+  return res.data
+}

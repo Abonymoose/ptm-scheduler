@@ -8,6 +8,7 @@ import { formatPtmDate } from '../utils/ptmDate'
 import { LOGO_LARGE } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
 import InfoButton from '../components/InfoButton'
+import ScheduleExport from '../components/export/ScheduleExport'
 
 const noteIcon = filled => (
   <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
@@ -599,7 +600,21 @@ export default function ParentDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div style={{ padding: 'clamp(10px,1.5vw,16px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4C099', background: '#FFF8F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', fontWeight: 500 }}>{activeBookings.length} upcoming meetings</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                {activeBookings.length > 0 && (
+                  <ScheduleExport
+                    kind="parent"
+                    filename={`${(user?.name || 'schedule').replace(/\s+/g, '-')}-ptm-schedule.png`}
+                    data={{
+                      studentName: user?.name || '',
+                      grade: user?.grade,
+                      section: user?.section,
+                      parentName: user?.parent_name,
+                      ptmDate,
+                      bookings: activeBookings,
+                    }}
+                  />
+                )}
                 <div onClick={() => setColourByChild(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
                   <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', color: colourByChild ? '#C45A0A' : '#6B7280', fontWeight: 600 }}>Colour by child</span>
                   <div style={{ width: 38, height: 22, borderRadius: 22, background: colourByChild ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>

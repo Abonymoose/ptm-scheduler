@@ -362,7 +362,7 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession = Depends(get_db
 async def get_me(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
     result = await db.execute(
         text("SELECT u.id, u.name, u.email, u.role, u.venue, u.section, u.grade,"
-             " u.family_id, u.parent_name, s.ptm_date"
+             " u.family_id, u.parent_name, u.subject, u.room, u.room_location, s.ptm_date"
              " FROM users u JOIN schools s ON u.school_id = s.id WHERE u.id = :uid"),
         {"uid": current_user["sub"]}
     )

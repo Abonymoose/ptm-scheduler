@@ -20,6 +20,8 @@ class TeacherUpdate(BaseModel):
     email: str
     subject: str | None = None
     venue: str | None = None
+    room: str | None = None
+    room_location: str | None = None
 
 
 class TeacherCreate(BaseModel):
@@ -146,22 +148,9 @@ async def get_unbooked_parents(
     return {"count": len(parents), "parents": parents}
 
 
-@router.get("/teachers/{teacher_id}/slots")
-async def get_teacher_slots(
-    teacher_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-):
-    _require_admin(current_user)
-
-    # Confirm the teacher belongs to this admin's school.
-    result = await db.execute(
-        text("SELECT id FROM users WHERE id = :tid AND role = 'teacher' AND school_id = :sid"),
-        {"tid": teacher_id, "sid": current_user["school_id"]}
-    )
-    if not result.fetchone():
-        raise HTTPException(status_code=404, detail="Teacher not found")
-
+async def _teacher_day_slots(db: AsyncSession, teacher_id: str) -> list[dict]:
+    """A teacher's full slot grid with each booked slot's parent/student info.
+    Shared by the manage-teacher panel and the export endpoint below."""
     result = await db.execute(
         text(
             "SELECT s.id, s.start_time, s.end_time, s.capacity,"
@@ -205,6 +194,25 @@ async def get_teacher_slots(
     return out
 
 
+@router.get("/teachers/{teacher_id}/slots")
+async def get_teacher_slots(
+    teacher_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    _require_admin(current_user)
+
+    # Confirm the teacher belongs to this admin's school.
+    result = await db.execute(
+        text("SELECT id FROM users WHERE id = :tid AND role = 'teacher' AND school_id = :sid"),
+        {"tid": teacher_id, "sid": current_user["school_id"]}
+    )
+    if not result.fetchone():
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    return await _teacher_day_slots(db, teacher_id)
+
+
 @router.patch("/teachers/{teacher_id}")
 async def update_teacher(
     teacher_id: str,
@@ -230,13 +238,15 @@ async def update_teacher(
         raise HTTPException(status_code=400, detail="Email already in use by another user")
 
     await db.execute(
-        text("UPDATE users SET name = :name, email = :email, subject = :subject, venue = :venue WHERE id = :tid"),
-        {"name": body.name, "email": body.email, "subject": body.subject, "venue": body.venue, "tid": teacher_id}
+        text("UPDATE users SET name = :name, email = :email, subject = :subject, venue = :venue,"
+             " room = :room, room_location = :room_location WHERE id = :tid"),
+        {"name": body.name, "email": body.email, "subject": body.subject, "venue": body.venue,
+         "room": body.room, "room_location": body.room_location, "tid": teacher_id}
     )
     await db.commit()
 
     result = await db.execute(
-        text("SELECT id, name, email, subject, venue FROM users WHERE id = :tid"),
+        text("SELECT id, name, email, subject, venue, room, room_location FROM users WHERE id = :tid"),
         {"tid": teacher_id}
     )
     row = result.fetchone()
@@ -422,3 +432,80 @@ async def delete_slot(
             logger.exception("Admin-cancel notification raised for booking %s", bk.id)
 
     return {"cancelled_booking": had_confirmed}
+
+
+@router.get("/teachers/{teacher_id}/export")
+async def export_teacher_day(
+    teacher_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Teacher header info + full day, for the admin export picker (any
+    teacher in the school, not just the caller). Cross-school access is a
+    hard 403 here, unlike the 404-by-obscurity other admin teacher lookups
+    use -- this endpoint's cross-school behaviour is explicitly tested."""
+    _require_admin(current_user)
+    row = (await db.execute(
+        text("SELECT id, school_id, name, subject, room, room_location"
+             " FROM users WHERE id = :tid AND role = 'teacher'"),
+        {"tid": teacher_id}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    if str(row.school_id) != current_user["school_id"]:
+        raise HTTPException(status_code=403, detail="Not your school")
+
+    slots = await _teacher_day_slots(db, teacher_id)
+    return {
+        "id": str(row.id),
+        "name": row.name,
+        "subject": row.subject,
+        "room": row.room,
+        "room_location": row.room_location,
+        "slots": slots,
+    }
+
+
+@router.get("/parents/{parent_id}/export")
+async def export_parent_schedule(
+    parent_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Parent header info + their confirmed bookings, for the admin export
+    picker (any parent in the school). Cross-school access is a hard 403,
+    same reasoning as the teacher export endpoint above."""
+    _require_admin(current_user)
+    row = (await db.execute(
+        text("SELECT id, school_id, name, parent_name, grade, section"
+             " FROM users WHERE id = :pid AND role = 'parent'"),
+        {"pid": parent_id}
+    )).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Parent not found")
+    if str(row.school_id) != current_user["school_id"]:
+        raise HTTPException(status_code=403, detail="Not your school")
+
+    result = await db.execute(
+        text(
+            "SELECT b.id, b.student_name, b.section,"
+            " s.start_time, s.end_time,"
+            " t.name AS teacher_name, t.subject AS teacher_subject,"
+            " t.room, t.room_location"
+            " FROM bookings b"
+            " JOIN slots s ON b.slot_id = s.id"
+            " JOIN users t ON s.teacher_id = t.id"
+            " WHERE b.parent_id = :pid AND b.status = 'confirmed'"
+            " ORDER BY s.start_time"
+        ),
+        {"pid": parent_id}
+    )
+    bookings = [dict(r._mapping) for r in result.fetchall()]
+    return {
+        "id": str(row.id),
+        "name": row.name,
+        "parent_name": row.parent_name,
+        "grade": row.grade,
+        "section": row.section,
+        "bookings": bookings,
+    }

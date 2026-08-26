@@ -4,11 +4,12 @@ import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
-import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin } from '../api/admin'
+import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin, getTeacherExport, getParentExport } from '../api/admin'
 import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
 import { getMe } from '../api/auth'
 import InfoButton from '../components/InfoButton'
+import ScheduleExport from '../components/export/ScheduleExport'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000' })
 api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); if (t) cfg.headers.Authorization = `Bearer ${t}`; return cfg })
@@ -31,7 +32,7 @@ export default function AdminDashboard() {
   const [openTeacher, setOpenTeacher] = useState(null)
   const [openBooking, setOpenBooking] = useState(null)
   const [manageTeacher, setManageTeacher] = useState(null)
-  const [manageForm, setManageForm] = useState({ title: 'Ms.', name: '', email: '', subject: '', venue: '' })
+  const [manageForm, setManageForm] = useState({ title: 'Ms.', name: '', email: '', subject: '', venue: '', room: '', room_location: '' })
   const [manageSlots, setManageSlots] = useState([])
   const [loadingMSlots, setLoadingMSlots] = useState(false)
   const [savingTeacher, setSavingTeacher] = useState(false)
@@ -65,6 +66,11 @@ export default function AdminDashboard() {
   const [seedSections, setSeedSections] = useState(['A', 'B', 'C', 'D'])
   const [demoUsers, setDemoUsers] = useState(null)
   const [viewAsSearch, setViewAsSearch] = useState('')
+  const [exportSearch, setExportSearch] = useState('')
+  const [exportPicked, setExportPicked] = useState(null)   // {id, name, role, section, grade}
+  const [exportPayload, setExportPayload] = useState(null) // fetched teacher/parent export data
+  const [exportedAt, setExportedAt] = useState(null)
+  const [exportLoading, setExportLoading] = useState(false)
   const [ptmDate, setPtmDate] = useState(null)          // ISO 'YYYY-MM-DD'
   const [ptmDraft, setPtmDraft] = useState('')          // date input value
   const [ptmConfirm, setPtmConfirm] = useState(false)   // showing the "moves all slots" warning
@@ -201,10 +207,24 @@ export default function AdminDashboard() {
     if (tab === 'demo' && changelog === null) {
       getChangelog().then(setChangelog).catch(() => setChangelog({ days: [], total: 0, error: true }))
     }
-    if (tab === 'demo' && demoUsers === null) {
+    if ((tab === 'demo' || tab === 'export') && demoUsers === null) {
       getDemoUsers().then(setDemoUsers).catch(() => setDemoUsers([]))
     }
   }, [tab, changelog, demoUsers])
+
+  const pickExportUser = async (u) => {
+    setExportPicked(u)
+    setExportPayload(null)
+    setExportLoading(true)
+    try {
+      const data = u.role === 'teacher' ? await getTeacherExport(u.id) : await getParentExport(u.id)
+      setExportPayload(data)
+      setExportedAt(new Date().toISOString())
+    } catch {
+      showToast('Failed to load export data')
+    }
+    setExportLoading(false)
+  }
 
   const handleImpersonate = async (u) => {
     try {
@@ -219,7 +239,7 @@ export default function AdminDashboard() {
   const teacherMap = {}
   slots.forEach(s => {
     const key = s.teacher_name
-    if (!teacherMap[key]) teacherMap[key] = { id: s.teacher_id, name: key, email: s.teacher_email || '', venue: s.venue || '', sub: s.subject || '', slots: [], booked: 0 }
+    if (!teacherMap[key]) teacherMap[key] = { id: s.teacher_id, name: key, email: s.teacher_email || '', venue: s.venue || '', room: s.room || '', room_location: s.room_location || '', sub: s.subject || '', slots: [], booked: 0 }
     teacherMap[key].slots.push(s)
     if (s.booked_count > 0) teacherMap[key].booked += s.booked_count
   })
@@ -245,7 +265,7 @@ export default function AdminDashboard() {
 
   const openManage = async (t) => {
     setManageTeacher(t)
-    setManageForm({ ...splitTitle(t.name || ''), email: t.email || '', subject: t.sub || '', venue: t.venue || '' })
+    setManageForm({ ...splitTitle(t.name || ''), email: t.email || '', subject: t.sub || '', venue: t.venue || '', room: t.room || '', room_location: t.room_location || '' })
     setConfirmCancel(null)
     setRemoveMode(false); setRemoveImpact(null); setRemoveTyped(''); setRemoveError(''); setRemovingTeacher(false)
     setMBulkSel(new Set()); setMLastSel(null); setMBulkCancelConfirm(0); setMSelectMode(false)
@@ -260,7 +280,7 @@ export default function AdminDashboard() {
   const saveTeacher = async () => {
     if (!manageForm.name || !manageForm.email) { showToast('Name and email are required'); return }
     setSavingTeacher(true)
-    const payload = { name: combineTitle(manageForm.title, manageForm.name), email: manageForm.email, subject: manageForm.subject, venue: manageForm.venue }
+    const payload = { name: combineTitle(manageForm.title, manageForm.name), email: manageForm.email, subject: manageForm.subject, venue: manageForm.venue, room: manageForm.room, room_location: manageForm.room_location }
     try { await updateTeacher(manageTeacher.id, payload); showToast('Teacher updated'); await fetchData() }
     catch (err) { showToast(err.response?.data?.detail || 'Failed to save') }
     setSavingTeacher(false)
@@ -359,7 +379,7 @@ export default function AdminDashboard() {
 
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
-          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`], ...(isDemoAdmin ? [['demo','Demo']] : [])].map(([key, lbl]) => (
+          {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['export','Export'], ...(isDemoAdmin ? [['demo','Demo']] : [])].map(([key, lbl]) => (
             <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#6B7280', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
@@ -423,7 +443,7 @@ export default function AdminDashboard() {
                     {isOpen && (
                       <div style={{ padding: 'clamp(8px,1.2vw,14px)', borderTop: '1px solid #FDE9D4', background: '#fff' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(4px,.6vw,8px)', marginBottom: 'clamp(6px,1vw,10px)' }}>
-                          {[['Venue', t.venue || '—'], ['Email', t.email || '—'], ['Booked', `${t.booked} / ${t.slots.length}`], ['Free', t.slots.length - t.booked]].map(([label, val]) => (
+                          {[['Venue', t.venue || '—'], ['Room', t.room || '—'], ['Email', t.email || '—'], ['Booked', `${t.booked} / ${t.slots.length}`], ['Free', t.slots.length - t.booked]].map(([label, val]) => (
                             <div key={label}>
                               <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#6B7280', marginBottom: 1 }}>{label}</div>
                               <div style={{ fontSize: 'clamp(10px,1.2vw,14px)', color: '#374151' }}>{val}</div>
@@ -544,6 +564,61 @@ export default function AdminDashboard() {
         )}
 
         {/* DEMO */}
+        {/* EXPORT */}
+        {tab === 'export' && (
+          <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(14px,2vw,22px)' }}>
+            <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 2 }}>Export a schedule</div>
+            <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginBottom: 8 }}>Pick any teacher or parent in the school to produce their shareable image or A4 print sheet.</div>
+            <input value={exportSearch} onChange={e => setExportSearch(e.target.value)} placeholder="Search teachers &amp; parents…"
+              style={{ width: '100%', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
+            <div className="custom-scroll" style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #F4C099', borderRadius: 10, marginBottom: 'clamp(14px,2vw,20px)' }}>
+              {demoUsers === null ? <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>Loading…</div>
+              : (() => {
+                  const q = exportSearch.trim().toLowerCase()
+                  const list = demoUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q))
+                  if (list.length === 0) return <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>No matches.</div>
+                  return list.map(u => (
+                    <div key={u.id} onClick={() => pickExportUser(u)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 'clamp(8px,1.1vw,11px) clamp(10px,1.3vw,14px)', cursor: 'pointer', borderBottom: '1px solid #FDE9D4', background: exportPicked?.id === u.id ? '#FFF8F3' : 'transparent' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#FFF8F3'} onMouseLeave={e => e.currentTarget.style.background = exportPicked?.id === u.id ? '#FFF8F3' : 'transparent'}>
+                      <span style={{ fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 600, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleName(u.name)}{u.section ? ` · ${u.section}` : ''}</span>
+                      <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: u.role === 'teacher' ? '#FFF0E6' : '#EFF6FF', color: u.role === 'teacher' ? '#C45A0A' : '#1D4ED8' }}>{u.role}</span>
+                    </div>
+                  ))
+                })()}
+            </div>
+
+            {exportPicked && (
+              <div style={{ border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(14px,2vw,18px)' }}>
+                <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 10 }}>{titleName(exportPicked.name)}</div>
+                {exportLoading ? <div style={{ color: '#6B7280', fontSize: 13 }}>Loading…</div>
+                : !exportPayload ? <div style={{ color: '#6B7280', fontSize: 13 }}>Couldn't load this schedule.</div>
+                : exportPicked.role === 'teacher' ? (
+                  <ScheduleExport
+                    kind="teacher"
+                    filename={`${exportPayload.name.replace(/\s+/g, '-')}-ptm-day-sheet.png`}
+                    data={{
+                      teacherName: exportPayload.name, subject: exportPayload.subject,
+                      room: exportPayload.room, ptmDate, slots: exportPayload.slots,
+                      exportedBy: user?.name, exportedAt,
+                    }}
+                  />
+                ) : (
+                  <ScheduleExport
+                    kind="parent"
+                    filename={`${exportPayload.name.replace(/\s+/g, '-')}-ptm-schedule.png`}
+                    data={{
+                      studentName: exportPayload.name, grade: exportPayload.grade,
+                      section: exportPayload.section, parentName: exportPayload.parent_name,
+                      ptmDate, bookings: exportPayload.bookings,
+                      exportedBy: user?.name, exportedAt,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {tab === 'demo' && isDemoAdmin && (
           <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {/* Terminal panel */}
@@ -773,7 +848,7 @@ export default function AdminDashboard() {
                     {TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject'], ['Venue', 'venue']].map(([lbl, key]) => (
+                {[['Name', 'name'], ['Email', 'email'], ['Subject', 'subject'], ['Venue', 'venue'], ['Room', 'room'], ['Room location', 'room_location']].map(([lbl, key]) => (
                   <div key={key}>
                     <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>{lbl}</label>
                     <input value={manageForm[key]} onChange={e => setManageForm(f => ({ ...f, [key]: e.target.value }))}
