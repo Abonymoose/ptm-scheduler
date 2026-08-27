@@ -16,14 +16,21 @@ export const T = {
 export const serif = "Fraunces, Georgia, serif"
 export const sans = "Inter, -apple-system, sans-serif"
 
-// Same technique the dashboards already use for start_time/end_time -- no
-// explicit timeZone, no manual offset math. See CLAUDE.md: converting would
-// shift every meeting by 5.5 hours while tests stay green.
-export const fmtTime = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+// Slot start_time/end_time (and the PTM date) are naive local IST clock
+// values merely labelled UTC in the DB -- see CLAUDE.md. `toLocaleTimeString`
+// with no explicit timeZone uses the VIEWER's own system zone, which for a
+// browser actually set to IST converts a "08:10+00" value to "1:40 PM" --
+// wrong, since 08:10 already IS the intended IST wall-clock time. Pinning
+// timeZone: 'UTC' here renders the stored digits verbatim, with no
+// conversion, regardless of the viewer's own timezone.
+export const fmtTime = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
 // Time and AM/PM as separate pieces (mockups render AM/PM as a smaller superscript-style tag).
 export const splitTime = iso => {
   const [time, ap] = fmtTime(iso).split(' ')
   return { time, ap: ap || '' }
 }
-export const fmtDay = iso => new Date(iso).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })
+export const fmtDay = iso => new Date(iso).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+// UNLIKE the above: this is a genuine current-moment timestamp (when the
+// export was produced), not a stored/mislabelled clock value -- it must
+// stay in the viewer's actual local time, so no timeZone override here.
 export const fmtExportedAt = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
