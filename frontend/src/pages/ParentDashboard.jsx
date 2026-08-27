@@ -52,8 +52,14 @@ const FAIL_REASON = {
   not_found: 'slot not found',
 }
 
-const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+// start_time/end_time are naive IST clock values merely labelled UTC (see
+// CLAUDE.md) -- timeZone: 'UTC' renders the stored digits verbatim instead
+// of converting them into the viewer's own zone (which double-applies the
+// +5:30 already baked into the stored value). Every call site below formats
+// a slot/meeting start_time or end_time, never a genuine current-moment
+// timestamp -- this file has no created_at/updated_at display.
+const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
+const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
 
 const DONE_TICK = <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#F47920" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
 

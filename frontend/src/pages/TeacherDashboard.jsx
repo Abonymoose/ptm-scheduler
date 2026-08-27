@@ -29,8 +29,15 @@ const getMe = () => api.get('/auth/me').then(r => r.data)
 const patchVenue = venue => api.patch('/auth/venue', { venue }).then(r => r.data)
 const deleteBooking = id => api.delete(`/bookings/${id}`).then(r => r.data)
 
-const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+// start_time/end_time are naive IST clock values merely labelled UTC (see
+// CLAUDE.md) -- timeZone: 'UTC' renders the stored digits verbatim instead
+// of converting them into the viewer's own zone (which double-applies the
+// +5:30 already baked into the stored value). Every call site below formats
+// a slot/meeting start_time, never a genuine current-moment timestamp --
+// `clock()` below handles the actual "now" ticker separately, without
+// toLocale*, and is unaffected by this.
+const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
+const fmtDateTime = iso => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
 const clock = () => { const n = new Date(); let h = n.getHours(); const m = n.getMinutes(); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m < 10 ? '0' : ''}${m} ${ap}` }
 const initials = name => { if (!name) return '??'; const p = name.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim().split(' ').filter(Boolean); return p.length >= 2 ? (p[0][0]+p[p.length-1][0]).toUpperCase() : p[0].slice(0,2).toUpperCase() }
 

@@ -17,8 +17,14 @@ const getAllBookings = () => api.get('/bookings/all').then(r => r.data)
 const getAllSlots = () => api.get('/slots/all').then(r => r.data)
 const getUnbookedParents = () => api.get('/admin/unbooked-parents').then(r => r.data)
 
-const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
-const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+// start_time/end_time are naive IST clock values merely labelled UTC (see
+// CLAUDE.md) -- timeZone: 'UTC' renders the stored digits verbatim instead
+// of converting them into the viewer's own zone (which double-applies the
+// +5:30 already baked into the stored value). Every call site below formats
+// a slot/booking start_time, never a genuine current-moment timestamp --
+// this file has no created_at/updated_at display.
+const fmt = iso => new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
+const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 export default function AdminDashboard() {
   const { user, logoutUser, beginImpersonation } = useAuth()
