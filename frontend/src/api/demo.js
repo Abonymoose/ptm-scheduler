@@ -42,3 +42,13 @@ export const impersonate = async (userId) => {
   const res = await axios.post(`${BASE_URL}/demo/impersonate`, { user_id: userId }, authHeader())
   return res.data
 }
+
+export const getEmailConfig = async () => {
+  const res = await axios.get(`${BASE_URL}/demo/email-config`, authHeader())
+  return res.data
+}
+
+export const setEmailConfig = async (overrideTo, allowlist) => {
+  const res = await axios.post(`${BASE_URL}/demo/email-config`, { override_to: overrideTo, allowlist }, authHeader())
+  return res.data
+}

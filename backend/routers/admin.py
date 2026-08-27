@@ -8,7 +8,7 @@ from sqlalchemy import text
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
-from email_service import send_cancellation_email
+from email_service import send_cancellation_email, get_email_routing
 from routers.demo import _generate_grid
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -509,3 +509,17 @@ async def export_parent_schedule(
         "section": row.section,
         "bookings": bookings,
     }
+
+
+@router.get("/email-config")
+async def get_email_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Current effective email routing (override address + allowlist) --
+    read-only, admin role only, for checking the state without SSHing in.
+    Never returns SENDGRID_API_KEY. Same underlying data as the Demo tab's
+    GET /demo/email-config; this one is plain admin-scoped, not tied to the
+    demo account specifically."""
+    _require_admin(current_user)
+    return await get_email_routing(db)

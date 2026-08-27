@@ -54,6 +54,45 @@ def test_send_without_override_goes_to_real_recipient(monkeypatch):
     assert "TEST MODE" not in msg["html_content"]
 
 
+def test_send_with_override_and_empty_allowlist_behaves_as_before(monkeypatch):
+    """No EMAIL_ALLOWLIST set at all -- same redirect-everything behaviour as
+    before the allowlist existed."""
+    monkeypatch.setenv("EMAIL_OVERRIDE_TO", "dev-inbox@example.com")
+    monkeypatch.delenv("EMAIL_ALLOWLIST", raising=False)
+    sent = _patch_sendgrid(monkeypatch)
+
+    ok = email_service.send_otp_email("teacher@inventureacademy.com", "Ms. Teacher", "482917")
+    assert ok is True
+    assert sent[0].kwargs["to_emails"] == "dev-inbox@example.com"
+    assert sent[0].kwargs["subject"].startswith("[TEST → teacher@inventureacademy.com]")
+
+
+def test_send_to_allowlisted_address_goes_real_no_prefix(monkeypatch):
+    monkeypatch.setenv("EMAIL_OVERRIDE_TO", "dev-inbox@example.com")
+    monkeypatch.setenv("EMAIL_ALLOWLIST", " Jayadev@InventureAcademy.com , other@x.edu")
+    sent = _patch_sendgrid(monkeypatch)
+
+    # Case-insensitive, whitespace-around-entry tolerant.
+    ok = email_service.send_otp_email("jayadev@inventureacademy.com", "Jayadev", "482917")
+    assert ok is True
+    msg = sent[0].kwargs
+    assert msg["to_emails"] == "jayadev@inventureacademy.com"
+    assert not msg["subject"].startswith("[TEST")
+    assert "[TEST MODE]" not in msg["plain_text_content"]
+
+
+def test_send_to_non_allowlisted_address_still_redirects(monkeypatch):
+    monkeypatch.setenv("EMAIL_OVERRIDE_TO", "dev-inbox@example.com")
+    monkeypatch.setenv("EMAIL_ALLOWLIST", "jayadev@inventureacademy.com")
+    sent = _patch_sendgrid(monkeypatch)
+
+    ok = email_service.send_otp_email("teacher@inventureacademy.com", "Ms. Teacher", "482917")
+    assert ok is True
+    msg = sent[0].kwargs
+    assert msg["to_emails"] == "dev-inbox@example.com"
+    assert msg["subject"].startswith("[TEST → teacher@inventureacademy.com]")
+
+
 def test_send_with_override_redirects_and_prefixes_subject(monkeypatch, caplog):
     monkeypatch.setenv("EMAIL_OVERRIDE_TO", "dev-inbox@example.com")
     sent = _patch_sendgrid(monkeypatch)

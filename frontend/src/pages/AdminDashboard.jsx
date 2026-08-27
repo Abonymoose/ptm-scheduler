@@ -5,7 +5,7 @@ import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin, getTeacherExport, getParentExport } from '../api/admin'
-import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate } from '../api/demo'
+import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate, getEmailConfig, setEmailConfig as setEmailConfigApi } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
 import { getMe } from '../api/auth'
 import InfoButton from '../components/InfoButton'
@@ -66,6 +66,11 @@ export default function AdminDashboard() {
   const [seedSections, setSeedSections] = useState(['A', 'B', 'C', 'D'])
   const [demoUsers, setDemoUsers] = useState(null)
   const [viewAsSearch, setViewAsSearch] = useState('')
+  const [emailConfig, setEmailConfig] = useState(null)        // {override_to, allowlist} loaded from server
+  const [emailRedirectOn, setEmailRedirectOn] = useState(false)
+  const [emailOverrideInput, setEmailOverrideInput] = useState('')
+  const [emailAllowlistText, setEmailAllowlistText] = useState('')
+  const [savingEmailConfig, setSavingEmailConfig] = useState(false)
   const [exportSearch, setExportSearch] = useState('')
   const [exportPicked, setExportPicked] = useState(null)   // {id, name, role, section, grade}
   const [exportPayload, setExportPayload] = useState(null) // fetched teacher/parent export data
@@ -210,7 +215,34 @@ export default function AdminDashboard() {
     if ((tab === 'demo' || tab === 'export') && demoUsers === null) {
       getDemoUsers().then(setDemoUsers).catch(() => setDemoUsers([]))
     }
-  }, [tab, changelog, demoUsers])
+    if (tab === 'demo' && emailConfig === null) {
+      getEmailConfig().then(cfg => {
+        setEmailConfig(cfg)
+        setEmailRedirectOn(!!cfg.override_to)
+        setEmailOverrideInput(cfg.override_to || '')
+        setEmailAllowlistText((cfg.allowlist || []).join('\n'))
+      }).catch(() => setEmailConfig({ override_to: '', allowlist: [] }))
+    }
+  }, [tab, changelog, demoUsers, emailConfig])
+
+  const handleSaveEmailConfig = async () => {
+    setSavingEmailConfig(true)
+    const allowlist = emailAllowlistText.split(/[\n,]/).map(s => s.trim()).filter(Boolean)
+    const overrideTo = emailRedirectOn ? emailOverrideInput.trim() : ''
+    demoPrint(`$ email-config override=${overrideTo || '(off)'} allowlist=${allowlist.join(',') || '(none)'}`)
+    try {
+      const cfg = await setEmailConfigApi(overrideTo, allowlist)
+      setEmailConfig(cfg)
+      setEmailRedirectOn(!!cfg.override_to)
+      setEmailAllowlistText((cfg.allowlist || []).join('\n'))
+      demoPrint(cfg.override_to ? `Redirecting all mail to ${cfg.override_to} (allowlist: ${cfg.allowlist.join(', ') || 'none'}).` : 'Sending to real recipients.', 'success')
+      showToast('Email routing saved')
+    } catch (err) {
+      demoPrint(err.response?.data?.detail || 'Failed to save email routing.', 'error')
+      showToast('Failed to save email routing')
+    }
+    setSavingEmailConfig(false)
+  }
 
   const pickExportUser = async (u) => {
     setExportPicked(u)
@@ -635,6 +667,68 @@ export default function AdminDashboard() {
                   <div key={i} style={{ fontFamily: "'Courier New',monospace", fontSize: 'clamp(12px,1.4vw,14px)', lineHeight: 1.6, whiteSpace: 'pre-wrap', color: entry.type === 'success' ? '#4ADE80' : entry.type === 'error' ? '#FF6B6B' : 'rgba(255,255,255,.85)' }}>{entry.text}</div>
                 ))}
               </div>
+            </div>
+
+            {/* Email routing */}
+            <div style={{ margin: 'clamp(10px,1.4vw,14px) clamp(10px,1.5vw,16px) 0', border: '1px solid #F4C099', borderRadius: 12, padding: 'clamp(12px,1.6vw,16px)' }}>
+              <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 8 }}>Email routing</div>
+
+              {emailConfig === null ? (
+                <div style={{ color: '#6B7280', fontSize: 13 }}>Loading…</div>
+              ) : (
+                <>
+                  {/* Status — must never read wrong during a real PTM, so it's
+                      loud and colour-coded rather than a subtle label. */}
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10, padding: 'clamp(10px,1.4vw,14px)',
+                    borderRadius: 10, marginBottom: 12,
+                    background: emailRedirectOn ? '#FEF2F2' : '#F0FDF4',
+                    border: `1.5px solid ${emailRedirectOn ? '#FCA5A5' : '#86EFAC'}`,
+                  }}>
+                    <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{emailRedirectOn ? '🔴' : '🟢'}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 'clamp(13px,1.6vw,15px)', fontWeight: 800, color: emailRedirectOn ? '#B91C1C' : '#15803D' }}>
+                        {emailRedirectOn
+                          ? `Redirecting all mail to ${emailOverrideInput.trim() || '(no address set — nothing will send)'}`
+                          : 'Sending to real recipients'}
+                      </div>
+                      {emailRedirectOn && (
+                        <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#B91C1C', marginTop: 3, fontWeight: 700 }}>
+                          Parents will NOT receive their login codes while this is on.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <label style={{ position: 'relative', width: 44, height: 24, cursor: 'pointer', flexShrink: 0 }}>
+                      <input type="checkbox" checked={emailRedirectOn} onChange={e => setEmailRedirectOn(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                      <span style={{ position: 'absolute', inset: 0, background: emailRedirectOn ? '#F47920' : '#E5D5C5', borderRadius: 20, transition: '.2s' }}>
+                        <span style={{ position: 'absolute', height: 'calc(100% - 4px)', aspectRatio: 1, left: emailRedirectOn ? 'calc(100% - 2px)' : 2, top: 2, background: '#fff', borderRadius: '50%', transition: '.2s', boxShadow: '0 1px 4px rgba(0,0,0,.15)', transform: emailRedirectOn ? 'translateX(-100%)' : 'none' }} />
+                      </span>
+                    </label>
+                    <span style={{ fontSize: 'clamp(12px,1.4vw,14px)', fontWeight: 700, color: '#1B3F7A' }}>Redirect mail — {emailRedirectOn ? 'ON' : 'OFF'}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Redirect address</label>
+                      <input value={emailOverrideInput} onChange={e => setEmailOverrideInput(e.target.value)} placeholder="you@example.com" disabled={!emailRedirectOn}
+                        style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', boxSizing: 'border-box', background: emailRedirectOn ? '#fff' : '#F9FAFB' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 'clamp(10px,1.2vw,12px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', display: 'block', marginBottom: 4 }}>Allowlist — always sent for real</label>
+                      <textarea value={emailAllowlistText} onChange={e => setEmailAllowlistText(e.target.value)} placeholder="jayadev@inventureacademy.com" rows={3}
+                        style={{ width: '100%', padding: 'clamp(9px,1.2vw,12px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', boxSizing: 'border-box', resize: 'vertical' }} />
+                      <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginTop: 4 }}>One address per line, or comma-separated. These bypass the redirect above entirely.</div>
+                    </div>
+                    <button onClick={handleSaveEmailConfig} disabled={savingEmailConfig}
+                      style={{ alignSelf: 'flex-start', fontSize: 'clamp(12px,1.4vw,15px)', fontWeight: 700, padding: 'clamp(8px,1.1vw,12px) clamp(18px,2.4vw,28px)', borderRadius: 10, background: '#1B3F7A', color: '#fff', border: 'none', cursor: savingEmailConfig ? 'not-allowed' : 'pointer', opacity: savingEmailConfig ? .6 : 1, fontFamily: 'inherit' }}>
+                      {savingEmailConfig ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Action buttons */}

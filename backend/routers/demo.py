@@ -4,6 +4,7 @@ from sqlalchemy import text
 from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user, create_access_token
+from email_service import get_email_routing, set_email_routing
 import logging
 from datetime import datetime, timezone, timedelta
 from collections import OrderedDict
@@ -93,6 +94,11 @@ class SeedData(BaseModel):
 
 class Impersonate(BaseModel):
     user_id: str
+
+
+class EmailConfigUpdate(BaseModel):
+    override_to: str = ""       # empty = redirect off
+    allowlist: list[str] = []   # real-mail bypass list; addresses matched case-insensitively
 
 
 _impersonation_log = logging.getLogger("ptm.impersonation")
@@ -484,3 +490,33 @@ async def wipe_seed_data(
     deleted = len(res.fetchall())
     await db.commit()
     return {"deleted": deleted}
+
+
+@router.get("/email-config")
+async def get_email_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Current effective email routing (settings-table row, falling back to
+    the EMAIL_OVERRIDE_TO/EMAIL_ALLOWLIST env vars) -- for the Demo tab's
+    email routing panel. Never touches or returns SENDGRID_API_KEY. Gated
+    the same as every other /demo endpoint (admin role, not the demo email
+    specifically -- the frontend restricts the Demo tab to that account, but
+    that's a UI convenience, not a distinct auth boundary here)."""
+    _require_admin(current_user)
+    return await get_email_routing(db)
+
+
+@router.post("/email-config")
+async def set_email_config(
+    body: EmailConfigUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Set email routing at runtime, no server restart needed. An empty
+    override_to is written as-is (not skipped) -- that's exactly what the
+    Demo tab's "turn redirect off" toggle sends, and it must take effect
+    even if EMAIL_OVERRIDE_TO is still set in the environment."""
+    _require_admin(current_user)
+    await set_email_routing(db, body.override_to, body.allowlist)
+    return await get_email_routing(db)

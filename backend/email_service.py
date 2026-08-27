@@ -8,20 +8,39 @@ Env vars:
 - SENDGRID_API_KEY : required. Its absence raises at import (startup) time, so
                      the app refuses to boot rather than silently failing to
                      deliver login codes.
-- EMAIL_OVERRIDE_TO : optional. When set, EVERY outbound email (all types,
-                     for all time — see `_send`) is redirected to this
-                     address instead of its real recipient. For testing
-                     against the prod users table without mailing real
-                     Inventure staff. Absent means normal behaviour, always.
+- EMAIL_OVERRIDE_TO : optional. When set, outbound email is redirected to this
+                     address instead of its real recipient -- EXCEPT for
+                     addresses in EMAIL_ALLOWLIST, which are sent for real
+                     with no prefix. For testing against the prod users table
+                     without mailing real Inventure staff. Absent means
+                     normal behaviour, always.
+- EMAIL_ALLOWLIST  : optional, comma-separated. Addresses that bypass
+                     EMAIL_OVERRIDE_TO entirely (case-insensitive, whitespace
+                     around each entry stripped). Has no effect on its own --
+                     only matters when EMAIL_OVERRIDE_TO is also set.
+
+Both of the above can also be set at runtime via the `settings` table (see
+migrations/007_settings_table.sql), edited from the admin Demo tab so they
+don't need a server restart to change. A `settings` row for either key takes
+priority over its env var, including an explicitly empty row (the Demo tab's
+"turn redirect off" toggle writes one) -- the env var is only a fallback for
+when the table has no row at all yet.
 """
+import asyncio
 import os
 import logging
 from datetime import datetime, timedelta, timezone
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger("ptm.email")
+
+_OVERRIDE_KEY = "email_override_to"
+_ALLOWLIST_KEY = "email_allowlist"
 
 FROM_EMAIL = "noreply@ptmnow.com"
 FROM_NAME = "PTM Now"
@@ -35,14 +54,17 @@ if not _API_KEY:
     )
 
 # One-time, loud, at process startup — so this can't sit forgotten on prod.
-# The actual per-send redirect logic in `_send` re-reads the env var fresh on
+# Env-var state only (the `settings` table can still override this at
+# request time — see `_email_routing` — but isn't queried at import time).
+# The actual per-send redirect logic in `_send` re-reads config fresh on
 # every call rather than trusting this frozen value, so it can never go stale
 # within a long-running process and toggling it in tests needs no reload.
 if os.getenv("EMAIL_OVERRIDE_TO"):
+    _startup_allowlist = os.getenv("EMAIL_ALLOWLIST", "").strip() or "(none)"
     logger.warning(
-        "EMAIL OVERRIDE ACTIVE — all mail redirects to %s. This MUST be "
-        "unset before real use.",
-        os.getenv("EMAIL_OVERRIDE_TO"),
+        "EMAIL OVERRIDE ACTIVE — all mail redirects to %s, except allowlisted "
+        "addresses: %s. This MUST be unset before real use.",
+        os.getenv("EMAIL_OVERRIDE_TO"), _startup_allowlist,
     )
 
 # Hosted, not inline: Gmail strips inline <svg> from HTML email, which is why
@@ -75,21 +97,119 @@ def _display_code(code: str) -> str:
     return f"{code[:3]} {code[3:]}"
 
 
+# A dedicated engine, never database.py's app-wide one: `_send` runs inside
+# asyncio.to_thread (see send_otp_email's docstring), so it has no running
+# event loop of its own and reads the DB via a fresh asyncio.run() per call.
+# Reusing the main app engine across a different loop each time would risk
+# the same "attached to a different loop" failure backend/tests/conftest.py's
+# seed_engine comment describes -- NullPool sidesteps it exactly the way that
+# engine does, by never caching a connection across loop boundaries. This
+# engine object itself is created once and reused; NullPool never carries a
+# connection between the asyncio.run() calls that borrow it.
+_settings_engine = None
+
+
+def _get_settings_engine():
+    global _settings_engine
+    if _settings_engine is None:
+        url = os.getenv("DATABASE_URL")
+        if not url:
+            return None
+        url = url.replace("postgresql://", "postgresql+asyncpg://").split("?")[0]
+        _settings_engine = create_async_engine(url, poolclass=NullPool, connect_args={"ssl": "require"})
+    return _settings_engine
+
+
+async def _fetch_settings_rows(keys: list[str]) -> dict[str, str]:
+    """Raw key->value rows present in `settings` for the given keys. A key
+    with no row is simply absent from the returned dict."""
+    engine = _get_settings_engine()
+    if engine is None:
+        return {}
+    placeholders = ", ".join(f":k{i}" for i in range(len(keys)))
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(f"SELECT key, value FROM settings WHERE key IN ({placeholders})"),
+            {f"k{i}": k for i, k in enumerate(keys)},
+        )
+        return {r.key: r.value for r in result.fetchall()}
+
+
+def _parse_allowlist(raw: str) -> set[str]:
+    return {a.strip().lower() for a in (raw or "").split(",") if a.strip()}
+
+
+def _email_routing() -> tuple[str | None, set[str]]:
+    """Resolve (override_to, allowlist) for this send: a `settings` row for a
+    key takes priority over its env var -- including a present-but-empty row,
+    which is exactly what the Demo tab's "turn redirect off" toggle writes.
+    Any DB error (unreachable, table missing, etc.) falls back to the env
+    vars rather than blocking email delivery."""
+    override_to = os.getenv("EMAIL_OVERRIDE_TO") or None
+    allowlist = _parse_allowlist(os.getenv("EMAIL_ALLOWLIST", ""))
+    try:
+        rows = asyncio.run(_fetch_settings_rows([_OVERRIDE_KEY, _ALLOWLIST_KEY]))
+    except Exception:
+        logger.exception("Could not read email routing settings from the DB; using env vars")
+        rows = {}
+    if _OVERRIDE_KEY in rows:
+        override_to = rows[_OVERRIDE_KEY] or None
+    if _ALLOWLIST_KEY in rows:
+        allowlist = _parse_allowlist(rows[_ALLOWLIST_KEY])
+    return override_to, allowlist
+
+
+async def get_email_routing(db: AsyncSession) -> dict:
+    """Same resolution as `_email_routing`, but via the caller's own async DB
+    session -- for route handlers (GET/POST /demo/email-config,
+    GET /admin/email-config) that already have one, rather than spinning up
+    the standalone engine above. Returns the effective config as the API
+    shape: {"override_to": str, "allowlist": [str, ...]}."""
+    result = await db.execute(
+        text("SELECT key, value FROM settings WHERE key IN (:k1, :k2)"),
+        {"k1": _OVERRIDE_KEY, "k2": _ALLOWLIST_KEY},
+    )
+    rows = {r.key: r.value for r in result.fetchall()}
+    override_to = rows.get(_OVERRIDE_KEY, os.getenv("EMAIL_OVERRIDE_TO", "")) or ""
+    allowlist_raw = rows.get(_ALLOWLIST_KEY, os.getenv("EMAIL_ALLOWLIST", "")) or ""
+    return {
+        "override_to": override_to,
+        "allowlist": sorted(_parse_allowlist(allowlist_raw)),
+    }
+
+
+async def set_email_routing(db: AsyncSession, override_to: str, allowlist: list[str]) -> None:
+    """Upsert both settings rows in one transaction. An empty `override_to`
+    is a valid, meaningful value (redirect off) -- always written, never
+    skipped, so it can override a set env var (see `_email_routing`)."""
+    allowlist_raw = ", ".join(a.strip() for a in allowlist if a.strip())
+    for key, value in ((_OVERRIDE_KEY, override_to.strip()), (_ALLOWLIST_KEY, allowlist_raw)):
+        await db.execute(
+            text(
+                "INSERT INTO settings (key, value) VALUES (:key, :value)"
+                " ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"
+            ),
+            {"key": key, "value": value},
+        )
+    await db.commit()
+
+
 def _send(to_email: str, subject: str, plain_text_content: str, html_content: str) -> bool:
     """Single choke point for every outbound email. Every email type must
     call this rather than building its own SendGrid Mail/send — that's what
     makes the EMAIL_OVERRIDE_TO redirect below impossible to bypass by
     accident when a new email type (e.g. cancellations) is added later.
 
-    When EMAIL_OVERRIDE_TO is set, every send goes to that address instead
-    of `to_email`, no exceptions: the subject is prefixed with the intended
-    recipient and a banner naming them is prepended to both bodies. Absent
-    (the default) means exactly today's behaviour — real recipient, no
-    redirect, ever.
+    When an override address is active, every send goes to that address
+    instead of `to_email` EXCEPT addresses on the allowlist, which are sent
+    for real with no prefix -- e.g. a demo where one real teacher should get
+    real mail while everyone else stays redirected. No override (the
+    default) means exactly today's behaviour — real recipient, no redirect,
+    ever.
     """
-    override_to = os.getenv("EMAIL_OVERRIDE_TO")
+    override_to, allowlist = _email_routing()
     actual_to = to_email
-    if override_to:
+    if override_to and to_email.strip().lower() not in allowlist:
         actual_to = override_to
         subject = f"[TEST → {to_email}] {subject}"
         plain_text_content = f"[TEST MODE] Intended recipient: {to_email}\n\n" + plain_text_content
