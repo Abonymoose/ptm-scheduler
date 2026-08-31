@@ -4,27 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import { requestOtp, verifyOtp, adminLogin } from '../api/auth'
 import { LOGO_LARGE } from '../assets/logos'
 
-// Frontend-only easter egg. Pure client-side: never calls the backend, never
-// creates a session. Requires the exact email + an exact (case-sensitive) code.
-// Add a game by dropping another `code: url` pair in here — any code length works.
 // Demo email is public (not a secret); only the code (DEMO_SECRET_CODE) is, and
 // that's checked server-side. Routing this email to the code step lets the demo
 // admin type the secret code — request-otp would otherwise reject an admin email.
 const DEMO_EMAIL = 'demo@inventureacademy.com'
-const EGG_EMAIL = 'alphamogger@pm4k.com'
-const EGG_GAMES = {
-  pmmxgu: 'https://vex5.gitlab.io/file/',
-  basketrandom: 'https://script.google.com/macros/s/AKfycbwiQgeRHVDP8wzJ_CeSE1LyaKCMu1qdlopwylhD4LdBvBVd2y36VjlWY0iyk38WH0JiJA/exec',
-  dunedash: 'https://script.google.com/macros/s/AKfycbxif2sgdRNG-zqSFKUNZ60ZABnsdBYug037DeKlnuXY1XYyveJlFQK6YHpCX-KiWnC6/exec',
-  rugby: 'https://script.google.com/macros/s/AKfycbxjYzXDX0iopyVPSDgG8_sTlQPpjv5KYMdsOtLXzYrQYdHPmHdswUb5NTXedQ3RK8XyoQ/exec',
-  basketbros: 'https://script.google.com/macros/s/AKfycbxUfaDSpH-0SJL0WPKt38JY7OOOGMmtpY9JTSbL8pvtjxS7jSpNHHu6MdZgWUshIU00Kw/exec',
-  slope: 'https://slope-unblocked.gitlab.io/file/',
-  subwaysurfers: 'https://gertdoro.github.io/3hg7dj3bnc82/index.html',
-}
-const EGG_CODES = Object.keys(EGG_GAMES)
-const EGG_MAX_LEN = Math.max(...EGG_CODES.map(c => c.length))
-// own-property lookup only (so "constructor" etc. can't match)
-const eggUrlFor = code => (Object.prototype.hasOwnProperty.call(EGG_GAMES, code) ? EGG_GAMES[code] : null)
 
 // Resend UI on the code step. The server enforces both limits for real (30s
 // cooldown, 3-per-15-min cap) — these mirror them client-side purely so the
@@ -59,9 +42,7 @@ export default function Login({ branded = false } = {}) {
   const [isAdmin, setIsAdmin] = useState(false)  // reveal password field for admins
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [egg, setEgg] = useState(null)       // easter-egg game URL (null = off)
   const inputsRef = useRef([])
-  const eggKeys = useRef('')                 // raw keystroke buffer (OTP UI strips non-digits)
   // Re-entrancy guards for the two OTP-issuing buttons. `loading`/`resendLoading`
   // state already disables them visually, but state updates don't reach the DOM
   // until the next render commits — a second click landing in that window would
@@ -93,8 +74,6 @@ export default function Login({ branded = false } = {}) {
     if (sendingRef.current) return  // synchronous re-entrancy guard, before anything else
     setError('')
     if (!email) { setError('Please enter your email.'); return }
-    // Easter egg: advance to the code step looking exactly normal — no backend call.
-    if (email === EGG_EMAIL) { setStep(2); return }
     // Demo login: skip request-otp (admin emails are rejected there) and go straight
     // to code entry; the typed code is checked against DEMO_SECRET_CODE in verify-otp.
     if (email === DEMO_EMAIL) { setStep(2); return }
@@ -138,15 +117,6 @@ export default function Login({ branded = false } = {}) {
   }
 
   const handleDigit = (i, raw) => {
-    // Easter egg: capture raw keystrokes into a rolling buffer (runs before OTP
-    // logic). For the egg email we never fill boxes/submit — the buffer alone
-    // drives it, so codes longer than 6 chars still work.
-    if (email === EGG_EMAIL) {
-      eggKeys.current = (eggKeys.current + raw.slice(-1)).slice(-EGG_MAX_LEN)
-      const hit = EGG_CODES.find(code => eggKeys.current.endsWith(code))
-      if (hit) { setEgg(EGG_GAMES[hit]); return }
-      return
-    }
     // Alphanumeric, 6 chars — letters are needed for the demo login code.
     const d = raw.replace(/[^a-zA-Z0-9]/g, '')
     const n = [...digits]
@@ -172,7 +142,6 @@ export default function Login({ branded = false } = {}) {
 
   const handleOtpPaste = (e) => {
     const pasted = e.clipboardData.getData('text') || ''
-    if (email === EGG_EMAIL && eggUrlFor(pasted)) { e.preventDefault(); setEgg(eggUrlFor(pasted)); return }
     const txt = pasted.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6)
     if (!txt) return
     e.preventDefault()
@@ -211,7 +180,7 @@ export default function Login({ branded = false } = {}) {
     setResendLoading(false)
   }
 
-  const backToEmail = () => { setStep(1); setDigits(Array(6).fill('')); setError(''); setShake(false); eggKeys.current = '' }
+  const backToEmail = () => { setStep(1); setDigits(Array(6).fill('')); setError(''); setShake(false) }
 
   const onKey = e => { if (e.key === 'Enter') handleSendOtp() }
 
@@ -225,7 +194,6 @@ export default function Login({ branded = false } = {}) {
   }, [])
   useEffect(() => {
     if (step === 2) {
-      eggKeys.current = ''
       setTimeout(() => inputsRef.current[0]?.focus(), 0)
       // Fresh resend budget/cooldown each time the code step is (re)entered —
       // the code that was just sent already started its own 30s server-side
@@ -250,38 +218,11 @@ export default function Login({ branded = false } = {}) {
     const id = setInterval(tick, 250)
     return () => clearInterval(id)
   }, [cooldownEndsAt])
-  // Easter-egg exit: Escape closes the game (the × button is the reliable exit once
-  // focus is inside the cross-origin iframe).
-  useEffect(() => {
-    if (!egg) return
-    const onKeyDown = e => { if (e.key === 'Escape') setEgg(null) }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [egg])
 
   const inp = { width: '100%', padding: 'clamp(10px,1.3vw,14px) clamp(12px,1.6vw,16px)', fontSize: 'clamp(13px,1.5vw,15px)', border: '1.5px solid #F4C099', borderRadius: 10, outline: 'none', fontFamily: 'inherit', transition: 'border-color .15s, box-shadow .15s', color: '#1B3F7A', background: '#fff', boxSizing: 'border-box' }
   const focusOn = e => { e.target.style.borderColor = '#F47920'; e.target.style.boxShadow = '0 0 0 3px rgba(244,121,32,.12)' }
   const focusOff = e => { e.target.style.borderColor = '#F4C099'; e.target.style.boxShadow = 'none' }
   const label = { fontSize: 'clamp(11px,1.3vw,13px)', fontWeight: 600, color: '#1B3F7A', display: 'block', marginBottom: 'clamp(4px,.5vw,7px)' }
-
-  if (egg) {
-    return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#000' }}>
-        <iframe
-          title="game"
-          src={egg}
-          allow="fullscreen; autoplay; gamepad; accelerometer"
-          style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-        />
-        <button
-          onClick={() => setEgg(null)}
-          aria-label="Exit"
-          title="Exit (Esc)"
-          style={{ position: 'fixed', top: 8, right: 10, zIndex: 100000, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.4)', color: 'rgba(255,255,255,.55)', fontSize: 17, lineHeight: '28px', textAlign: 'center', padding: 0, cursor: 'pointer' }}
-        >×</button>
-      </div>
-    )
-  }
 
   // PTM Now brand header — matches the public landing site. Links go to the
   // landing pages (served at the domain root, separate from the app routes).
