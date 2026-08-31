@@ -1,4 +1,5 @@
 import { T, sans } from './tokens'
+import { ICON_PTM_NOW } from '../../assets/logos'
 
 // The small "Powered by PTM Now" mark repeated in every export mockup's footer
 // (frontend/reference/parent-pass-autofit.html:209-217 and identical blocks
@@ -9,28 +10,31 @@ import { T, sans } from './tokens'
 // here targets html2canvas's output, not the DOM. The DOM itself already
 // centres the icon correctly (flex + align-items:center, matching the
 // mockup's .mark CSS); html2canvas 1.4.1 doesn't reproduce that centring and
-// paints the icon ~7px above the text regardless of display/vertical-align
-// on an inline <svg>. Rasterizing the icon as an <img> data URI (like the
-// header logo, which html2canvas paints correctly) makes an explicit `top`
-// offset actually take effect, and 7px is the measured value that lines up
-// its centre with the text's -- verified by rendering this component through
-// the real exportNodeAsImage/html2canvas call and measuring pixel bounding
-// boxes in the output canvas.
-const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="170" height="170" viewBox="0 0 170 170">
-  <rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52"/>
-  <rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E"/>
-  <rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E"/>
-  <rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B"/>
-  <rect x="10" y="44" width="150" height="14" fill="#D8443B"/>
-  <path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`
-const iconSrc = `data:image/svg+xml,${encodeURIComponent(iconSvg)}`
-
+// paints the icon ~7px above the text regardless of display/vertical-align.
+// The icon is a base64 PNG (like the header logo, ICON_PTM_NOW in
+// assets/logos.js, generated at 28x28 for a crisp 14px display) rather than
+// an SVG data URI -- Safari can't reliably rasterize SVG-in-<img> into a
+// canvas (particularly one with no explicit intrinsic width/height), which
+// made the icon vanish entirely on iOS even though it rendered fine on
+// desktop Chrome.
+//
+// The `top: 7` offset is calibrated to html2canvas 1.4.1's paint behaviour,
+// not to any CSS rule -- the DOM itself is already correctly centred, so no
+// test will catch a regression here. Confirmed against the real rendered
+// PNG (not just the DOM) on desktop Chrome after the SVG-to-PNG swap: the
+// offset is unchanged at 7px, icon centre lands within 1px of both text
+// runs' centres in both TeacherPass and ParentPass. NOT verified on actual
+// iOS Safari -- there's no real WebKit engine available in this environment,
+// only Chromium-based automation, so Safari's specific paint offset here is
+// unconfirmed. If reports of misalignment on iPhone come back (as opposed to
+// the icon simply not appearing, which this PNG switch fixes), re-measure
+// on a real device. If html2canvas is ever upgraded, re-measure regardless
+// of platform.
 export default function PoweredByMark() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: sans, fontSize: 11, fontWeight: 600, color: T.soft, whiteSpace: 'nowrap' }}>
       Powered by
-      <img src={iconSrc} alt="" width={14} height={14} aria-hidden="true" style={{ display: 'block', position: 'relative', top: 7 }} />
+      <img src={ICON_PTM_NOW} alt="" width={14} height={14} aria-hidden="true" style={{ display: 'block', position: 'relative', top: 7 }} />
       PTM&nbsp;Now
     </div>
   )
