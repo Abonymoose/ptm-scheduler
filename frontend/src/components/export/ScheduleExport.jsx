@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import theme from '../../theme'
 import ParentPass from './ParentPass'
 import TeacherPass from './TeacherPass'
-import { TeacherDaySheet, ParentScheduleSheet } from './PrintSheet'
 import { exportNodeAsImage } from '../../utils/exportImage'
 
 const btnBase = {
@@ -11,13 +10,9 @@ const btnBase = {
   borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
 }
 const primaryBtn = { ...btnBase, background: theme.primary, color: '#fff', border: 'none' }
-const secondaryBtn = { ...btnBase, background: '#fff', color: theme.textPrimary, border: `1.5px solid ${theme.borderMid}` }
 
-// Two always-together buttons -- [Save as image] (primary) and [Print]
-// (secondary) -- for the parent pass / teacher day sheet exports.
-// `kind` picks which pair of components render; `data` is spread onto both
-// (ParentPass/ParentScheduleSheet and TeacherPass/TeacherDaySheet share prop
-// shapes within their kind, so one `data` object feeds both renders).
+// `kind` picks which pass component renders; `data` is spread onto it
+// (ParentPass/TeacherPass share prop shapes within their kind).
 export default function ScheduleExport({ kind, data, filename }) {
   const imgRef = useRef(null)
   const [saving, setSaving] = useState(false)
@@ -35,7 +30,6 @@ export default function ScheduleExport({ kind, data, filename }) {
   }
 
   const ImagePass = kind === 'parent' ? ParentPass : TeacherPass
-  const PrintComp = kind === 'parent' ? ParentScheduleSheet : TeacherDaySheet
 
   return (
     <>
@@ -43,17 +37,11 @@ export default function ScheduleExport({ kind, data, filename }) {
         <button onClick={handleSaveImage} disabled={saving} style={{ ...primaryBtn, opacity: saving ? .65 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}>
           {saving ? 'Preparing…' : 'Save as image'}
         </button>
-        <button onClick={() => window.print()} style={secondaryBtn}>Print</button>
       </div>
 
       {/* Off-screen, real DOM (html2canvas + font metrics both need layout). */}
       <div style={{ position: 'fixed', left: -9999, top: 0, pointerEvents: 'none' }} aria-hidden="true">
         <ImagePass ref={imgRef} {...data} />
-      </div>
-      {/* Invisible on screen; frontend/src/styles/print.css shows only this
-          (via .print-sheet) and hides everything else when actually printing. */}
-      <div style={{ overflow: 'hidden', width: 0, height: 0 }} aria-hidden="true">
-        <PrintComp {...data} />
       </div>
     </>
   )

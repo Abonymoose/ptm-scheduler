@@ -606,14 +606,15 @@ export default function AdminDashboard() {
         {tab === 'export' && (
           <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 'clamp(14px,2vw,22px)' }}>
             <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 800, color: '#1B3F7A', marginBottom: 2 }}>Export a schedule</div>
-            <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginBottom: 8 }}>Pick any teacher or parent in the school to produce their shareable image or A4 print sheet.</div>
-            <input value={exportSearch} onChange={e => setExportSearch(e.target.value)} placeholder="Search teachers &amp; parents…"
+            <div style={{ fontSize: 'clamp(10px,1.1vw,12px)', color: '#6B7280', marginBottom: 8 }}>Pick any teacher in the school to produce their shareable image.</div>
+            <input value={exportSearch} onChange={e => setExportSearch(e.target.value)} placeholder="Search teachers…"
               style={{ width: '100%', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
             <div className="custom-scroll" style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #F4C099', borderRadius: 10, marginBottom: 'clamp(14px,2vw,20px)' }}>
               {demoUsers === null ? <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>Loading…</div>
               : (() => {
                   const q = exportSearch.trim().toLowerCase()
-                  const list = demoUsers.filter(u => !q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q))
+                  // Parent pass isn't demo-ready yet (name/section rendering) -- teachers only here.
+                  const list = demoUsers.filter(u => u.role === 'teacher' && (!q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q)))
                   if (list.length === 0) return <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>No matches.</div>
                   return list.map(u => (
                     <div key={u.id} onClick={() => pickExportUser(u)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 'clamp(8px,1.1vw,11px) clamp(10px,1.3vw,14px)', cursor: 'pointer', borderBottom: '1px solid #FDE9D4', background: exportPicked?.id === u.id ? '#FFF8F3' : 'transparent' }}
