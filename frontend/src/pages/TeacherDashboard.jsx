@@ -242,31 +242,31 @@ export default function TeacherDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,900px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
+      <div className="dash-shell" style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,900px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
-        <div style={{ background: '#F47920', padding: 'clamp(10px,1.8vw,20px) clamp(14px,2.5vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0, gap: 8 }}>
+        <div className="dash-topbar" style={{ background: '#F47920', padding: 'clamp(10px,1.8vw,20px) clamp(14px,2.5vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0, gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.5vw,16px)', flex: 1, minWidth: 0 }}>
-            <div style={{ width: 'clamp(34px,4.5vw,48px)', height: 'clamp(34px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
+            <div className="dash-avatar" style={{ width: 'clamp(34px,4.5vw,48px)', height: 'clamp(34px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
-              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
-              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="dash-title" style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {/* Read-only: venue/room is admin-set only (Manage teacher form). */}
                 <span id="venue-text">{venueText}</span>
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
-            <div style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
-            <button onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
-            {!isMobile && <img src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />}
+            <div className="dash-badge" style={{ fontSize: 'clamp(12px,1.6vw,18px)', fontWeight: 700, background: '#fff', color: '#F47920', padding: 'clamp(4px,.8vw,9px) clamp(8px,1.4vw,16px)', borderRadius: 8, whiteSpace: 'nowrap' }}>{time}</div>
+            <button className="dash-signout" onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            {!isMobile && <img className="dash-logo" src={LOGO_SMALL} alt="Inventure" style={{ height: 'clamp(20px,2.8vw,34px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />}
           </div>
         </div>
 
         {/* UP NEXT BANNER */}
         {upcomingSlots.length > 0 && (
-          <div style={{ background: '#FFF0E6', borderBottom: '1px solid #F4C099', padding: 'clamp(8px,1.2vw,14px) clamp(16px,2.5vw,28px)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div className="dash-strip" style={{ background: '#FFF0E6', borderBottom: '1px solid #F4C099', padding: 'clamp(8px,1.2vw,14px) clamp(16px,2.5vw,28px)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap' }}>Up next:</span>
             <span style={{ fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>
               {upcomingSlots[0]?.bookings?.length > 0 ? `${upcomingSlots[0].bookings[0].student_name || upcomingSlots[0].bookings[0].parent_name}${upcomingSlots[0].bookings[0].section ? ' · ' + upcomingSlots[0].bookings[0].section : ''}` : 'No upcoming'} at {fmt(upcomingSlots[0]?.start_time)}
@@ -277,7 +277,7 @@ export default function TeacherDashboard() {
         {/* TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
           {[['s','My schedule'],['n','Notes'],['m','Manage slots']].map(([key, lbl]) => (
-            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: `clamp(12px,1.8vw,18px) ${isMobile ? 4 : 8}px`, textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em', whiteSpace: 'nowrap' }}>{lbl}</div>
+            <div key={key} className="dash-tab" onClick={() => setTab(key)} style={{ flex: 1, padding: `clamp(12px,1.8vw,18px) ${isMobile ? 4 : 8}px`, textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em', whiteSpace: 'nowrap' }}>{lbl}</div>
           ))}
         </div>
 

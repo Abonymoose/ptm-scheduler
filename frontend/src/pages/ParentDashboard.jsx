@@ -27,6 +27,9 @@ const CHILD_COLOURS = [
 ]
 const childColour = idx => CHILD_COLOURS[idx % CHILD_COLOURS.length]
 const firstName = name => (name || '').split(' ')[0]
+// "History/Civics" has no natural break, so at 12px it would widen its grid
+// column past the minimum on narrow tablets; allow a wrap after each slash.
+const breakAfterSlash = text => text.split('/').flatMap((part, i, all) => i < all.length - 1 ? [part + '/', <wbr key={i} />] : [part])
 
 // Index of the child a booking is for: exact student + section first, then
 // section alone (bookings made before students existed carry only that).
@@ -427,32 +430,32 @@ export default function ParentDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100vh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
-      <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,960px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
+      <div className="dash-shell pd-card" style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', width: 'min(96vw,960px)', margin: 'clamp(10px,2vw,20px) auto', boxShadow: '0 2px 20px rgba(0,0,0,.06)', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
-        <div style={{ padding: 'clamp(12px,1.8vw,20px) clamp(16px,2.5vw,28px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
+        <div className="dash-topbar" style={{ padding: 'clamp(12px,1.8vw,20px) clamp(16px,2.5vw,28px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)' }}>
-            <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
+            <div className="dash-avatar" style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div>
-              <div style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Student'}{user?.section ? ` · ${user.section}` : ''}</div>
-              <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.65)', marginTop: 2 }}>Inventure Academy · PTM {formatPtmDate(ptmDate)}</div>
+              <div className="dash-title" style={{ fontSize: 'clamp(15px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em' }}>{user?.name || 'Student'}{user?.section ? ` · ${user.section}` : ''}</div>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: 'rgba(255,255,255,.65)', marginTop: 2 }}>Inventure Academy · PTM {formatPtmDate(ptmDate)}</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px,1.2vw,14px)', flexShrink: 0 }}>
-            <button onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings" style={{ width: 'clamp(30px,3.6vw,38px)', height: 'clamp(30px,3.6vw,38px)', borderRadius: '50%', background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
+            <button className="dash-icon-btn" onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings" style={{ width: 'clamp(30px,3.6vw,38px)', height: 'clamp(30px,3.6vw,38px)', borderRadius: '50%', background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
             </button>
-            <button onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
-            <img src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
+            <button className="dash-signout" onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            <img className="dash-logo" src={LOGO_LARGE} alt="Inventure" style={{ height: 'clamp(24px,3vw,36px)', width: 'auto', filter: 'brightness(0) invert(1)', opacity: .9 }} />
           </div>
         </div>
 
         {/* MAIN TABS */}
         <div style={{ display: 'flex', background: '#fff', borderBottom: '2px solid #F4C099', flexShrink: 0 }}>
           {[['grid','Book'],['sched','My schedule'],['notes','Notes']].map(([key, lbl]) => (
-            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>
+            <div key={key} className="dash-tab" onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(12px,1.8vw,18px) 8px', textAlign: 'center', fontSize: 'clamp(13px,1.6vw,17px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#C4B5A5', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, marginBottom: -2, transition: 'all .2s', letterSpacing: '-.01em' }}>
               {lbl}
-              {key === 'sched' && activeBookings.length > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F47920', color: '#fff', borderRadius: 20, fontSize: 'clamp(9px,1vw,12px)', fontWeight: 700, padding: '1px clamp(5px,.7vw,8px)', marginLeft: 5, verticalAlign: 'middle', minWidth: 20 }}>{activeBookings.length}</span>}
+              {key === 'sched' && activeBookings.length > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F47920', color: '#fff', borderRadius: 20, fontSize: 'clamp(var(--dash-fs-9, 12px),1vw,12px)', fontWeight: 700, padding: '1px clamp(5px,.7vw,8px)', marginLeft: 5, verticalAlign: 'middle', minWidth: 20 }}>{activeBookings.length}</span>}
             </div>
           ))}
         </div>
@@ -461,15 +464,15 @@ export default function ParentDashboard() {
         {tab === 'grid' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             {/* Action bar */}
-            <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
+            <div className="custom-scroll pd-actionbar" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 4, background: '#FDEBDA', borderRadius: 50, padding: 3, flexShrink: 0 }}>
                 {children.map((c, i) => (
-                  <button key={c.id} onClick={() => setActiveChild(c.id)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === c.id ? childColour(i).accent : 'transparent', color: activeChild === c.id ? '#fff' : '#C45A0A', boxShadow: activeChild === c.id ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{firstName(c.name)} · {c.section}</button>
+                  <button key={c.id} className="pd-actionbar-btn" onClick={() => setActiveChild(c.id)} style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === c.id ? childColour(i).accent : 'transparent', color: activeChild === c.id ? '#fff' : '#C45A0A', boxShadow: activeChild === c.id ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{firstName(c.name)} · {c.section}</button>
                 ))}
               </div>
-              <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to add to cart, then Confirm</span>
+              <span style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,15px)', color: '#6B7280', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to add to cart, then Confirm</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
-                <button onClick={openAutoModal} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit' }}>Auto-schedule</button>
+                <button className="pd-actionbar-btn" onClick={openAutoModal} style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,15px)', fontWeight: 700, padding: 'clamp(7px,1vw,12px) clamp(12px,1.6vw,20px)', borderRadius: 50, background: '#1B3F7A', color: '#fff', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 12px rgba(27,63,122,.3)', fontFamily: 'inherit' }}>Auto-schedule</button>
                 <InfoButton text="Automatically picks meeting slots across the teachers you select, avoiding time clashes." label="About auto-schedule" />
               </div>
             </div>
@@ -483,12 +486,12 @@ export default function ParentDashboard() {
               {child ? (<table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 'clamp(56px,7vw,74px)', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', paddingBottom: 8, fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 600, color: '#6B7280', position: 'sticky', top: 0, zIndex: 5 }}>Time</th>
+                    <th style={{ width: 'clamp(56px,7vw,74px)', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', paddingBottom: 8, fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', fontWeight: 600, color: '#6B7280', position: 'sticky', top: 0, zIndex: 5 }}>Time</th>
                     {teachers.map(t => (
-                      <th key={t} style={{ textAlign: 'center', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', minWidth: 'clamp(80px,9vw,110px)', position: 'sticky', top: 0, zIndex: 5, padding: 0 }}>
+                      <th key={t} className="pd-th" style={{ textAlign: 'center', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', minWidth: 'clamp(80px,9vw,110px)', position: 'sticky', top: 0, zIndex: 5, padding: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%', padding: '8px 4px' }}>
-                          <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.2, width: '100%' }}>{titleName(t).split(' ').slice(0, 2).join(' ')}</span>
-                          <span style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#6B7280', textAlign: 'center', lineHeight: 1.1 }}>{subjectByName[t] || ''}</span>
+                          <span style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.2, width: '100%' }}>{titleName(t).split(' ').slice(0, 2).join(' ')}</span>
+                          <span style={{ fontSize: 'clamp(var(--dash-fs-9, 12px),1vw,12px)', color: '#6B7280', textAlign: 'center', lineHeight: 1.1 }}>{breakAfterSlash(subjectByName[t] || '')}</span>
                         </div>
                       </th>
                     ))}
@@ -497,7 +500,7 @@ export default function ParentDashboard() {
                 <tbody>
                   {allTimes.map(time => (
                     <tr key={time} ref={el => { rowRefs.current[time] = el }}>
-                      <td style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', textAlign: 'center', whiteSpace: 'nowrap', background: '#FFF8F3', fontWeight: 600, borderRight: '2px solid #F4C099', border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>{fmt(time)}</td>
+                      <td style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', textAlign: 'center', whiteSpace: 'nowrap', background: '#FFF8F3', fontWeight: 600, borderRight: '2px solid #F4C099', border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', verticalAlign: 'middle' }}>{fmt(time)}</td>
                       {teachers.map(t => {
                         const slot = teacherGroups[t]?.find(s => s.start_time === time)
                         if (!slot) return <td key={t} style={{ border: '1px solid #F0E4D4', height: 'clamp(32px,4vw,44px)', background: '#F9FAFB' }} />
@@ -545,7 +548,7 @@ export default function ParentDashboard() {
                                   : cls === 'child1' ? '#C45A0A'
                                   : cls === 'child2' ? '#1D4ED8'
                                   : '#E5D5C5',
-                                fontSize: 'clamp(11px,1.3vw,14px)',
+                                fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)',
                                 fontWeight: 600,
                                 transition: 'all .12s', fontFamily: 'inherit',
                               }}>
@@ -564,22 +567,22 @@ export default function ParentDashboard() {
               )}
             </div>
 
-            {/* Legend */}
-            <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 600, marginRight: 4 }}>Legend:</span>
+            {/* Legend + bottom bar: two stacked rows; one row on short screens (dashboard.css) */}
+            <div className="pd-footer" style={{ flexShrink: 0 }}>
+            <div className="pd-legend" style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', fontWeight: 600, marginRight: 4 }}>Legend:</span>
               {[
                 ...(child ? [{ label: firstName(child.name), bg: colour.bg, border: colour.accent, dashed: false }] : []),
                 { label: 'In cart', bg: '#FFF8F3', border: '#F47920', dashed: true },
                 { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5', dashed: false },
               ].map(l => (
-                <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
+                <span key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', fontWeight: 500 }}>
                   <span style={{ width: 'clamp(14px,1.8vw,20px)', height: 'clamp(14px,1.8vw,20px)', borderRadius: 5, background: l.bg, border: `2px ${l.dashed ? 'dashed' : 'solid'} ${l.border}`, flexShrink: 0, display: 'inline-block' }} />{l.label}
                 </span>
               ))}
             </div>
 
-            {/* Bottom bar */}
-            <div style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
+            <div className="pd-bottombar" style={{ padding: 'clamp(12px,1.8vw,18px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
               <span style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#C45A0A', fontWeight: 600 }}>
                 {bookedCount > 0
                   ? `${bookedCount} teacher${bookedCount !== 1 ? 's' : ''} booked`
@@ -589,6 +592,7 @@ export default function ParentDashboard() {
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <button
+                className="pd-confirm"
                 onClick={handleConfirm}
                 disabled={cart.length === 0 || confirming}
                 style={{
@@ -607,6 +611,7 @@ export default function ParentDashboard() {
               </button>
               <InfoButton text="Your selected slots aren't booked until you press Confirm." label="About confirming slots" />
               </div>
+            </div>
             </div>
           </div>
         )}
@@ -648,9 +653,9 @@ export default function ParentDashboard() {
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none', minWidth: 0 }}>{titleName(bk.teacher_name)}</div>
-                        {kid && <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px clamp(6px,.9vw,9px)', borderRadius: 20, background: kid.bg, color: kid.text }}>{childName}</span>}
+                        {kid && <span style={{ flexShrink: 0, fontSize: 'clamp(var(--dash-fs-9, 12px),1.1vw,12px)', fontWeight: 700, padding: '2px clamp(6px,.9vw,9px)', borderRadius: 20, background: kid.bg, color: kid.text }}>{childName}</span>}
                       </div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
+                      <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
                       <div onClick={() => setDone(p => ({ ...p, [bk.id]: !p[bk.id] }))} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}>
@@ -696,9 +701,9 @@ export default function ParentDashboard() {
                   <div key={n.booking_id} style={{ padding: 'clamp(12px,1.6vw,18px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4EDE4' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleName(n.teacher_name)}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
+                      <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
                     </div>
-                    <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>{[n.student_name, n.section, n.grade != null ? `Gr ${n.grade}` : null].filter(Boolean).join(' · ')}</div>
+                    <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>{[n.student_name, n.section, n.grade != null ? `Gr ${n.grade}` : null].filter(Boolean).join(' · ')}</div>
                     <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}
                       placeholder="Write a note…"
                       style={{ width: '100%', marginTop: 8, padding: 'clamp(8px,1vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
@@ -758,7 +763,7 @@ export default function ParentDashboard() {
               <div key={label} onClick={() => set(v => !v)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 'clamp(10px,1.4vw,14px) 0', borderBottom: label === 'Animations' ? '1px solid #F4EDE4' : 'none', cursor: 'pointer' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A' }}>{label}</div>
-                  <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', marginTop: 1 }}>{sub}</div>
+                  <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', marginTop: 1 }}>{sub}</div>
                 </div>
                 <div style={{ width: 46, height: 26, borderRadius: 26, background: on ? '#F47920' : '#E5D5C5', position: 'relative', transition: 'background .15s', flexShrink: 0 }}>
                   <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: on ? 22 : 2, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.25)' }} />
@@ -780,8 +785,8 @@ export default function ParentDashboard() {
                 <div style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', marginTop: 4 }}>Pick teachers — we'll add a conflict-free schedule to your cart</div>
               </div>
               <div style={{ padding: 'clamp(8px,1.2vw,12px) clamp(20px,2.8vw,28px)', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280' }}>{selectedTeachers.size} of {teacherOptions.length} selected</span>
-                <button onClick={() => setSelectedTeachers(selectedTeachers.size === teacherOptions.length ? new Set() : new Set(teacherOptions.map(t => t.id)))} style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#F47920', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>{selectedTeachers.size === teacherOptions.length ? 'Deselect all' : 'Select all'}</button>
+                <span style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280' }}>{selectedTeachers.size} of {teacherOptions.length} selected</span>
+                <button onClick={() => setSelectedTeachers(selectedTeachers.size === teacherOptions.length ? new Set() : new Set(teacherOptions.map(t => t.id)))} style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', fontWeight: 700, color: '#F47920', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>{selectedTeachers.size === teacherOptions.length ? 'Deselect all' : 'Select all'}</button>
               </div>
               <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1 }}>
                 {teacherOptions.map((t, i) => {
@@ -794,7 +799,7 @@ export default function ParentDashboard() {
                       </div>
                       <div>
                         <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(t.name)}</div>
-                        {subject && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>{subject}</div>}
+                        {subject && <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>{subject}</div>}
                       </div>
                     </div>
                   )
@@ -810,7 +815,7 @@ export default function ParentDashboard() {
               <div style={{ padding: 'clamp(24px,3vw,32px) clamp(20px,2.8vw,28px) clamp(16px,2vw,22px)', textAlign: 'center', borderBottom: '1px solid #FDE9D4' }}>
                 <div style={{ width: 48, height: 48, borderRadius: '50%', margin: '0 auto 10px', background: autoResult.picks.length > 0 ? '#FFF0E6' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: autoResult.picks.length > 0 ? '#C45A0A' : '#6B7280' }}>{autoResult.picks.length > 0 ? '✓' : '—'}</div>
                 <div style={{ fontSize: 'clamp(16px,2vw,22px)', fontWeight: 800, color: '#1B3F7A' }}>{autoResult.picks.length > 0 ? `Added ${autoResult.picks.length} slot${autoResult.picks.length !== 1 ? 's' : ''} to cart` : 'No slots available'}</div>
-                {autoResult.conflicts.length > 0 && <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', marginTop: 4 }}>{autoResult.conflicts.length} teacher{autoResult.conflicts.length !== 1 ? 's' : ''} couldn't be scheduled</div>}
+                {autoResult.conflicts.length > 0 && <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', marginTop: 4 }}>{autoResult.conflicts.length} teacher{autoResult.conflicts.length !== 1 ? 's' : ''} couldn't be scheduled</div>}
               </div>
               <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1, padding: 'clamp(12px,1.8vw,18px) clamp(20px,2.8vw,28px)' }}>
                 {autoResult.picks.map((p, i) => (
@@ -818,14 +823,14 @@ export default function ParentDashboard() {
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F47920', flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#1B3F7A' }}>{titleName(p.teacher_name)}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', marginTop: 1 }}>{fmt(p.start_time)} – {fmt(p.end_time)}</div>
+                      <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#6B7280', marginTop: 1 }}>{fmt(p.start_time)} – {fmt(p.end_time)}</div>
                     </div>
-                    <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, color: '#C45A0A', background: '#FFF0E6', padding: '2px 8px', borderRadius: 20, border: '1.5px dashed #F47920' }}>In cart</div>
+                    <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', fontWeight: 700, color: '#C45A0A', background: '#FFF0E6', padding: '2px 8px', borderRadius: 20, border: '1.5px dashed #F47920' }}>In cart</div>
                   </div>
                 ))}
                 {autoResult.conflicts.length > 0 && (
                   <div style={{ marginTop: autoResult.picks.length > 0 ? 14 : 0, background: '#F9FAFB', borderRadius: 8, padding: '12px 14px' }}>
-                    <div style={{ fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.5px' }}>Could not schedule</div>
+                    <div style={{ fontSize: 'clamp(var(--dash-fs-9, 12px),1.1vw,12px)', fontWeight: 700, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.5px' }}>Could not schedule</div>
                     {autoResult.conflicts.map((name, i) => <div key={i} style={{ fontSize: 'clamp(12px,1.5vw,15px)', color: '#6B7280', padding: '4px 0', borderBottom: i < autoResult.conflicts.length - 1 ? '1px solid #E5E7EB' : 'none' }}>{name}</div>)}
                   </div>
                 )}
@@ -884,7 +889,7 @@ export default function ParentDashboard() {
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F87171', flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 600, color: '#1B3F7A' }}>{titleName(teacherName)}</div>
-                      <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#6B7280', marginTop: 1, textTransform: 'capitalize' }}>{reason}</div>
+                      <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: '#6B7280', marginTop: 1, textTransform: 'capitalize' }}>{reason}</div>
                     </div>
                   </div>
                 )

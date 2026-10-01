@@ -1,0 +1,89 @@
+/*
+ * Dashboard chrome: the one place for viewport-size layout rules shared by
+ * the Parent, Teacher and Admin dashboards.
+ *
+ * The dashboards are styled inline, and an inline style beats any stylesheet
+ * rule unless that rule is !important. So the chrome classes below do nothing
+ * by default (the inline styles are the default look) and the media queries
+ * override them with !important. Outside these queries every dashboard
+ * renders exactly as its inline styles say.
+ *
+ * "Short" = a laptop/tablet-landscape window under 820px tall. The 1000px
+ * width floor keeps phones (including landscape phones) on their own layout.
+ */
+
+/* ---- Minimum text size --------------------------------------------------
+ * Parent dashboard text that used to bottom out at 9-11px reads its floor
+ * from these, e.g. clamp(var(--dash-fs-11, 12px), 1.3vw, 14px). Unset, the
+ * floor is 12px. Phones keep their original floors so the mobile layout is
+ * unchanged (12px there wraps the header and costs two grid rows). */
+@media (max-width: 640px) {
+  :root { --dash-fs-9: 9px; --dash-fs-10: 10px; --dash-fs-11: 11px; }
+}
+
+/* Parent grid header cells: a fixed width (not just min-width) so a long
+ * teacher name or subject wraps instead of widening its column. Above phone
+ * width only; equals the min-width, so columns that fit are unchanged. */
+@media (min-width: 641px) {
+  .pd-th { width: clamp(80px, 9vw, 110px); }
+}
+
+/* ---- Wider parent card on laptop widths ------------------------------------
+ * 9 teacher columns need ~1070px. Below 1000px the card already fits its
+ * columns; at 1536px+ the original 960px card is kept as-is. */
+@media (min-width: 1000px) and (max-width: 1535px) {
+  .pd-card { width: min(96vw, 1200px) !important; }
+}
+
+/* ---- Short viewports: compact chrome --------------------------------------- */
+@media (min-width: 1000px) and (max-height: 820px) {
+  /* Card: thin page margins, fill the height they free up. */
+  .dash-shell {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    height: calc(100svh - 16px) !important;
+  }
+
+  /* Orange header */
+  .dash-topbar { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .dash-avatar { width: 34px !important; height: 34px !important; font-size: 13px !important; }
+  .dash-title { font-size: 17px !important; }
+  .dash-subtitle { font-size: 12px !important; margin-top: 0 !important; }
+  .dash-icon-btn { width: 32px !important; height: 32px !important; }
+  .dash-signout { min-height: 32px !important; padding-top: 4px !important; padding-bottom: 4px !important; }
+  .dash-logo { height: 26px !important; }
+  .dash-badge { padding-top: 3px !important; padding-bottom: 3px !important; font-size: 14px !important; }
+
+  /* Strips directly under the header (teacher "Up next", admin stats) */
+  .dash-strip { padding-top: 5px !important; padding-bottom: 5px !important; }
+  .dash-stat-value { font-size: 19px !important; }
+
+  /* Tab bar */
+  .dash-tab { padding-top: 8px !important; padding-bottom: 8px !important; font-size: 15px !important; }
+
+  /* Single-line bottom bars (admin) */
+  .dash-footbar { padding-top: 5px !important; padding-bottom: 5px !important; }
+
+  /* Parent: child toggle / auto-schedule row */
+  .pd-actionbar { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .pd-actionbar-btn { padding-top: 5px !important; padding-bottom: 5px !important; }
+
+  /* Parent: legend + booked-count/Confirm become ONE row. The wrapper is a
+   * plain block by default, so the two rows stack exactly as before. */
+  .pd-footer {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #F4C099;
+    background: #FFF8F3;
+  }
+  .pd-footer > .pd-legend,
+  .pd-footer > .pd-bottombar {
+    border-top: none !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .pd-footer > .pd-legend { flex: 1 1 auto; min-width: 0; padding-right: 0 !important; }
+  .pd-footer > .pd-bottombar { flex: 0 0 auto; flex-wrap: nowrap !important; gap: 12px !important; padding-left: 0 !important; }
+  .pd-confirm { padding-top: 7px !important; padding-bottom: 7px !important; }
+}

@@ -387,15 +387,15 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: 'system-ui,sans-serif' }}>
-      <div style={{ background: '#fff', border: '1px solid #F4C099', borderRadius: 'clamp(10px,1.5vw,18px)', overflow: 'hidden', width: 'min(96vw,860px)', margin: 'clamp(10px,2vw,24px) auto', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
+      <div className="dash-shell" style={{ background: '#fff', border: '1px solid #F4C099', borderRadius: 'clamp(10px,1.5vw,18px)', overflow: 'hidden', width: 'min(96vw,860px)', margin: 'clamp(10px,2vw,24px) auto', display: 'flex', flexDirection: 'column', height: 'calc(100svh - clamp(20px,4vw,40px))' }}>
 
         {/* TOPBAR */}
-        <div style={{ padding: 'clamp(8px,1.2vw,16px) clamp(12px,2vw,24px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
+        <div className="dash-topbar" style={{ padding: 'clamp(8px,1.2vw,16px) clamp(12px,2vw,24px)', background: '#F47920', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,16px)' }}>
-            <div style={{ width: 'clamp(28px,3.5vw,44px)', height: 'clamp(28px,3.5vw,44px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(9px,1.1vw,13px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>AD</div>
+            <div className="dash-avatar" style={{ width: 'clamp(28px,3.5vw,44px)', height: 'clamp(28px,3.5vw,44px)', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(9px,1.1vw,13px)', fontWeight: 700, color: '#F47920', flexShrink: 0 }}>AD</div>
             <div>
-              <div style={{ fontSize: 'clamp(12px,1.5vw,18px)', fontWeight: 600, color: '#fff' }}>Inventure Academy</div>
-              <div style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="dash-title" style={{ fontSize: 'clamp(12px,1.5vw,18px)', fontWeight: 600, color: '#fff' }}>Inventure Academy</div>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(9px,1.1vw,13px)', color: '#FFE0C0', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Admin · PTM {formatPtmDate(ptmDate)}</span>
                 <button onClick={() => { setPtmDraft(ptmDate || ''); setPtmConfirm(false); setPtmModalOpen(true) }}
                   style={{ fontSize: 'clamp(8px,1vw,11px)', fontWeight: 700, padding: '2px 8px', borderRadius: 12, background: 'rgba(255,255,255,.25)', border: '1px solid rgba(255,255,255,.5)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Edit date</button>
@@ -403,16 +403,16 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)' }}>
-            <button onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
-            <img src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
+            <button className="dash-signout" onClick={logoutUser} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,fontSize:'clamp(12px,1.4vw,14px)',fontWeight:600,padding:'clamp(6px,1vw,8px) clamp(14px,1.8vw,18px)',borderRadius:20,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.4)',color:'#fff',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>Sign out</button>
+            <img className="dash-logo" src={LOGO_SMALL} style={{ height: 'clamp(28px,3.5vw,44px)', width: 'auto', opacity: .95 }} alt="Inventure" />
           </div>
         </div>
 
         {/* STATS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
           {[{ label: 'Teachers', value: teachers.length }, { label: 'Bookings', value: totalBookings }, { label: 'Total slots', value: totalSlots }, { label: 'Avg fill rate', value: `${avgFill}%` }].map((s, i) => (
-            <div key={i} style={{ flex: 1, padding: 'clamp(6px,1vw,12px) 0', textAlign: 'center', borderRight: i < 3 ? '1px solid #F4C099' : 'none' }}>
-              <div style={{ fontSize: 'clamp(16px,2.2vw,26px)', fontWeight: 700, color: '#1B3F7A' }}>{s.value}</div>
+            <div key={i} className="dash-strip" style={{ flex: 1, padding: 'clamp(6px,1vw,12px) 0', textAlign: 'center', borderRight: i < 3 ? '1px solid #F4C099' : 'none' }}>
+              <div className="dash-stat-value" style={{ fontSize: 'clamp(16px,2.2vw,26px)', fontWeight: 700, color: '#1B3F7A' }}>{s.value}</div>
               <div style={{ fontSize: 'clamp(8px,1vw,11px)', color: '#6B7280', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
@@ -421,7 +421,7 @@ export default function AdminDashboard() {
         {/* TABS */}
         <div style={{ display: 'flex', borderBottom: '1px solid #F4C099', flexShrink: 0 }}>
           {[['o','Overview'],['b','All bookings'],['u',`Hasn't booked${unbooked.count ? ` (${unbooked.count})` : ''}`],['export','Export'], ...(isDemoAdmin ? [['demo','Demo']] : [])].map(([key, lbl]) => (
-            <div key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#6B7280', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
+            <div key={key} className="dash-tab" onClick={() => setTab(key)} style={{ flex: 1, padding: 'clamp(10px,1.5vw,16px)', textAlign: 'center', fontSize: 'clamp(12px,1.5vw,16px)', fontWeight: 600, cursor: 'pointer', color: tab === key ? '#F47920' : '#6B7280', borderBottom: `3px solid ${tab === key ? '#F47920' : 'transparent'}`, background: tab === key ? '#FFF8F3' : '#fff', transition: 'all .15s' }}>{lbl}</div>
           ))}
         </div>
 
@@ -927,7 +927,7 @@ export default function AdminDashboard() {
         )}
 
         {/* BOTTOM BAR */}
-        <div style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
+        <div className="dash-footbar" style={{ padding: 'clamp(8px,1.2vw,14px) clamp(10px,1.5vw,18px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F3', borderTop: '1px solid #F4C099', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
           <span style={{ fontSize: 'clamp(11px,1.4vw,16px)', color: '#C45A0A', fontWeight: 500 }}>{totalBookings} bookings · {formatPtmDate(ptmDate)}</span>
         </div>
       </div>
