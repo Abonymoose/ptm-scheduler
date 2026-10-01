@@ -4,6 +4,7 @@ import { getSlots } from '../api/slots'
 import { batchBooking, getMyBookings, cancelBooking, autoSchedule } from '../api/bookings'
 import { getMyNotes, saveNote as saveNoteApi } from '../api/notes'
 import { getMe } from '../api/auth'
+import { getChildren } from '../api/parent'
 import { formatPtmDate } from '../utils/ptmDate'
 import { LOGO_LARGE } from '../assets/logos'
 import { titleName } from '../utils/teacherTitle'
@@ -18,30 +19,21 @@ const noteIcon = filled => (
   </svg>
 )
 
-const PARSHV_TEACHERS = ['Sandhya Chhetri','Helen Gilbert','Priya Naidu','Susan Christi','Anwesha Basu','Anthony Samuel','Sunaina Naugain','Shubha S','Muneezah Mattu']
-const DHRITI_TEACHERS = ['Kavya Sharma','Rina Patel','Deepa Nair','Preethi Rao','Anjali Menon','Swati Joshi']
+// Accent colours by child position (orange, blue), cycling past two children.
+// `cls` is the booked-cell class the grid styles key off.
+const CHILD_COLOURS = [
+  { cls: 'child1', accent: '#F47920', bg: '#FFF0E6', text: '#C45A0A' },
+  { cls: 'child2', accent: '#2563EB', bg: '#EFF6FF', text: '#1D4ED8' },
+]
+const childColour = idx => CHILD_COLOURS[idx % CHILD_COLOURS.length]
+const firstName = name => (name || '').split(' ')[0]
 
-const CHILDREN = {
-  p: { label: 'Parshv', student_name: 'Parshv Mehta', section: '7C', teachers: PARSHV_TEACHERS },
-  d: { label: 'Dhriti', student_name: 'Dhriti Mehta', section: '4A', teachers: DHRITI_TEACHERS },
+// Index of the child a booking is for: exact student + section first, then
+// section alone (bookings made before students existed carry only that).
+const childIndexFor = (children, bk) => {
+  const exact = children.findIndex(c => c.section === bk?.section && c.name === bk?.student_name)
+  return exact !== -1 ? exact : children.findIndex(c => c.section === bk?.section)
 }
-
-const CHILD_SUBJECTS = {
-  'Sandhya Chhetri':'Chemistry','Helen Gilbert':'Computers','Priya Naidu':'History/Civics',
-  'Susan Christi':'English','Anwesha Basu':'Physics','Anthony Samuel':'Biology',
-  'Sunaina Naugain':'French','Shubha S':'Mathematics','Muneezah Mattu':'Theme/EVS',
-  'Kavya Sharma':'Theme/EVS','Rina Patel':'Mathematics','Deepa Nair':'French',
-  'Preethi Rao':'English','Anjali Menon':'Kannada','Swati Joshi':'Computers',
-}
-
-const childKey = bk => {
-  const sec = bk?.section || ''
-  if (sec.startsWith('7')) return 'p'
-  if (sec.startsWith('4')) return 'd'
-  return null
-}
-const CHILD_ACCENT = { p: '#F47920', d: '#2563EB' }
-const CHILD_PILL = { p: { bg: '#FFF0E6', text: '#C45A0A' }, d: { bg: '#EFF6FF', text: '#1D4ED8' } }
 
 const FAIL_REASON = {
   blocked: 'blocked by teacher',
@@ -97,7 +89,9 @@ export default function ParentDashboard() {
   const [selectedTeachers, setSelectedTeachers] = useState(new Set())
   const [welcomeModal, setWelcomeModal] = useState(false)
   const [welcomeChecked, setWelcomeChecked] = useState(false)
-  const [activeChild, setActiveChild] = useState('p')
+  const [children, setChildren] = useState([])
+  const [childrenLoaded, setChildrenLoaded] = useState(false)
+  const [activeChild, setActiveChild] = useState(null)   // student id
   const [colourByChild, setColourByChild] = useState(false)
   const [slotInfoModal, setSlotInfoModal] = useState(null)
   const [cart, setCart] = useState([])
@@ -147,21 +141,24 @@ export default function ParentDashboard() {
 
   // Auto-scroll when parent switches the active child pill
   useEffect(() => {
-    if (isFirstMount.current) { isFirstMount.current = false; return }
-    if (tab !== 'grid' || !slots.length) return
+    // The first child is selected once /parent/children loads; that initial
+    // selection shouldn't scroll, only later switches.
+    if (isFirstMount.current) { if (activeChild) isFirstMount.current = false; return }
+    const c = children.find(k => k.id === activeChild)
+    if (tab !== 'grid' || !slots.length || !c) return
 
-    const c = CHILDREN[activeChild]
-    const prefix = activeChild === 'p' ? '7' : '4'
+    const idx = children.indexOf(c)
     const childBookings = bookings
-      .filter(bk => bk.status !== 'cancelled' && (bk.section || '').startsWith(prefix))
+      .filter(bk => bk.status !== 'cancelled' && childIndexFor(children, bk) === idx)
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
 
     let targetTime = null
     if (childBookings.length > 0) {
       targetTime = childBookings[0].start_time
     } else {
+      const ids = new Set(c.teachers.map(t => t.id))
       const childGroups = {}
-      slots.filter(s => c.teachers.some(t => s.teacher_name?.includes(t))).forEach(s => {
+      slots.filter(s => ids.has(s.teacher_id)).forEach(s => {
         if (!childGroups[s.teacher_name]) childGroups[s.teacher_name] = []
         childGroups[s.teacher_name].push(s)
       })
@@ -193,6 +190,13 @@ export default function ParentDashboard() {
   }
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2500) }
+
+  useEffect(() => {
+    getChildren()
+      .then(kids => { setChildren(kids); if (kids.length) setActiveChild(kids[0].id) })
+      .catch(() => showToast('Failed to load your children'))
+      .finally(() => setChildrenLoaded(true))
+  }, [])
 
   // --- Notes ---
   const noteIds = new Set(notes.map(n => n.booking_id))
@@ -238,29 +242,32 @@ export default function ParentDashboard() {
   const cartStartTimes = new Set(cart.map(c => c.start_time))
   const cartTeacherNames = new Set(cart.map(c => c.teacher_name))
 
-  const groupByTeacher = (teacherList) => {
+  const groupByTeacher = (teacherIds) => {
     const map = {}
-    slots.filter(s => teacherList.some(t => s.teacher_name?.includes(t))).forEach(s => {
+    slots.filter(s => teacherIds.has(s.teacher_id)).forEach(s => {
       if (!map[s.teacher_name]) map[s.teacher_name] = []
       map[s.teacher_name].push(s)
     })
     return map
   }
 
-  const child = CHILDREN[activeChild]
-  const currentTeachers = child.teachers
-  const teacherGroups = groupByTeacher(currentTeachers)
+  const childIdx = children.findIndex(c => c.id === activeChild)
+  const child = childIdx === -1 ? null : children[childIdx]
+  const colour = childColour(Math.max(childIdx, 0))
+  const currentTeacherIds = new Set(child ? child.teachers.map(t => t.id) : [])
+  const subjectByName = Object.fromEntries(children.flatMap(c => c.teachers).map(t => [t.name, t.subject || '']))
+  const teacherGroups = groupByTeacher(currentTeacherIds)
   const teachers = Object.keys(teacherGroups)
   const allTimes = [...new Set(Object.values(teacherGroups).flat().map(s => s.start_time))].sort()
 
   const teacherOptions = [...new Map(slots.map(s => [s.teacher_id, s.teacher_name])).entries()]
     .map(([id, name]) => ({ id, name }))
-    .filter(t => currentTeachers.some(ct => t.name?.includes(ct)))
+    .filter(t => currentTeacherIds.has(t.id))
 
   const slotClass = slot => {
     const isBooked = bookedSlotIds.has(slot.id)
     const isInCart = cartSlotIds.has(slot.id)
-    if (isBooked) return activeChild === 'p' ? 'child1' : 'child2'
+    if (isBooked) return colour.cls
     if (isInCart) return 'cart'
     if (slot.is_blocked) return 'taken'
     if (slot.booked_count >= slot.capacity) return 'taken'
@@ -286,7 +293,7 @@ export default function ParentDashboard() {
     }
     setCart(prev => [...prev, {
       slot_id: slot.id,
-      student_name: child.student_name,
+      student_name: child.name,
       section: child.section,
       start_time: slot.start_time,
       end_time: slot.end_time,
@@ -389,7 +396,7 @@ export default function ParentDashboard() {
   const handleAutoSchedule = async () => {
     setAutoScheduling(true)
     try {
-      const result = await autoSchedule([...selectedTeachers], { student_name: child.student_name, section: child.section }, true)
+      const result = await autoSchedule([...selectedTeachers], { student_name: child.name, section: child.section }, true)
       const picks = result.picks || []
       const existingSlotIds = new Set(cart.map(c => c.slot_id))
       const existingStartTimes = new Set(cart.map(c => c.start_time))
@@ -398,7 +405,7 @@ export default function ParentDashboard() {
         .filter(p => !existingSlotIds.has(p.slot_id) && !existingStartTimes.has(p.start_time))
         .map(p => ({
           slot_id: p.slot_id,
-          student_name: child.student_name,
+          student_name: child.name,
           section: child.section,
           start_time: p.start_time,
           end_time: p.end_time,
@@ -456,8 +463,8 @@ export default function ParentDashboard() {
             {/* Action bar */}
             <div className="custom-scroll" style={{ padding: 'clamp(10px,1.4vw,16px) clamp(16px,2.5vw,28px)', background: '#FFF8F3', borderBottom: '1px solid #F4C099', display: 'flex', alignItems: 'center', gap: 'clamp(8px,1.2vw,14px)', flexWrap: 'nowrap', overflowX: 'auto', flexShrink: 0 }}>
               <div style={{ display: 'flex', gap: 4, background: '#FDEBDA', borderRadius: 50, padding: 3, flexShrink: 0 }}>
-                {Object.entries(CHILDREN).map(([key, c]) => (
-                  <button key={key} onClick={() => setActiveChild(key)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === key ? (key === 'p' ? '#F47920' : '#2563EB') : 'transparent', color: activeChild === key ? '#fff' : '#C45A0A', boxShadow: activeChild === key ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{c.label} · {c.section}</button>
+                {children.map((c, i) => (
+                  <button key={c.id} onClick={() => setActiveChild(c.id)} style={{ fontSize: 'clamp(11px,1.3vw,15px)', fontWeight: 700, padding: 'clamp(5px,.8vw,9px) clamp(12px,1.6vw,20px)', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all .15s', background: activeChild === c.id ? childColour(i).accent : 'transparent', color: activeChild === c.id ? '#fff' : '#C45A0A', boxShadow: activeChild === c.id ? '0 2px 8px rgba(244,121,32,.3)' : 'none' }}>{firstName(c.name)} · {c.section}</button>
                 ))}
               </div>
               <span style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', fontWeight: 500, whiteSpace: 'nowrap', flexShrink: 0 }}>Tap to add to cart, then Confirm</span>
@@ -473,7 +480,7 @@ export default function ParentDashboard() {
                 grow past the wrapper and trigger that scroll once there are
                 enough teachers to exceed the viewport. */}
             <div className="custom-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', minHeight: 0, pointerEvents: cartAnimating ? 'none' : 'auto' }}>
-              <table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              {child ? (<table style={{ width: 'max-content', minWidth: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead>
                   <tr>
                     <th style={{ width: 'clamp(56px,7vw,74px)', textAlign: 'center', whiteSpace: 'nowrap', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', paddingBottom: 8, fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 600, color: '#6B7280', position: 'sticky', top: 0, zIndex: 5 }}>Time</th>
@@ -481,7 +488,7 @@ export default function ParentDashboard() {
                       <th key={t} style={{ textAlign: 'center', borderBottom: '2px solid #F47920', background: '#FFF8F3', verticalAlign: 'bottom', minWidth: 'clamp(80px,9vw,110px)', position: 'sticky', top: 0, zIndex: 5, padding: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%', padding: '8px 4px' }}>
                           <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', fontWeight: 700, color: '#1B3F7A', textAlign: 'center', wordBreak: 'break-word', lineHeight: 1.2, width: '100%' }}>{titleName(t).split(' ').slice(0, 2).join(' ')}</span>
-                          <span style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#6B7280', textAlign: 'center', lineHeight: 1.1 }}>{CHILD_SUBJECTS[t.replace(/^(Ms\.|Mr\.|Dr\.)/,'').trim()] || ''}</span>
+                          <span style={{ fontSize: 'clamp(9px,1vw,12px)', color: '#6B7280', textAlign: 'center', lineHeight: 1.1 }}>{subjectByName[t] || ''}</span>
                         </div>
                       </th>
                     ))}
@@ -550,14 +557,18 @@ export default function ParentDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>) : childrenLoaded && (
+                <div style={{ padding: 'clamp(32px,5vw,60px)', textAlign: 'center', color: '#C4B5A5', fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 500 }}>
+                  No students are linked to your account yet. Please contact the school.
+                </div>
+              )}
             </div>
 
             {/* Legend */}
             <div style={{ display: 'flex', gap: 'clamp(10px,1.5vw,18px)', padding: 'clamp(10px,1.4vw,14px) clamp(16px,2.5vw,28px)', borderTop: '1px solid #F4C099', background: '#FFF8F3', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#6B7280', fontWeight: 600, marginRight: 4 }}>Legend:</span>
               {[
-                { label: child.label, bg: activeChild === 'p' ? '#FFF0E6' : '#EFF6FF', border: activeChild === 'p' ? '#F47920' : '#2563EB', dashed: false },
+                ...(child ? [{ label: firstName(child.name), bg: colour.bg, border: colour.accent, dashed: false }] : []),
                 { label: 'In cart', bg: '#FFF8F3', border: '#F47920', dashed: true },
                 { label: 'Taken', bg: '#F5F0EC', border: '#E5D5C5', dashed: false },
               ].map(l => (
@@ -623,9 +634,10 @@ export default function ParentDashboard() {
                 </div>
               ) : [...activeBookings].sort((a,b) => new Date(a.start_time) - new Date(b.start_time)).map(bk => {
                 const isDone = done[bk.id]
-                const kid = colourByChild ? childKey(bk) : null
-                const accent = kid ? CHILD_ACCENT[kid] : null
-                const childName = kid ? ((bk.student_name || '').split(' ')[0] || CHILDREN[kid].label) : null
+                const kidIdx = colourByChild ? childIndexFor(children, bk) : -1
+                const kid = kidIdx === -1 ? null : childColour(kidIdx)
+                const accent = kid ? kid.accent : null
+                const childName = kid ? (firstName(bk.student_name) || firstName(children[kidIdx].name)) : null
                 const barColor = isDone ? '#E5E5E5' : accent || '#F4C099'
                 return (
                   <div key={bk.id} style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #F4EDE4', minHeight: 'clamp(62px,8vw,80px)', background: isDone ? '#FAFAFA' : '#fff', transition: 'background .12s' }}>
@@ -636,7 +648,7 @@ export default function ParentDashboard() {
                     <div style={{ flex: 1, minWidth: 0, padding: 'clamp(8px,1.2vw,12px) clamp(14px,2vw,18px)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none', minWidth: 0 }}>{titleName(bk.teacher_name)}</div>
-                        {kid && <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px clamp(6px,.9vw,9px)', borderRadius: 20, background: CHILD_PILL[kid].bg, color: CHILD_PILL[kid].text }}>{childName}</span>}
+                        {kid && <span style={{ flexShrink: 0, fontSize: 'clamp(9px,1.1vw,12px)', fontWeight: 700, padding: '2px clamp(6px,.9vw,9px)', borderRadius: 20, background: kid.bg, color: kid.text }}>{childName}</span>}
                       </div>
                       <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{fmt(bk.start_time)} – {fmt(bk.end_time)}{bk.teacher_venue ? <span style={{ marginLeft: 8 }}>· {bk.teacher_venue}</span> : null}</div>
                     </div>
@@ -774,7 +786,7 @@ export default function ParentDashboard() {
               <div className="custom-scroll" style={{ overflowY: 'auto', flex: 1 }}>
                 {teacherOptions.map((t, i) => {
                   const checked = selectedTeachers.has(t.id)
-                  const subject = CHILD_SUBJECTS[t.name?.replace(/^(Ms\.|Mr\.|Dr\.)\s*/,'').trim()] || ''
+                  const subject = subjectByName[t.name] || ''
                   return (
                     <div key={t.id} onClick={() => toggleTeacher(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'clamp(10px,1.4vw,14px) clamp(20px,2.8vw,28px)', cursor: 'pointer', borderBottom: i < teacherOptions.length - 1 ? '1px solid #FDE9D4' : 'none', background: checked ? '#FFF8F3' : '#fff', transition: 'background .1s' }}>
                       <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: checked ? '2px solid #F47920' : '1.5px solid #F4C099', background: checked ? '#F47920' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .1s' }}>

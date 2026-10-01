@@ -199,7 +199,7 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     token = create_access_token({
         "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
         "name": user.name, "section": user.section, "grade": user.grade,
-        "family_id": user.family_id, "parent_name": user.parent_name,
+        "family_id": str(user.family_id) if user.family_id else None, "parent_name": user.parent_name,
     })
     return {"access_token": token, "token_type": "bearer"}
 
@@ -262,7 +262,7 @@ async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
         token = create_access_token({
             "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
             "name": user.name, "section": user.section, "grade": user.grade,
-            "family_id": user.family_id, "parent_name": user.parent_name,
+            "family_id": str(user.family_id) if user.family_id else None, "parent_name": user.parent_name,
         })
         return {"access_token": token, "token_type": "bearer", "role": user.role, "name": user.name}
 
@@ -320,7 +320,7 @@ async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db))
     token = create_access_token({
         "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
         "name": user.name, "section": user.section, "grade": user.grade,
-        "family_id": user.family_id, "parent_name": user.parent_name,
+        "family_id": str(user.family_id) if user.family_id else None, "parent_name": user.parent_name,
     })
     return {"access_token": token, "token_type": "bearer", "role": user.role, "name": user.name}
 

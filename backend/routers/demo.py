@@ -457,7 +457,7 @@ async def impersonate(
         {
             "sub": str(target.id), "role": target.role, "school_id": str(target.school_id),
             "name": target.name, "section": target.section, "grade": target.grade,
-            "family_id": target.family_id, "parent_name": target.parent_name,
+            "family_id": str(target.family_id) if target.family_id else None, "parent_name": target.parent_name,
             "impersonated_by": current_user["sub"],
         },
         expires_minutes=IMPERSONATION_EXPIRE_MINUTES,
