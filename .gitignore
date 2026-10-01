@@ -34,3 +34,6 @@ dist-ssr/
 
 ptmnow-build-plan.md
 ptmnow-build-plan.txt
+
+# Local DB connection notes (credentials): never commit
+neondb.txt
