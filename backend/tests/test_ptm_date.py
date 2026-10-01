@@ -87,7 +87,7 @@ def test_booking_survives_shift_and_reflects_new_date(client, seed):
     assert (slot.start_time.hour, slot.start_time.minute) == (8, 10)
 
 
-def test_reset_slots_uses_school_ptm_date(client, seed):
+def test_reset_slots_uses_school_ptm_date(client, seed, demo_on):
     client.patch("/admin/ptm-date", json={"ptm_date": "2026-05-20"},
                  headers=auth(seed["tokens"]["admin"]))
     r = client.post("/demo/reset-slots", headers=auth(seed["tokens"]["admin"]))
@@ -97,7 +97,7 @@ def test_reset_slots_uses_school_ptm_date(client, seed):
     assert dates == {"2026-05-20"}
 
 
-def test_add_teacher_uses_school_ptm_date(client, seed):
+def test_add_teacher_uses_school_ptm_date(client, seed, demo_on):
     client.patch("/admin/ptm-date", json={"ptm_date": "2026-05-20"},
                  headers=auth(seed["tokens"]["admin"]))
     r = client.post("/demo/add-teacher", json={"name": "New Teacher", "email": "newt@test.edu"},

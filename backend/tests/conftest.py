@@ -58,6 +58,10 @@ from auth import create_access_token, hash_password  # noqa: E402
 # by the autouse `no_real_email` fixture below.
 # The demo secret — tests set it per-case via monkeypatch; default off.
 os.environ.pop("DEMO_SECRET_CODE", None)
+# Demo routes are off unless a test opts in via the `demo_on` fixture. Popped
+# after the app import, since main.py load_dotenv()s the local .env.
+os.environ.pop("DEMO_ENABLED", None)
+os.environ.pop("DEMO_ADMIN_EMAILS", None)
 
 # --- A dedicated seeding engine (NullPool → a fresh connection per asyncio.run,
 #     so it never reuses a connection across event loops).
@@ -182,6 +186,13 @@ def seed():
             "parent2": _tok(PARENT2_ID, "parent", "Parent Two"),
         },
     }
+
+
+@pytest.fixture
+def demo_on(monkeypatch):
+    """Enable /demo and allowlist the seeded admin (admin@test.edu)."""
+    monkeypatch.setenv("DEMO_ENABLED", "true")
+    monkeypatch.setenv("DEMO_ADMIN_EMAILS", "admin@test.edu")
 
 
 def auth(token):

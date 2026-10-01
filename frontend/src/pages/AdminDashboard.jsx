@@ -5,9 +5,8 @@ import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin, getTeacherExport, getParentExport } from '../api/admin'
-import { wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate, getEmailConfig, setEmailConfig as setEmailConfigApi } from '../api/demo'
+import { getDemoStatus, wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate, getEmailConfig, setEmailConfig as setEmailConfigApi } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
-import { getMe } from '../api/auth'
 import InfoButton from '../components/InfoButton'
 import ScheduleExport from '../components/export/ScheduleExport'
 
@@ -86,7 +85,7 @@ export default function AdminDashboard() {
   const [ptmDraft, setPtmDraft] = useState('')          // date input value
   const [ptmConfirm, setPtmConfirm] = useState(false)   // showing the "moves all slots" warning
   const [ptmSaving, setPtmSaving] = useState(false)
-  const [adminEmail, setAdminEmail] = useState('')        // for Demo-tab gating
+  const [demoEnabled, setDemoEnabled] = useState(false)   // Demo tab visibility; the server gate is the real check
   const [ptmModalOpen, setPtmModalOpen] = useState(false) // Overview "change PTM date" modal
   const [ovAddOpen, setOvAddOpen] = useState(false)       // Overview add-teacher form
   const [ovAddForm, setOvAddForm] = useState({ title: 'Ms.', name: '', email: '', subject: '' })
@@ -97,7 +96,7 @@ export default function AdminDashboard() {
   const mLongPress = useRef(null)
   const mLongPressFired = useRef(false)
 
-  useEffect(() => { fetchData(); getMe().then(me => setAdminEmail(me.email || '')).catch(() => {}) }, [])
+  useEffect(() => { fetchData(); getDemoStatus().then(r => setDemoEnabled(r.enabled === true)).catch(() => setDemoEnabled(false)) }, [])
   useEffect(() => {
     if (!document.getElementById('custom-scroll-style')) {
       const s = document.createElement('style')
@@ -200,7 +199,11 @@ export default function AdminDashboard() {
     } catch (err) { demoPrint(err.response?.data?.detail || 'Failed to set PTM date.', 'error'); showToast(err.response?.data?.detail || 'Failed to set PTM date') }
     setPtmSaving(false)
   }
-  const isDemoAdmin = adminEmail === 'demo@inventureacademy.com'
+  const isDemoAdmin = demoEnabled
+  // Export picker lists teachers from the slots already loaded, not /demo/users,
+  // so it works for every admin whether or not demo routes are enabled.
+  const exportTeachers = [...new Map(slots.map(s => [s.teacher_id, { id: s.teacher_id, name: s.teacher_name, role: 'teacher' }])).values()]
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   const handleOverviewAddTeacher = async () => {
     if (!ovAddForm.name.trim() || !ovAddForm.email.trim()) { showToast('Name and email are required'); return }
     setOvAddBusy(true)
@@ -218,7 +221,7 @@ export default function AdminDashboard() {
     if (tab === 'demo' && changelog === null) {
       getChangelog().then(setChangelog).catch(() => setChangelog({ days: [], total: 0, error: true }))
     }
-    if ((tab === 'demo' || tab === 'export') && demoUsers === null) {
+    if (tab === 'demo' && demoUsers === null) {
       getDemoUsers().then(setDemoUsers).catch(() => setDemoUsers([]))
     }
     if (tab === 'demo' && emailConfig === null) {
@@ -610,11 +613,11 @@ export default function AdminDashboard() {
             <input value={exportSearch} onChange={e => setExportSearch(e.target.value)} placeholder="Search teachers…"
               style={{ width: '100%', padding: 'clamp(8px,1vw,11px)', border: '1.5px solid #F4C099', borderRadius: 9, fontSize: 'clamp(12px,1.4vw,14px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', marginBottom: 8 }} />
             <div className="custom-scroll" style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #F4C099', borderRadius: 10, marginBottom: 'clamp(14px,2vw,20px)' }}>
-              {demoUsers === null ? <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>Loading…</div>
+              {loading ? <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>Loading…</div>
               : (() => {
                   const q = exportSearch.trim().toLowerCase()
                   // Parent pass isn't demo-ready yet (name/section rendering) -- teachers only here.
-                  const list = demoUsers.filter(u => u.role === 'teacher' && (!q || (u.name || '').toLowerCase().includes(q) || (u.section || '').toLowerCase().includes(q)))
+                  const list = exportTeachers.filter(u => !q || (u.name || '').toLowerCase().includes(q))
                   if (list.length === 0) return <div style={{ color: '#6B7280', fontSize: 13, padding: '10px' }}>No matches.</div>
                   return list.map(u => (
                     <div key={u.id} onClick={() => pickExportUser(u)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: 'clamp(8px,1.1vw,11px) clamp(10px,1.3vw,14px)', cursor: 'pointer', borderBottom: '1px solid #FDE9D4', background: exportPicked?.id === u.id ? '#FFF8F3' : 'transparent' }}

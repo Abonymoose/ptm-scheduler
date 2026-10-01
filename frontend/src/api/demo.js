@@ -52,3 +52,10 @@ export const setEmailConfig = async (overrideTo, allowlist) => {
   const res = await axios.post(`${BASE_URL}/demo/email-config`, { override_to: overrideTo, allowlist }, authHeader())
   return res.data
 }
+
+// { enabled: true } only for an allowlisted admin with DEMO_ENABLED on;
+// anything else is a 404/401/403, which callers treat as disabled.
+export const getDemoStatus = async () => {
+  const res = await axios.get(`${BASE_URL}/demo/status`, authHeader())
+  return res.data
+}

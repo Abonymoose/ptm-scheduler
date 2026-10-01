@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from pydantic import BaseModel
 from database import get_db
-from auth import get_current_user, create_access_token
+from auth import decode_token, create_access_token
 from email_service import get_email_routing, set_email_routing
 import logging
 from datetime import datetime, timezone, timedelta
@@ -13,7 +14,52 @@ import os
 import uuid
 import random
 
-router = APIRouter(prefix="/demo", tags=["demo"])
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _demo_enabled() -> bool:
+    return os.getenv("DEMO_ENABLED", "").strip().lower() == "true"
+
+
+def _demo_admin_emails() -> set[str]:
+    return {e.strip().lower() for e in os.getenv("DEMO_ADMIN_EMAILS", "").split(",") if e.strip()}
+
+
+async def require_demo_access(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Gate for every /demo route, attached at the router so a new route can't
+    skip it. Order matters: the kill switch answers 404 before auth is even
+    looked at, so with DEMO_ENABLED off the routes are indistinguishable from
+    ones that don't exist. Then: valid token, admin role, and an email on the
+    DEMO_ADMIN_EMAILS allowlist — being some school's admin is not enough,
+    because email-config reroutes mail for every school.
+
+    Routes take current_user from this dependency; FastAPI resolves it once
+    per request."""
+    if not _demo_enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    current_user = decode_token(credentials.credentials)
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+    email = (await db.execute(
+        text("SELECT email FROM users WHERE id = :uid AND school_id = :sid AND role = 'admin'"),
+        {"uid": current_user["sub"], "sid": current_user["school_id"]}
+    )).scalar()
+    if not email or email.strip().lower() not in _demo_admin_emails():
+        raise HTTPException(status_code=403, detail="Not allowed")
+    return current_user
+
+
+router = APIRouter(
+    prefix="/demo",
+    tags=["demo"],
+    dependencies=[Depends(require_demo_access)],
+    include_in_schema=False,   # keep demo routes out of /docs and /openapi.json
+)
 
 # Hidden seed parent — every fake booking hangs off this account so demo data is
 # separately wipeable (delete by parent_id). One per school.
@@ -159,19 +205,22 @@ SLOT_DURATION = timedelta(minutes=7)
 SLOTS_PER_TEACHER = 45
 
 
-def _require_admin(current_user: dict):
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admins only")
+@router.get("/status")
+async def demo_status():
+    """Lets AdminDashboard decide whether to show the Demo tab. Behind the
+    same router gate as everything else, so it only ever answers for an
+    allowlisted admin with demo on; anyone else gets the gate's 404/401/403,
+    which the frontend reads as "disabled"."""
+    return {"enabled": True}
 
 
 @router.post("/wipe-bookings")
 async def wipe_bookings(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Delete every booking (confirmed, cancelled, and blocked markers) for the
     admin's school. Returns how many rows were deleted."""
-    _require_admin(current_user)
     result = await db.execute(
         text(
             "DELETE FROM bookings"
@@ -188,11 +237,10 @@ async def wipe_bookings(
 @router.post("/reset-slots")
 async def reset_slots(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Delete all slots for the school (cascading their bookings) and regenerate a
     clean grid: 45 x 7-min slots per teacher starting 08:10 on the PTM date."""
-    _require_admin(current_user)
     sid = current_user["school_id"]
 
     try:
@@ -261,9 +309,8 @@ def _read_handwritten_notes():
 
 
 @router.get("/changelog")
-async def changelog(current_user: dict = Depends(get_current_user)):
+async def changelog(current_user: dict = Depends(require_demo_access)):
     """Hand-written release notes (primary) + raw git commits from the last 7 days."""
-    _require_admin(current_user)
     notes = _read_handwritten_notes()
 
     # Git commits are secondary — if git is unavailable, still return the notes.
@@ -299,10 +346,9 @@ async def changelog(current_user: dict = Depends(get_current_user)):
 async def add_teacher(
     body: AddTeacher,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Create a real teacher in the admin's school + generate their slot grid."""
-    _require_admin(current_user)
     sid = current_user["school_id"]
     email = body.email.strip().lower()
     name = body.name.strip()
@@ -328,11 +374,10 @@ async def add_teacher(
 async def seed_data(
     body: SeedData,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Fill a teacher's FREE slots with fake confirmed bookings (seed parent),
     randomly spread, up to fill_percent. Never touches real or blocked slots."""
-    _require_admin(current_user)
     sid = current_user["school_id"]
     pct = max(0, min(100, body.fill_percent))
 
@@ -368,8 +413,8 @@ async def seed_data(
     # booked on this teacher's other slots.
     existing = (await db.execute(
         text("SELECT DISTINCT b.student_name FROM bookings b JOIN slots s ON b.slot_id = s.id"
-             " WHERE s.teacher_id = :tid AND b.status != 'cancelled' AND b.student_name IS NOT NULL"),
-        {"tid": body.teacher_id}
+             " WHERE s.teacher_id = :tid AND s.school_id = :sid AND b.status != 'cancelled' AND b.student_name IS NOT NULL"),
+        {"tid": body.teacher_id, "sid": sid}
     )).fetchall()
     used_names = {r.student_name for r in existing}
     gen_name = _unique_name_generator(used_names)
@@ -417,11 +462,10 @@ async def seed_data(
 @router.get("/users")
 async def demo_users(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Teachers + parents in the admin's school, for the 'View as' picker.
     (Admins are excluded — they can't be impersonated. Seed parent hidden.)"""
-    _require_admin(current_user)
     rows = (await db.execute(
         text("SELECT id, name, role, section, grade FROM users"
              " WHERE school_id = :sid AND role IN ('teacher','parent') AND email != :seed"
@@ -435,11 +479,10 @@ async def demo_users(
 async def impersonate(
     body: Impersonate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Issue a short-lived token for a teacher/parent in the admin's own school.
     Every guard is server-enforced — the frontend is never trusted."""
-    _require_admin(current_user)
 
     target = (await db.execute(
         text("SELECT id, role, school_id, name, section, grade, family_id, parent_name"
@@ -472,10 +515,9 @@ async def impersonate(
 @router.post("/wipe-seed-data")
 async def wipe_seed_data(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Delete ONLY seeded bookings (parent_id = seed parent). Real bookings survive."""
-    _require_admin(current_user)
     sid = current_user["school_id"]
     seed_row = (await db.execute(
         text("SELECT id FROM users WHERE email = :e AND school_id = :sid"),
@@ -484,8 +526,9 @@ async def wipe_seed_data(
     if not seed_row:
         return {"deleted": 0}
     res = await db.execute(
-        text("DELETE FROM bookings WHERE parent_id = :pid RETURNING id"),
-        {"pid": str(seed_row.id)}
+        text("DELETE FROM bookings WHERE parent_id = :pid"
+             " AND slot_id IN (SELECT id FROM slots WHERE school_id = :sid) RETURNING id"),
+        {"pid": str(seed_row.id), "sid": sid}
     )
     deleted = len(res.fetchall())
     await db.commit()
@@ -495,15 +538,13 @@ async def wipe_seed_data(
 @router.get("/email-config")
 async def get_email_config(
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Current effective email routing (settings-table row, falling back to
     the EMAIL_OVERRIDE_TO/EMAIL_ALLOWLIST env vars) -- for the Demo tab's
-    email routing panel. Never touches or returns SENDGRID_API_KEY. Gated
-    the same as every other /demo endpoint (admin role, not the demo email
-    specifically -- the frontend restricts the Demo tab to that account, but
-    that's a UI convenience, not a distinct auth boundary here)."""
-    _require_admin(current_user)
+    email routing panel. Never touches or returns SENDGRID_API_KEY. The
+    routing is global, not per school, which is why the router gate demands
+    a DEMO_ADMIN_EMAILS superadmin rather than any school's admin."""
     return await get_email_routing(db)
 
 
@@ -511,12 +552,11 @@ async def get_email_config(
 async def set_email_config(
     body: EmailConfigUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_demo_access)
 ):
     """Set email routing at runtime, no server restart needed. An empty
     override_to is written as-is (not skipped) -- that's exactly what the
     Demo tab's "turn redirect off" toggle sends, and it must take effect
     even if EMAIL_OVERRIDE_TO is still set in the environment."""
-    _require_admin(current_user)
     await set_email_routing(db, body.override_to, body.allowlist)
     return await get_email_routing(db)

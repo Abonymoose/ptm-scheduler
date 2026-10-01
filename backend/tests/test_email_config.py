@@ -4,6 +4,11 @@ GET /admin/email-config, and that a POSTed setting actually changes what
 import email_service
 from conftest import auth
 
+import pytest
+
+# Gate behaviour itself is covered in test_demo_gate.py.
+pytestmark = pytest.mark.usefixtures("demo_on")
+
 
 class FakeMail:
     def __init__(self, **kwargs):

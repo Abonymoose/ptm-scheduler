@@ -6,6 +6,11 @@ from sqlalchemy import text
 from conftest import auth, seed_engine
 from auth import decode_token
 
+import pytest
+
+# Gate behaviour itself is covered in test_demo_gate.py.
+pytestmark = pytest.mark.usefixtures("demo_on")
+
 
 def _teacher_slot_ids(client, seed, teacher_id):
     slots = client.get("/slots/all", headers=auth(seed["tokens"]["admin"])).json()
