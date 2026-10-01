@@ -238,7 +238,7 @@ export default function TeacherDashboard() {
   }
 
   const inp = { width: '100%', padding: 'clamp(10px,1.4vw,14px) clamp(12px,1.6vw,16px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', background: '#fff', outline: 'none', boxSizing: 'border-box' }
-  const lbl = { fontSize: 'clamp(11px,1.2vw,13px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4, display: 'block' }
+  const lbl = { fontSize: 'clamp(var(--dash-fs-11, 12px),1.2vw,13px)', fontWeight: 700, color: '#C45A0A', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4, display: 'block' }
 
   return (
     <div style={{ background: '#FFF8F3', minHeight: '100svh', fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
@@ -250,8 +250,8 @@ export default function TeacherDashboard() {
             <div className="dash-avatar" style={{ width: 'clamp(34px,4.5vw,48px)', height: 'clamp(34px,4.5vw,48px)', borderRadius: '50%', background: 'rgba(255,255,255,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.6vw,17px)', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{userInitials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="dash-title" style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
-              <div className="dash-subtitle" style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
-              <div className="dash-subtitle" style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
+              <div className="dash-subtitle" style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
                 {/* Read-only: venue/room is admin-set only (Manage teacher form). */}
                 <span id="venue-text">{venueText}</span>
               </div>
@@ -355,8 +355,8 @@ export default function TeacherDashboard() {
                       <div style={{ width: 'clamp(36px,4.5vw,48px)', height: 'clamp(36px,4.5vw,48px)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'clamp(12px,1.5vw,17px)', fontWeight: 700, flexShrink: 0, background: '#fff', border: '2px solid #F4C099', color: '#F47920', opacity: isDone ? .4 : 1 }}>{bk ? initials(bk.student_name || bk.parent_name) : '—'}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 'clamp(14px,1.8vw,20px)', fontWeight: 700, color: isDone ? '#C4B5A5' : '#1B3F7A', letterSpacing: '-.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: isDone ? 'line-through' : 'none' }}>{bk ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : '(free)'}</div>
-                        <div style={{ fontSize: 'clamp(11px,1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
-                        {attendees.length > 0 && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#C45A0A', fontWeight: 600, marginTop: 2 }}>✓ {attendees.join(', ')}</div>}
+                        <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,15px)', color: '#6B7280', marginTop: 2 }}>{bk ? (bk.parent_name ? `Parent: ${bk.parent_name}` : `${slot.booked_count}/${slot.capacity} booked`) : `${slot.booked_count}/${slot.capacity} booked`}</div>
+                        {attendees.length > 0 && <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: '#C45A0A', fontWeight: 600, marginTop: 2 }}>✓ {attendees.join(', ')}</div>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(10px,1.5vw,16px)', paddingRight: 'clamp(14px,2vw,22px)', flexShrink: 0 }}>
@@ -403,9 +403,9 @@ export default function TeacherDashboard() {
                   <div key={n.booking_id} style={{ padding: 'clamp(12px,1.6vw,18px) clamp(16px,2.5vw,28px)', borderBottom: '1px solid #F4EDE4' }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ fontSize: 'clamp(14px,1.7vw,17px)', fontWeight: 700, color: '#1B3F7A', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.student_name || n.parent_name || 'Meeting'}{n.section ? ` · ${n.section}` : ''}{n.grade != null ? ` · Gr ${n.grade}` : ''}</div>
-                      <div style={{ fontSize: 'clamp(11px,1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
+                      <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,14px)', color: '#C45A0A', fontWeight: 600, flexShrink: 0 }}>{fmtDateTime(n.start_time)}</div>
                     </div>
-                    {n.parent_name && <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>Parent: {n.parent_name}</div>}
+                    {n.parent_name && <div style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', color: '#6B7280', marginTop: 1 }}>Parent: {n.parent_name}</div>}
                     <textarea value={val} onChange={e => setNoteDrafts(prev => ({ ...prev, [n.booking_id]: e.target.value }))} rows={2}
                       placeholder="Write a note…"
                       style={{ width: '100%', marginTop: 8, padding: 'clamp(8px,1vw,12px)', border: '1.5px solid #F4C099', borderRadius: 10, fontSize: 'clamp(13px,1.5vw,15px)', fontFamily: 'inherit', color: '#1B3F7A', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
@@ -499,7 +499,7 @@ export default function TeacherDashboard() {
                         ) : isBooked ? (
                           <>
                             <div style={{ fontSize: 'clamp(13px,1.6vw,16px)', fontWeight: 700, color: '#C45A0A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(bk?.student_name || bk?.parent_name) ? `${bk.student_name || bk.parent_name}${bk.section ? ' · ' + bk.section : ''}` : 'Booked'}</div>
-                            {bk?.parent_name && <div style={{ fontSize: 'clamp(11px,1.3vw,13px)', color: '#6B7280', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
+                            {bk?.parent_name && <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.3vw,13px)', color: '#6B7280', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Parent: {bk.parent_name}</div>}
                           </>
                         ) : (
                           <div style={{ fontSize: 'clamp(13px,1.5vw,15px)', color: '#6B7280', fontWeight: 500 }}>Free</div>
@@ -512,7 +512,7 @@ export default function TeacherDashboard() {
                             style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', fontSize: 21, fontWeight: 300, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>×</button>
                         ) : (
                           <button onClick={e => { e.stopPropagation(); setCancelModal({ id: slot.id, booking_id: bk.booking_id, name: bk.student_name || bk.parent_name }) }}
-                            style={{ fontSize: 'clamp(10px,1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', whiteSpace: 'nowrap' }}>Cancel mtg</button>
+                            style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.1vw,12px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.6vw,6px) clamp(8px,1.1vw,12px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid #FCA5A5', background: '#FEF2F2', color: '#B91C1C', whiteSpace: 'nowrap' }}>Cancel mtg</button>
                         )
                       )}
                       {!inSelect && !isBooked && (
@@ -524,10 +524,10 @@ export default function TeacherDashboard() {
                           </button>
                         ) : (
                           <button onClick={e => { e.stopPropagation(); isBlocked ? handleUnblock(slot.id) : handleBlock(slot.id) }}
-                            style={{ fontSize: 'clamp(10px,1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A', whiteSpace: 'nowrap' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
+                            style={{ fontSize: 'clamp(var(--dash-fs-10, 12px),1.2vw,13px)', fontWeight: 700, flexShrink: 0, padding: 'clamp(4px,.7vw,7px) clamp(9px,1.3vw,14px)', borderRadius: 50, cursor: 'pointer', fontFamily: 'inherit', border: `1.5px solid ${isBlocked ? '#9CA3AF' : '#F4C099'}`, background: '#fff', color: isBlocked ? '#6B7280' : '#C45A0A', whiteSpace: 'nowrap' }}>{isBlocked ? 'Unblock' : 'Block'}</button>
                         )
                       )}
-                      {!isMobile && <div style={{ fontSize: 'clamp(11px,1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#6B7280' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>}
+                      {!isMobile && <div style={{ fontSize: 'clamp(var(--dash-fs-11, 12px),1.2vw,12px)', fontWeight: 700, flexShrink: 0, padding: '3px clamp(7px,1vw,10px)', borderRadius: 20, background: isBlocked ? '#E5E7EB' : isBooked ? '#FFF0E6' : '#F3F4F6', color: isBlocked ? '#6B7280' : isBooked ? '#C45A0A' : '#6B7280' }}>{isBlocked ? 'Blocked' : isBooked ? 'Booked' : 'Free'}</div>}
                     </div>
                   )
                 })

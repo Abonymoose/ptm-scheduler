@@ -13,12 +13,12 @@
  */
 
 /* ---- Minimum text size --------------------------------------------------
- * Parent dashboard text that used to bottom out at 9-11px reads its floor
+ * Dashboard text that used to bottom out at 8-11px reads its floor
  * from these, e.g. clamp(var(--dash-fs-11, 12px), 1.3vw, 14px). Unset, the
  * floor is 12px. Phones keep their original floors so the mobile layout is
  * unchanged (12px there wraps the header and costs two grid rows). */
 @media (max-width: 640px) {
-  :root { --dash-fs-9: 9px; --dash-fs-10: 10px; --dash-fs-11: 11px; }
+  :root { --dash-fs-8: 8px; --dash-fs-9: 9px; --dash-fs-10: 10px; --dash-fs-11: 11px; }
 }
 
 /* Parent grid header cells: a fixed width (not just min-width) so a long
@@ -28,10 +28,10 @@
   .pd-th { width: clamp(80px, 9vw, 110px); }
 }
 
-/* ---- Wider parent card on laptop widths ------------------------------------
+/* ---- Wider parent card ------------------------------------------------------
  * 9 teacher columns need ~1070px. Below 1000px the card already fits its
- * columns; at 1536px+ the original 960px card is kept as-is. */
-@media (min-width: 1000px) and (max-width: 1535px) {
+ * columns. */
+@media (min-width: 1000px) {
   .pd-card { width: min(96vw, 1200px) !important; }
 }
 
