@@ -341,7 +341,7 @@ def _format_slot_datetime(start_time: datetime) -> str:
     email is about. Uses the datetime's own stored hour/minute/day fields
     directly, with NO timezone conversion: slot times are inserted elsewhere
     in this codebase as naive local (IST) clock values merely labelled UTC
-    (see routers/demo.py's PTM_START, "# 08:10 on PTM day"), not real
+    (see teachers.py's PTM_START, "# 08:10 on PTM day"), not real
     UTC instants — the same convention the frontend's `fmt()` relies on.
     Converting via .astimezone() here would silently shift the displayed
     time by 5:30 and make this email wrong. This mirrors _send_time_ist's

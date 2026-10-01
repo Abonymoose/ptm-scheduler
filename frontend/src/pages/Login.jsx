@@ -4,11 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { requestOtp, verifyOtp, adminLogin } from '../api/auth'
 import { LOGO_LARGE } from '../assets/logos'
 
-// Demo email is public (not a secret); only the code (DEMO_SECRET_CODE) is, and
-// that's checked server-side. Routing this email to the code step lets the demo
-// admin type the secret code — request-otp would otherwise reject an admin email.
-const DEMO_EMAIL = 'demo@inventureacademy.com'
-
 // Resend UI on the code step. The server enforces both limits for real (30s
 // cooldown, 3-per-15-min cap) — these mirror them client-side purely so the
 // button's label/disabled state look right; a stale client guess never lets
@@ -74,9 +69,6 @@ export default function Login({ branded = false } = {}) {
     if (sendingRef.current) return  // synchronous re-entrancy guard, before anything else
     setError('')
     if (!email) { setError('Please enter your email.'); return }
-    // Demo login: skip request-otp (admin emails are rejected there) and go straight
-    // to code entry; the typed code is checked against DEMO_SECRET_CODE in verify-otp.
-    if (email === DEMO_EMAIL) { setStep(2); return }
     if (isAdmin && !password) { setError('Please enter your password.'); return }
     sendingRef.current = true
     setLoading(true)

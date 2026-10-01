@@ -1,8 +1,9 @@
 """Ensure demo@inventureacademy.com exists as a real admin account.
 
 Usage:  python ensure_demo_user.py prod   (or 'test')
-Idempotent — safe to re-run. The demo user logs in via DEMO_SECRET_CODE, so the
-stored password is irrelevant (a random hash).
+Idempotent — safe to re-run. The stored password is a random hash nobody
+knows, and there is no longer a DEMO_SECRET_CODE login, so this account can't
+sign in until it is given a real password (admins use password + emailed OTP).
 """
 import asyncio, os, sys, uuid, secrets
 from dotenv import load_dotenv

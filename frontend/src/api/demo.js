@@ -18,11 +18,6 @@ export const getChangelog = async () => {
   return res.data
 }
 
-export const addTeacher = async (payload) => {
-  const res = await axios.post(`${BASE_URL}/demo/add-teacher`, payload, authHeader())
-  return res.data
-}
-
 export const seedData = async (teacherId, opts = {}) => {
   const res = await axios.post(`${BASE_URL}/demo/seed-data`, { teacher_id: teacherId, ...opts }, authHeader())
   return res.data

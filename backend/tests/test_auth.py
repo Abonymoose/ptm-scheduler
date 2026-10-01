@@ -329,7 +329,7 @@ def test_signup_without_role_creates_parent(client, seed):
     assert _role_of("plain-parent@test.edu") == "parent"
 
 
-# --- /auth/me + /auth/venue --------------------------------------------------
+# --- /auth/me ------------------------------------------------------------
 def test_me(client, seed):
     r = client.get("/auth/me", headers=auth(seed["tokens"]["t1"]))
     assert r.status_code == 200
@@ -341,11 +341,11 @@ def test_me_requires_auth(client, seed):
     assert r.status_code in (401, 403)
 
 
-def test_venue_update_teacher(client, seed):
+# --- venue/room/room_location are admin-set only (see test_admin.py for the
+# PATCH /admin/teachers/{id} coverage) -- PATCH /auth/venue used to let a
+# teacher self-edit their own venue; it's been removed so location fields
+# only ever change through the admin-gated endpoint. Regression: the route
+# itself must be gone, not just newly forbidden.
+def test_auth_venue_route_removed(client, seed):
     r = client.patch("/auth/venue", json={"venue": "Lab 9"}, headers=auth(seed["tokens"]["t1"]))
-    assert r.status_code == 200 and r.json()["venue"] == "Lab 9"
-
-
-def test_venue_update_non_teacher_forbidden(client, seed):
-    r = client.patch("/auth/venue", json={"venue": "Lab 9"}, headers=auth(seed["tokens"]["parent"]))
-    assert r.status_code == 403
+    assert r.status_code == 404

@@ -5,7 +5,7 @@ import axios from 'axios'
 import { LOGO_SMALL } from '../assets/logos'
 import { titleName, TITLE_OPTIONS, combineTitle, splitTitle } from '../utils/teacherTitle'
 import { getTeacherSlots, updateTeacher, cancelSlot, blockSlot, unblockSlot, batchSlotAction, getPtmDate, setPtmDate as setPtmDateApi, getTeacherImpact, deleteTeacher, addTeacher as createTeacherAdmin, getTeacherExport, getParentExport } from '../api/admin'
-import { getDemoStatus, wipeBookings, resetSlots, getChangelog, addTeacher, seedData, wipeSeedData, getDemoUsers, impersonate, getEmailConfig, setEmailConfig as setEmailConfigApi } from '../api/demo'
+import { getDemoStatus, wipeBookings, resetSlots, getChangelog, seedData, wipeSeedData, getDemoUsers, impersonate, getEmailConfig, setEmailConfig as setEmailConfigApi } from '../api/demo'
 import { formatPtmDate } from '../utils/ptmDate'
 import InfoButton from '../components/InfoButton'
 import ScheduleExport from '../components/export/ScheduleExport'
@@ -153,7 +153,7 @@ export default function AdminDashboard() {
     setDemoBusy(true)
     demoPrint(`$ add-teacher ${addForm.email.trim()}`)
     try {
-      const r = await addTeacher({ name: combineTitle(addForm.title, addForm.name), email: addForm.email.trim(), subject: addForm.subject.trim() || null })
+      const r = await createTeacherAdmin({ name: combineTitle(addForm.title, addForm.name), email: addForm.email.trim(), subject: addForm.subject.trim() || null })
       demoPrint(`Added ${r.name} with ${r.slots_created} slots.`, 'success')
       setAddForm({ title: addForm.title, name: '', email: '', subject: '' })
       await fetchData()

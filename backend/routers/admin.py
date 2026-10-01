@@ -1,4 +1,3 @@
-import uuid
 import asyncio
 import logging
 from datetime import date
@@ -9,7 +8,7 @@ from pydantic import BaseModel
 from database import get_db
 from auth import get_current_user
 from email_service import send_cancellation_email, get_email_routing
-from routers.demo import _generate_grid
+from teachers import create_teacher as provision_teacher
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger("ptm.admin")
@@ -253,32 +252,17 @@ async def update_teacher(
     return dict(row._mapping)
 
 
-@router.post("/teachers")
+@router.post("/teachers", status_code=201)
 async def create_teacher(
     body: TeacherCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a real teacher in the admin's school + generate their 45-slot grid.
-    Same logic as /demo/add-teacher, exposed on the normal admin route."""
+    """Create a teacher in the admin's own school (from the JWT, never the
+    body) and generate their 45-slot grid. 409 if the email is already in
+    use anywhere. Shares teachers.create_teacher with /demo/add-teacher."""
     _require_admin(current_user)
-    sid = current_user["school_id"]
-    email = body.email.strip().lower()
-    name = body.name.strip()
-    if not name or not email:
-        raise HTTPException(status_code=400, detail="Name and email are required")
-    dup = (await db.execute(text("SELECT 1 FROM users WHERE email = :e"), {"e": email})).fetchone()
-    if dup:
-        raise HTTPException(status_code=400, detail=f"A user with email {email} already exists")
-    tid = str(uuid.uuid4())
-    await db.execute(
-        text("INSERT INTO users (id, school_id, name, email, hashed_password, role, subject)"
-             " VALUES (:id, :sid, :n, :e, 'x', 'teacher', :subj)"),
-        {"id": tid, "sid": sid, "n": name, "e": email, "subj": body.subject}
-    )
-    slots = await _generate_grid(db, tid, sid)
-    await db.commit()
-    return {"id": tid, "name": name, "email": email, "subject": body.subject, "slots_created": slots}
+    return await provision_teacher(db, current_user["school_id"], body.name, body.email, body.subject)
 
 
 @router.get("/teachers/{teacher_id}/impact")

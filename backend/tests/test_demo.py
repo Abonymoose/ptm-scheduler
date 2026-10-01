@@ -136,7 +136,7 @@ def test_add_teacher_creates_teacher_with_slots(client, seed):
 def test_add_teacher_rejects_duplicate_email(client, seed):
     r = client.post("/demo/add-teacher", json={"name": "Dup", "email": seed["emails"]["t1"]},
                     headers=auth(seed["tokens"]["admin"]))
-    assert r.status_code == 400
+    assert r.status_code == 409   # shared teachers.create_teacher, same as /admin/teachers
 
 
 def test_seed_data_fills_half_without_touching_real_or_blocked(client, seed):
@@ -357,35 +357,40 @@ def test_demo_users_non_admin_forbidden(client, seed):
     assert client.get("/demo/users", headers=auth(seed["tokens"]["parent"])).status_code == 403
 
 
-# --- demo login (DEMO_SECRET_CODE) -------------------------------------------
-def test_demo_login_correct_code(client, seed, monkeypatch):
+# --- demo login: the DEMO_SECRET_CODE shortcut is gone -------------------------
+def test_fixed_demo_code_rejected_even_with_secret_set(client, seed, monkeypatch):
+    """Regression: verify-otp used to accept DEMO_SECRET_CODE for the demo
+    admin with no attempt limit. Setting the env var must change nothing."""
     monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")
     r = client.post("/auth/verify-otp", json={"email": seed["emails"]["demo"], "code": "LETME6"})
-    assert r.status_code == 200
-    body = r.json()
-    assert "access_token" in body and body["role"] == "admin"
-
-
-def test_demo_login_wrong_code(client, seed, monkeypatch):
-    monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")
-    r = client.post("/auth/verify-otp", json={"email": seed["emails"]["demo"], "code": "NOPE99"})
     assert r.status_code == 400
+    assert "access_token" not in r.json()
 
 
-def test_demo_login_disabled_when_secret_unset(client, seed, monkeypatch):
-    # No DEMO_SECRET_CODE → demo path off → falls back to normal OTP (no otp row → 400).
-    monkeypatch.delenv("DEMO_SECRET_CODE", raising=False)
+def test_fixed_demo_code_rejected_even_with_live_otp(client, seed, monkeypatch):
+    """With a real outstanding OTP for the demo account, the fixed code is just
+    a wrong code: rejected, and it counts as a failed attempt."""
+    monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")
+    asyncio.run(_insert_otp(seed["emails"]["demo"], "135790"))
     r = client.post("/auth/verify-otp", json={"email": seed["emails"]["demo"], "code": "LETME6"})
     assert r.status_code == 400
 
+    async def _attempts():
+        async with seed_engine.connect() as c:
+            return (await c.execute(text("SELECT attempts FROM otps WHERE email = :e"),
+                                    {"e": seed["emails"]["demo"]})).scalar()
+    assert asyncio.run(_attempts()) == 1
 
-def test_demo_secret_does_not_affect_other_emails(client, seed, monkeypatch):
-    # A normal user still uses the otps table even when the demo secret is set.
-    monkeypatch.setenv("DEMO_SECRET_CODE", "LETME6")
-    client.post("/auth/request-otp", json={"email": seed["emails"]["parent"]})
-    real_code = _latest_otp(seed["emails"]["parent"])
-    ok = client.post("/auth/verify-otp", json={"email": seed["emails"]["parent"], "code": real_code})
-    assert ok.status_code == 200 and ok.json()["role"] == "parent"
-    # The demo secret must NOT log a normal user in.
-    bad = client.post("/auth/verify-otp", json={"email": seed["emails"]["parent"], "code": "LETME6"})
-    assert bad.status_code == 400
+
+def test_demo_account_uses_normal_admin_login(client, seed):
+    """The demo account is an admin, so it goes through password + OTP like any
+    other admin; request-otp turns it away."""
+    r = client.post("/auth/request-otp", json={"email": seed["emails"]["demo"]})
+    assert r.status_code == 400 and r.json()["detail"] == "Admins use password login"
+
+
+async def _insert_otp(email, code):
+    async with seed_engine.begin() as c:
+        await c.execute(text("INSERT INTO otps (email, code, expires_at, used)"
+                             " VALUES (:e, :c, NOW() + INTERVAL '10 minutes', false)"),
+                        {"e": email, "c": code})

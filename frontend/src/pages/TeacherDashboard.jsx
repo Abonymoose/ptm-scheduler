@@ -26,7 +26,6 @@ api.interceptors.request.use(cfg => { const t = localStorage.getItem('token'); i
 const getMySlots = () => api.get('/slots/mine').then(r => r.data)
 const createSlot = body => api.post('/slots/', body).then(r => r.data)
 const getMe = () => api.get('/auth/me').then(r => r.data)
-const patchVenue = venue => api.patch('/auth/venue', { venue }).then(r => r.data)
 const deleteBooking = id => api.delete(`/bookings/${id}`).then(r => r.data)
 
 // start_time/end_time are naive IST clock values merely labelled UTC (see
@@ -73,12 +72,10 @@ export default function TeacherDashboard() {
   const [attModal, setAttModal] = useState(null)
   const [attSel, setAttSel] = useState([])
   const [savingAtt, setSavingAtt] = useState(false)
-  const [venueModal, setVenueModal] = useState(false)
   const [venueText, setVenueText] = useState('Room TBD')
   const [ptmDate, setPtmDate] = useState(null)
   const [mySubject, setMySubject] = useState('')
   const [myRoom, setMyRoom] = useState('')
-  const [venueInput, setVenueInput] = useState('')
   const [cancelModal, setCancelModal] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [newDate, setNewDate] = useState('')
@@ -255,8 +252,8 @@ export default function TeacherDashboard() {
               <div style={{ fontSize: 'clamp(14px,2vw,22px)', fontWeight: 700, color: '#fff', letterSpacing: '-.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name ? titleName(user.name) : 'Teacher'}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>PTM {formatPtmDate(ptmDate)}</div>
               <div style={{ fontSize: 'clamp(10px,1.2vw,13px)', color: 'rgba(255,255,255,.8)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Read-only: venue/room is admin-set only (Manage teacher form). */}
                 <span id="venue-text">{venueText}</span>
-                <button onClick={() => { setVenueInput(venueText); setVenueModal(true) }} style={{ fontSize: 'clamp(9px,1.1vw,12px)', padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'inherit' }}>Change venue</button>
               </div>
             </div>
           </div>
@@ -560,23 +557,6 @@ export default function TeacherDashboard() {
           </div>
         )}
       </div>
-
-      {/* VENUE MODAL */}
-      {venueModal && (
-        <div onClick={() => setVenueModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', zIndex: 200, padding: 20, overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: 'clamp(24px,3.5vw,40px)', width: '100%', maxWidth: 'min(380px,calc(100vw - 32px))', marginTop: isMobile ? 12 : 0, textAlign: 'left', boxShadow: '0 12px 40px rgba(0,0,0,.15)' }}>
-            <div style={{ fontSize: 'clamp(17px,2.2vw,24px)', fontWeight: 700, color: '#1B3F7A', marginBottom: 8 }}>Change venue</div>
-            <div style={{ fontSize: 'clamp(13px,1.6vw,17px)', color: '#6B7280', marginBottom: 'clamp(10px,1.4vw,16px)', lineHeight: 1.5 }}>Enter the new room or location</div>
-            <input value={venueInput} onChange={e => setVenueInput(e.target.value)} placeholder="e.g. Room 201"
-              style={{ width: '100%', padding: 'clamp(12px,1.6vw,16px)', fontSize: 'clamp(14px,1.8vw,18px)', border: '2px solid #F4C099', borderRadius: 12, outline: 'none', fontFamily: 'inherit', color: '#1B3F7A', marginBottom: 'clamp(16px,2.5vw,24px)', boxSizing: 'border-box' }}
-              onFocus={e => e.target.style.borderColor = '#F47920'} onBlur={e => e.target.style.borderColor = '#F4C099'} />
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setVenueModal(false)} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: '2px solid #F4C099', background: '#fff', color: '#6B7280', fontFamily: 'inherit' }}>Back</button>
-              <button onClick={async () => { if (venueInput.trim()) { const v = venueInput.trim(); setVenueText(v); try { await patchVenue(v); showToast('Venue updated') } catch { showToast('Venue saved locally') } } setVenueModal(false) }} style={{ flex: 1, padding: 'clamp(12px,1.6vw,16px)', borderRadius: 12, fontSize: 'clamp(14px,1.8vw,18px)', fontWeight: 700, cursor: 'pointer', border: 'none', background: '#F47920', color: '#fff', fontFamily: 'inherit' }}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ATTENDANCE MODAL */}
       {attModal && (

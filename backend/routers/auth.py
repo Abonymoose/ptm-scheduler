@@ -5,7 +5,6 @@ from pydantic import BaseModel, EmailStr
 from database import get_db
 from auth import hash_password, verify_password, create_access_token, get_current_user
 from email_service import send_otp_email
-import os
 import uuid
 import secrets
 import asyncio
@@ -129,9 +128,6 @@ class AdminLoginRequest(BaseModel):
     email: str
     password: str
 
-class VenueRequest(BaseModel):
-    venue: str
-
 @router.post("/signup")
 async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     # Find school by invite code
@@ -238,34 +234,11 @@ async def request_otp(body: RequestOtpRequest, db: AsyncSession = Depends(get_db
     return {"message": "OTP sent"}
 
 
-DEMO_EMAIL = "demo@inventureacademy.com"
-
-
 @router.post("/verify-otp")
 async def verify_otp(body: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
-    # Demo login: only active when DEMO_SECRET_CODE is set (prod). The code is
-    # checked against the env secret, NOT the otps table. Disabled otherwise, so
-    # tests/local fall through to the normal OTP flow below. Never touches
-    # otps, so it's exempt from attempt-limiting below — by design, not an
-    # oversight.
-    demo_secret = os.getenv("DEMO_SECRET_CODE")
-    if demo_secret and body.email == DEMO_EMAIL:
-        if body.code != demo_secret:
-            raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-        result = await db.execute(
-            text("SELECT id, role, school_id, name, section, grade, family_id, parent_name FROM users WHERE email = :email"),
-            {"email": body.email}
-        )
-        user = result.fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="No account found for this email")
-        token = create_access_token({
-            "sub": str(user.id), "role": user.role, "school_id": str(user.school_id),
-            "name": user.name, "section": user.section, "grade": user.grade,
-            "family_id": str(user.family_id) if user.family_id else None, "parent_name": user.parent_name,
-        })
-        return {"access_token": token, "token_type": "bearer", "role": user.role, "name": user.name}
-
+    # Every account, the demo account included, proves itself with a code from
+    # the otps table. There used to be a DEMO_SECRET_CODE shortcut here: a fixed
+    # code, no attempt limit, logging in an admin. It's gone and must not return.
     result = await db.execute(
         text(
             "SELECT id, code, attempts FROM otps"
@@ -373,15 +346,3 @@ async def get_me(db: AsyncSession = Depends(get_db), current_user: dict = Depend
     if m.get("ptm_date") is not None:
         m["ptm_date"] = m["ptm_date"].isoformat()  # 'YYYY-MM-DD'
     return m
-
-
-@router.patch("/venue")
-async def update_venue(body: VenueRequest, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can update venue")
-    await db.execute(
-        text("UPDATE users SET venue = :venue WHERE id = :uid"),
-        {"venue": body.venue, "uid": current_user["sub"]}
-    )
-    await db.commit()
-    return {"venue": body.venue}

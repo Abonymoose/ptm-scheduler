@@ -6,8 +6,9 @@ from pydantic import BaseModel
 from database import get_db
 from auth import decode_token, create_access_token
 from email_service import get_email_routing, set_email_routing
+from teachers import SLOT_DURATION, SLOTS_PER_TEACHER, ptm_start_for_school, create_teacher
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from collections import OrderedDict
 import subprocess
 import os
@@ -167,42 +168,8 @@ async def _get_or_create_seed_parent(db: AsyncSession, school_id: str) -> str:
     return uid
 
 
-async def _ptm_start_for_school(db: AsyncSession, school_id: str) -> datetime:
-    """08:10 (UTC) on the school's configured PTM date. Falls back to the module
-    default if the column is somehow null."""
-    row = (await db.execute(
-        text("SELECT ptm_date FROM schools WHERE id = :sid"),
-        {"sid": school_id}
-    )).fetchone()
-    d = row.ptm_date if row and row.ptm_date else PTM_START.date()
-    return datetime(d.year, d.month, d.day, 8, 10, tzinfo=timezone.utc)
-
-
-async def _generate_grid(db: AsyncSession, teacher_id: str, school_id: str) -> int:
-    ptm_start = await _ptm_start_for_school(db, school_id)
-    rows, params = [], {}
-    for i in range(SLOTS_PER_TEACHER):
-        start = ptm_start + i * SLOT_DURATION
-        rows.append(f"(:id{i}, :tid{i}, :sid{i}, :start{i}, :end{i}, 1)")
-        params[f"id{i}"] = str(uuid.uuid4())
-        params[f"tid{i}"] = teacher_id
-        params[f"sid{i}"] = school_id
-        params[f"start{i}"] = start
-        params[f"end{i}"] = start + SLOT_DURATION
-    await db.execute(
-        text("INSERT INTO slots (id, teacher_id, school_id, start_time, end_time, capacity)"
-             " VALUES " + ", ".join(rows)),
-        params,
-    )
-    return SLOTS_PER_TEACHER
-
 # Repo root = two levels up from this file (backend/routers/demo.py -> repo/).
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Fresh-grid shape — mirrors the existing seeded data (seed.py).
-PTM_START = datetime(2026, 4, 9, 8, 10, tzinfo=timezone.utc)  # 08:10 on PTM day
-SLOT_DURATION = timedelta(minutes=7)
-SLOTS_PER_TEACHER = 45
 
 
 @router.get("/status")
@@ -255,7 +222,7 @@ async def reset_slots(
             {"sid": sid}
         )).fetchall()
 
-        ptm_start = await _ptm_start_for_school(db, sid)
+        ptm_start = await ptm_start_for_school(db, sid)
 
         # Build every slot row, then insert them all in ONE multi-row statement
         # instead of one round-trip per slot. Only the numeric row index is
@@ -348,26 +315,10 @@ async def add_teacher(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_demo_access)
 ):
-    """Create a real teacher in the admin's school + generate their slot grid."""
-    sid = current_user["school_id"]
-    email = body.email.strip().lower()
-    name = body.name.strip()
-    if not name or not email:
-        raise HTTPException(status_code=400, detail="Name and email are required")
-
-    dup = (await db.execute(text("SELECT 1 FROM users WHERE email = :e"), {"e": email})).fetchone()
-    if dup:
-        raise HTTPException(status_code=400, detail=f"A user with email {email} already exists")
-
-    tid = str(uuid.uuid4())
-    await db.execute(
-        text("INSERT INTO users (id, school_id, name, email, hashed_password, role, subject)"
-             " VALUES (:id, :sid, :n, :e, 'x', 'teacher', :subj)"),
-        {"id": tid, "sid": sid, "n": name, "e": email, "subj": body.subject}
-    )
-    slots = await _generate_grid(db, tid, sid)
-    await db.commit()
-    return {"id": tid, "name": name, "email": email, "subject": body.subject, "slots_created": slots}
+    """Create a real teacher in the admin's school + generate their slot grid.
+    Same function as POST /admin/teachers, which is the route to use outside
+    demos."""
+    return await create_teacher(db, current_user["school_id"], body.name, body.email, body.subject)
 
 
 @router.post("/seed-data")

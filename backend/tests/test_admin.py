@@ -54,6 +54,39 @@ def test_update_teacher_non_admin_forbidden(client, seed):
     assert r.status_code == 403
 
 
+# --- room / room_location are admin-only (regression: a teacher must never
+# be able to set their own meeting room, even on their own record) ----------
+def test_update_teacher_room_admin_succeeds(client, seed):
+    r = client.patch(f"/admin/teachers/{seed['ids']['t1']}",
+                     json={"name": "Ms. Teacher One", "email": seed["emails"]["t1"],
+                           "room": "R-104", "room_location": "2nd floor, near the library"},
+                     headers=auth(seed["tokens"]["admin"]))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["room"] == "R-104"
+    assert body["room_location"] == "2nd floor, near the library"
+
+
+def test_update_teacher_room_non_admin_forbidden(client, seed):
+    # Teacher t1 tries to set their OWN room via the admin endpoint.
+    r = client.patch(f"/admin/teachers/{seed['ids']['t1']}",
+                     json={"name": "Ms. Teacher One", "email": seed["emails"]["t1"],
+                           "room": "R-999", "room_location": "wherever I want"},
+                     headers=auth(seed["tokens"]["t1"]))
+    assert r.status_code == 403
+
+    async def _room():
+        async with seed_engine.connect() as c:
+            return (await c.execute(
+                text("SELECT room, room_location FROM users WHERE id = :i"), {"i": seed["ids"]["t1"]},
+            )).fetchone()
+    row = asyncio.run(_room())
+    # Rejected outright -- the seeded row (no room set) is untouched, not just
+    # partially applied.
+    assert row.room is None
+    assert row.room_location is None
+
+
 def test_delete_slot_with_booking_atomic(client, seed):
     a = seed["slots"]["A"]
     client.post("/bookings/", json={"slot_id": a}, headers=auth(seed["tokens"]["parent"]))
