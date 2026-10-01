@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script data-cfasync="false">/* motion: set before first paint so nothing flashes; off for reduced motion or old browsers */if('IntersectionObserver' in window&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))document.documentElement.classList.add('motion');</script>
 <title>FAQ — PTM Now</title>
 <meta name="description" content="Answers to common questions about PTM Now — how booking works, logging in, privacy, cost, and getting started.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
@@ -45,15 +46,52 @@ a:hover{text-decoration:underline;}
 .faq .answer p:last-child{margin-bottom:0;}
 @keyframes fadein{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
 
-.cta-band{background:var(--coral);border-radius:16px;padding:36px 32px;text-align:center;color:#fff;margin-top:40px;}
+.cta-band{background:var(--coral);border-radius:20px;padding:36px 32px;text-align:center;color:#fff;margin-top:40px;}
 .cta-band h2{font-size:24px;margin-bottom:10px;color:#fff;font-family:'Fraunces',serif;}
 .cta-band p{opacity:.92;margin-bottom:0;font-size:15px;}
-.footer{border-top:0.5px solid var(--border);padding:36px 0;}
-.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;max-width:1080px;margin:0 auto;padding:0 24px;}
+.footer{border-top:0.5px solid var(--border);padding:40px 0;}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;max-width:1080px;margin:0 auto;padding:0 24px;}
 .footer .brand{font-size:16px;}
-.footer-links{display:flex;gap:22px;font-size:14px;}
+.footer-links{display:flex;gap:24px;font-size:14px;}
 .footer-links a{color:var(--charcoal-soft);}
-@media(max-width:640px){.page-head h1{font-size:32px;}.nav-links a:not(.btn){display:none;}.faq summary{font-size:16px;}}
+@media(max-width:640px){.page-head h1{font-size:32px;}.faq summary{font-size:16px;}}
+/* ===== Motion & polish: shared by index, how-it-works, faq, privacy. Keep all four copies identical. =====
+   Only transform and opacity animate. Hidden start states apply only under html.motion, which is never set
+   with prefers-reduced-motion, so reduced motion (or no JS) shows everything immediately. */
+:root{--ease:cubic-bezier(.22,1,.36,1);--dur:.7s;--rise:18px;--stagger:70ms;--float:7px;}
+@media (max-width:720px){:root{--dur:.5s;--rise:10px;--stagger:50ms;--float:4px;}}
+html{scroll-behavior:smooth;}
+@keyframes rise-in{from{opacity:0;transform:translate3d(0,var(--rise),0);}to{opacity:1;transform:none;}}
+.motion .hin{animation:rise-in var(--dur) var(--ease) backwards;animation-delay:calc(var(--i,0) * var(--stagger) + 80ms);}
+.motion [data-reveal]{opacity:0;transform:translate3d(0,var(--rise),0);}
+.motion [data-reveal].in{opacity:1;transform:none;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:var(--d,0ms);}
+@keyframes float{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(0,calc(var(--float) * -1),0);}}
+.motion .frame-wrap{animation:float 7s ease-in-out 1.6s infinite;}
+.nav-links a:not(.btn),.footer-links a{position:relative;}
+.nav-links a:not(.btn)::after,.footer-links a::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1.5px;border-radius:1px;background:currentColor;transform:scaleX(0);transform-origin:left center;transition:transform .35s var(--ease);}
+.nav-links a:not(.btn):hover::after,.footer-links a:hover::after,.nav-links a:focus-visible::after,.footer-links a:focus-visible::after{transform:scaleX(1);}
+.nav-links a:hover,.footer-links a:hover{text-decoration:none;}
+.footer-links a{transition:color .2s var(--ease);}
+.footer-links a:hover{color:#1F2421;}
+.content a,.answer a{text-underline-offset:3px;}
+.btn{transition:background-color .2s var(--ease),transform .3s var(--ease);}
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:translateY(0) scale(.98);transition-duration:.1s;}
+.arrow{transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease),transform .3s var(--ease);}
+.arrow:active{transform:scale(.95);transition-duration:.1s;}
+.feature{position:relative;transition:transform .35s var(--ease);}
+.feature::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 14px 34px rgba(31,36,33,.09);opacity:0;transition:opacity .35s var(--ease);pointer-events:none;}
+.feature:hover{box-shadow:none;}
+.feature:hover::after{opacity:1;}
+.faq .chev{transition:transform .35s var(--ease),background-color .2s var(--ease);}
+a:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid #EE5A52;outline-offset:3px;border-radius:6px;}
+@media (max-width:720px){.nav-links a:not(.btn){display:none;}}
+@media print{.motion .hin,.motion [data-reveal]{opacity:1 !important;transform:none !important;animation:none !important;}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
+  .btn:hover,.btn:active,.arrow:hover,.arrow:active,.feature:hover{transform:none;}
+}
 </style>
 </head>
 <body>
@@ -73,80 +111,80 @@ a:hover{text-decoration:underline;}
 
 <header class="page-head">
   <div class="wrap">
-    <h1>Frequently asked questions</h1>
-    <div class="sub">Everything you might want to know about PTM Now.</div>
+    <h1 class="hin" style="--i:0">Frequently asked questions</h1>
+    <div class="sub hin" style="--i:1">Everything you might want to know about PTM Now.</div>
   </div>
 </header>
 
 <main class="content">
   <div class="wrap">
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>What is PTM Now?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>PTM Now is a web app that takes the entire parent-teacher meeting process online — start to finish. It sweeps away the sign-up sheets and spreadsheets and replaces them with one system: parents book their slots in seconds, teachers see their whole day at a glance, and the school office runs everything from a single place, with complete transparency over every booking.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>Who is it for?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>PTM Now is built for schools of any size. Three groups use it together: the parents who book the meetings, the teachers who hold and manage them, and the office staff and administration who organise and oversee the entire day.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>Do parents need to download an app?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>No. PTM Now runs entirely in a web browser — on any phone, whether iOS or Android, any tablet, or any computer. Parents just open the link the school shares with them. There's nothing to install.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>How do parents log in?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Parents enter their email and receive a six-digit code by email, which logs them straight in. It's secure, and there's no password to remember.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>How does booking work?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Parents view the available slots for each teacher they need to see, add the ones they want to their cart, and confirm them all at once. There's also an auto-schedule option that automatically picks a set of non-conflicting slots across all their chosen teachers.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>Can two parents book the same slot?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>No. The system checks availability at the moment a booking is confirmed, so two parents can never end up in the same slot. Double-booking isn't just discouraged — it's completely impossible.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>What if a parent has more than one child?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>One login covers the entire family — every sibling included. Parents switch between their children with a single click, and can colour-code meetings by child to keep everything clear.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>Can meetings be cancelled or changed?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Yes. Both parents and teachers can cancel a booking — which frees the slot for someone else — and book a different time. Teachers and administrators see these changes reflected live, and receive an email notification.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>How do teachers use it?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Teachers set their slots and make them available to parents, then get a clear schedule of their whole meeting day. They can mark attendance for each meeting, keep private notes only they can see, and block off slots for breaks so parents can't book over them.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>What can the school office do?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>The school office and administrators manage teachers and their slots, set the meeting date, and can see exactly which parents haven't booked yet — so they can send reminders to just those families, instead of chasing everyone.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>Is our data safe?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Yes. PTM Now stores only what it needs — students' names, classes, and sections — but never sensitive academic records. All access is role-based, so people see only their own information. Full details are in our <a href="/privacy">privacy policy</a>.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>How much does it cost?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Pricing depends on the school and how PTM Now is used. Get in touch and we'll talk through what works for you.</p></div>
     </details>
 
-    <details class="faq">
+    <details class="faq" data-reveal>
       <summary>How does a school get started?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
       <div class="answer"><p>Getting set up takes very little time or effort. The school shares its teacher and class information, picks a meeting date, and the slots are generated automatically. Before committing, we arrange a pilot — a single PTM — to show exactly how it works.</p></div>
     </details>
 
-    <div class="cta-band">
+    <div class="cta-band" data-reveal>
       <h2>Still have a question?</h2>
       <p>Reach out any time at parshvpmehta@gmail.com.</p>
     </div>
@@ -168,5 +206,27 @@ a:hover{text-decoration:underline;}
     </div>
   </div>
 </footer>
+<script data-cfasync="false">
+/* motion: scroll reveals (shared by all four landing pages; keep copies identical) */
+(function(){
+  var root=document.documentElement;
+  if(!root.classList.contains('motion'))return;
+  var cs=getComputedStyle(root),step=parseFloat(cs.getPropertyValue('--stagger'))||70,dur=(parseFloat(cs.getPropertyValue('--dur'))||.7)*1000;
+  function settle(el){el.removeAttribute('data-reveal');el.classList.remove('in');el.style.removeProperty('--d');}
+  var io=new IntersectionObserver(function(entries){
+    var hits=entries.filter(function(e){return e.isIntersecting;}).map(function(e){return e.target;});
+    hits.sort(function(a,b){return a.compareDocumentPosition(b)&4?-1:1;});
+    hits.forEach(function(el,n){
+      io.unobserve(el);
+      var delay=Math.min(n,5)*step;
+      el.style.setProperty('--d',delay+'ms');
+      el.classList.add('in');
+      /* hand the element back to its own styles (e.g. card hover lift) once revealed */
+      setTimeout(function(){settle(el);},dur+delay+120);
+    });
+  },{rootMargin:'0px 0px -6% 0px',threshold:0.08});
+  [].forEach.call(document.querySelectorAll('[data-reveal]'),function(el){io.observe(el);});
+})();
+</script>
 </body>
 </html>

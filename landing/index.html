@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script data-cfasync="false">/* motion: set before first paint so nothing flashes; off for reduced motion or old browsers */if('IntersectionObserver' in window&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))document.documentElement.classList.add('motion');</script>
 <title>PTM Now — Parent-teacher meetings, scheduled in seconds</title>
 <meta name="description" content="PTM Now is the simple way for schools to run parent-teacher meeting booking. No clashes, no chasing, works on any phone.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
@@ -160,7 +161,6 @@ a{color:inherit;text-decoration:none;}
   .hero{padding:44px 0 24px;}
   .hero h1{font-size:38px;}
   .hero p.lead{font-size:17px;}
-  .nav-links a:not(.btn){display:none;}
   .features,.steps{grid-template-columns:1fr;}
   .section{padding:56px 0;}
   .section-head h2{font-size:30px;}
@@ -169,6 +169,43 @@ a{color:inherit;text-decoration:none;}
   .carousel{gap:8px;}
   .frame-wrap,.phone{width:300px;}
   .frame-wrap{height:600px;}.phone{height:600px;}
+}
+/* ===== Motion & polish: shared by index, how-it-works, faq, privacy. Keep all four copies identical. =====
+   Only transform and opacity animate. Hidden start states apply only under html.motion, which is never set
+   with prefers-reduced-motion, so reduced motion (or no JS) shows everything immediately. */
+:root{--ease:cubic-bezier(.22,1,.36,1);--dur:.7s;--rise:18px;--stagger:70ms;--float:7px;}
+@media (max-width:720px){:root{--dur:.5s;--rise:10px;--stagger:50ms;--float:4px;}}
+html{scroll-behavior:smooth;}
+@keyframes rise-in{from{opacity:0;transform:translate3d(0,var(--rise),0);}to{opacity:1;transform:none;}}
+.motion .hin{animation:rise-in var(--dur) var(--ease) backwards;animation-delay:calc(var(--i,0) * var(--stagger) + 80ms);}
+.motion [data-reveal]{opacity:0;transform:translate3d(0,var(--rise),0);}
+.motion [data-reveal].in{opacity:1;transform:none;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);transition-delay:var(--d,0ms);}
+@keyframes float{0%,100%{transform:translate3d(0,0,0);}50%{transform:translate3d(0,calc(var(--float) * -1),0);}}
+.motion .frame-wrap{animation:float 7s ease-in-out 1.6s infinite;}
+.nav-links a:not(.btn),.footer-links a{position:relative;}
+.nav-links a:not(.btn)::after,.footer-links a::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1.5px;border-radius:1px;background:currentColor;transform:scaleX(0);transform-origin:left center;transition:transform .35s var(--ease);}
+.nav-links a:not(.btn):hover::after,.footer-links a:hover::after,.nav-links a:focus-visible::after,.footer-links a:focus-visible::after{transform:scaleX(1);}
+.nav-links a:hover,.footer-links a:hover{text-decoration:none;}
+.footer-links a{transition:color .2s var(--ease);}
+.footer-links a:hover{color:#1F2421;}
+.content a,.answer a{text-underline-offset:3px;}
+.btn{transition:background-color .2s var(--ease),transform .3s var(--ease);}
+.btn:hover{transform:translateY(-1px);}
+.btn:active{transform:translateY(0) scale(.98);transition-duration:.1s;}
+.arrow{transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease),transform .3s var(--ease);}
+.arrow:active{transform:scale(.95);transition-duration:.1s;}
+.feature{position:relative;transition:transform .35s var(--ease);}
+.feature::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 14px 34px rgba(31,36,33,.09);opacity:0;transition:opacity .35s var(--ease);pointer-events:none;}
+.feature:hover{box-shadow:none;}
+.feature:hover::after{opacity:1;}
+.faq .chev{transition:transform .35s var(--ease),background-color .2s var(--ease);}
+a:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid #EE5A52;outline-offset:3px;border-radius:6px;}
+@media (max-width:720px){.nav-links a:not(.btn){display:none;}}
+@media print{.motion .hin,.motion [data-reveal]{opacity:1 !important;transform:none !important;animation:none !important;}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}
+  .btn:hover,.btn:active,.arrow:hover,.arrow:active,.feature:hover{transform:none;}
 }
 </style>
 </head>
@@ -190,19 +227,19 @@ a{color:inherit;text-decoration:none;}
 
 <header class="hero">
   <div class="wrap">
-    <span class="eyebrow">Built for schools</span>
-    <h1>Parent-teacher meetings,<br><span class="accent">scheduled in seconds.</span></h1>
-    <p class="lead">The simple way for schools to run meeting booking — no clashes, no chasing parents, and it works on any phone.</p>
-    <div class="hero-cta">
+    <span class="eyebrow hin" style="--i:0">Built for schools</span>
+    <h1 class="hin" style="--i:1">Parent-teacher meetings,<br><span class="accent">scheduled in seconds.</span></h1>
+    <p class="lead hin" style="--i:2">The simple way for schools to run meeting booking — no clashes, no chasing parents, and it works on any phone.</p>
+    <div class="hero-cta hin" style="--i:3">
       <span class="btn btn-disabled btn-soon">Request a demo</span>
       <a href="/how-it-works" class="btn btn-ghost">See how it works</a>
     </div>
-    <p class="hero-note">No app to install · Works on any device · Set up in minutes</p>
+    <p class="hero-note hin" style="--i:4">No app to install · Works on any device · Set up in minutes</p>
   </div>
 </header>
 
 <section class="demo">
-  <div class="carousel">
+  <div class="carousel hin" style="--i:5">
     <div class="arrow" onclick="step(-1)" aria-label="Previous">‹</div>
     <div class="stagecol">
       <div class="frame-wrap">
@@ -255,39 +292,39 @@ a{color:inherit;text-decoration:none;}
 
 <section class="section section-sand" id="features">
   <div class="wrap">
-    <div class="section-head">
+    <div class="section-head" data-reveal>
       <span class="eyebrow">Why PTM Now</span>
       <h2>Everything a PTM day needs.</h2>
       <p>Replace clunky signup sheets with something built for the way meetings actually run.</p>
     </div>
     <div class="features">
-      <div class="feature"><div class="feature-icon">✓</div><h3>No double-bookings</h3><p>Two parents can never land in the same slot. The system simply won't allow it.</p></div>
-      <div class="feature"><div class="feature-icon">⚡</div><h3>Auto-schedule</h3><p>Parents pick their teachers and PTM Now finds non-conflicting slots across all of them, instantly.</p></div>
-      <div class="feature"><div class="feature-icon">📱</div><h3>Works on any phone</h3><p>No app to download. Parents get a link, enter a code, and book in seconds — from any device.</p></div>
-      <div class="feature"><div class="feature-icon">🔒</div><h3>Passwordless login</h3><p>No passwords to forget. Just an email and a six-digit code — simple and secure for everyone.</p></div>
-      <div class="feature"><div class="feature-icon">📝</div><h3>Notes &amp; attendance</h3><p>Teachers keep private notes on each meeting and mark who attended — all in one place.</p></div>
-      <div class="feature"><div class="feature-icon">🏫</div><h3>Made for schools</h3><p>Block breaks, see who hasn't booked, manage teachers — the tools an office actually needs.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">✓</div><h3>No double-bookings</h3><p>Two parents can never land in the same slot. The system simply won't allow it.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">⚡</div><h3>Auto-schedule</h3><p>Parents pick their teachers and PTM Now finds non-conflicting slots across all of them, instantly.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">📱</div><h3>Works on any phone</h3><p>No app to download. Parents get a link, enter a code, and book in seconds — from any device.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">🔒</div><h3>Passwordless login</h3><p>No passwords to forget. Just an email and a six-digit code — simple and secure for everyone.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">📝</div><h3>Notes &amp; attendance</h3><p>Teachers keep private notes on each meeting and mark who attended — all in one place.</p></div>
+      <div class="feature" data-reveal><div class="feature-icon">🏫</div><h3>Made for schools</h3><p>Block breaks, see who hasn't booked, manage teachers — the tools an office actually needs.</p></div>
     </div>
   </div>
 </section>
 
 <section class="section" id="how">
   <div class="wrap">
-    <div class="section-head">
+    <div class="section-head" data-reveal>
       <span class="eyebrow">Simple to run</span>
       <h2>Three steps to a booked PTM.</h2>
       <p>From setup to a full schedule, without the spreadsheet chaos.</p>
     </div>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><h3>The school sets up</h3><p>Add your teachers and pick the PTM date. Slots are generated automatically.</p></div>
-      <div class="step"><div class="step-num">2</div><h3>Parents book</h3><p>Parents get a link, sign in with a code, and pick their slots — or let auto-schedule do it.</p></div>
-      <div class="step"><div class="step-num">3</div><h3>Everyone's ready</h3><p>Teachers, parents, and the office all see their schedule, live, on any device.</p></div>
+      <div class="step" data-reveal><div class="step-num">1</div><h3>The school sets up</h3><p>Add your teachers and pick the PTM date. Slots are generated automatically.</p></div>
+      <div class="step" data-reveal><div class="step-num">2</div><h3>Parents book</h3><p>Parents get a link, sign in with a code, and pick their slots — or let auto-schedule do it.</p></div>
+      <div class="step" data-reveal><div class="step-num">3</div><h3>Everyone's ready</h3><p>Teachers, parents, and the office all see their schedule, live, on any device.</p></div>
     </div>
   </div>
 </section>
 
 <section class="section" style="padding-top:0;">
-  <div class="cta-band">
+  <div class="cta-band" data-reveal>
     <h2>Want PTM Now for your school?</h2>
     <p>Set it up for one meeting day and see how it feels. No commitment, and we'll help you get started.</p>
     <span class="btn btn-disabled btn-soon">Get in touch</span>
@@ -390,6 +427,28 @@ function step(d){show(cur+d);pause();}
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);});
 start();
 setTimeout(()=>{const i=document.querySelector('.panel.on .i');if(i){i.classList.add('peek');setTimeout(()=>i.classList.remove('peek'),2600);}},900);
+</script>
+<script data-cfasync="false">
+/* motion: scroll reveals (shared by all four landing pages; keep copies identical) */
+(function(){
+  var root=document.documentElement;
+  if(!root.classList.contains('motion'))return;
+  var cs=getComputedStyle(root),step=parseFloat(cs.getPropertyValue('--stagger'))||70,dur=(parseFloat(cs.getPropertyValue('--dur'))||.7)*1000;
+  function settle(el){el.removeAttribute('data-reveal');el.classList.remove('in');el.style.removeProperty('--d');}
+  var io=new IntersectionObserver(function(entries){
+    var hits=entries.filter(function(e){return e.isIntersecting;}).map(function(e){return e.target;});
+    hits.sort(function(a,b){return a.compareDocumentPosition(b)&4?-1:1;});
+    hits.forEach(function(el,n){
+      io.unobserve(el);
+      var delay=Math.min(n,5)*step;
+      el.style.setProperty('--d',delay+'ms');
+      el.classList.add('in');
+      /* hand the element back to its own styles (e.g. card hover lift) once revealed */
+      setTimeout(function(){settle(el);},dur+delay+120);
+    });
+  },{rootMargin:'0px 0px -6% 0px',threshold:0.08});
+  [].forEach.call(document.querySelectorAll('[data-reveal]'),function(el){io.observe(el);});
+})();
 </script>
 </body>
 </html>
