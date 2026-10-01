@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — PTM Now</title>
+<meta name="description" content="Answers to common questions about PTM Now — how booking works, logging in, privacy, cost, and getting started.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--coral:#EE5A52;--coral-dark:#C6362E;--coral-tint:#FDF0EE;--charcoal:#1F2421;--charcoal-soft:#4A524D;--sand:#F5F2ED;--white:#FFF;--border:#E9E4DC;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--charcoal);background:var(--white);line-height:1.7;-webkit-font-smoothing:antialiased;}
+h1{font-family:'Fraunces',Georgia,serif;font-weight:600;line-height:1.15;letter-spacing:-0.01em;}
+a{color:var(--coral-dark);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.wrap{max-width:720px;margin:0 auto;padding:0 24px;}
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);border-bottom:0.5px solid var(--border);}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px;max-width:1080px;margin:0 auto;padding:0 24px;}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;color:var(--charcoal);}
+.logo-mark{width:30px;height:30px;flex-shrink:0;}
+.nav-links{display:flex;align-items:center;gap:28px;font-size:15px;color:var(--charcoal-soft);}
+.nav-links a{color:var(--charcoal-soft);transition:color .15s;}
+.nav-links a:hover{color:var(--coral);text-decoration:none;}
+.btn{display:inline-block;background:var(--coral);color:#fff !important;padding:10px 20px;border-radius:8px;font-weight:500;font-size:15px;}
+.btn:hover{background:var(--coral-dark);text-decoration:none;}
+.page-head{padding:56px 0 28px;}
+.page-head h1{font-size:40px;margin-bottom:10px;}
+.page-head .sub{color:var(--charcoal-soft);font-size:17px;}
+.content{padding:8px 0 72px;}
+
+/* accordion */
+.faq{border-bottom:0.5px solid var(--border);}
+.faq summary{list-style:none;cursor:pointer;padding:20px 0;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:18px;font-weight:600;color:var(--charcoal);font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;transition:color .15s;}
+.faq summary::-webkit-details-marker{display:none;}
+.faq summary:hover{color:var(--coral-dark);}
+.faq .chev{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--coral-tint);display:flex;align-items:center;justify-content:center;transition:transform .25s ease,background .15s;}
+.faq[open] .chev{transform:rotate(180deg);background:var(--coral);}
+.faq .chev svg{width:12px;height:12px;transition:stroke .15s;}
+.faq[open] .chev svg{stroke:#fff;}
+.faq .answer{padding:0 0 22px;color:var(--charcoal-soft);animation:fadein .25s ease;}
+.faq .answer p{margin-bottom:10px;}
+.faq .answer p:last-child{margin-bottom:0;}
+@keyframes fadein{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+.cta-band{background:var(--coral);border-radius:16px;padding:36px 32px;text-align:center;color:#fff;margin-top:40px;}
+.cta-band h2{font-size:24px;margin-bottom:10px;color:#fff;font-family:'Fraunces',serif;}
+.cta-band p{opacity:.92;margin-bottom:0;font-size:15px;}
+.footer{border-top:0.5px solid var(--border);padding:36px 0;}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;max-width:1080px;margin:0 auto;padding:0 24px;}
+.footer .brand{font-size:16px;}
+.footer-links{display:flex;gap:22px;font-size:14px;}
+.footer-links a{color:var(--charcoal-soft);}
+@media(max-width:640px){.page-head h1{font-size:32px;}.nav-links a:not(.btn){display:none;}.faq summary{font-size:16px;}}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="brand">
+      <svg class="logo-mark" viewBox="0 0 170 170" aria-hidden="true"><rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52"/><rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E"/><rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E"/><rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B"/><rect x="10" y="44" width="150" height="14" fill="#D8443B"/><path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      PTM Now
+    </a>
+    <div class="nav-links">
+      <a href="/how-it-works">How it works</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+    </div>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <h1>Frequently asked questions</h1>
+    <div class="sub">Everything you might want to know about PTM Now.</div>
+  </div>
+</header>
+
+<main class="content">
+  <div class="wrap">
+
+    <details class="faq">
+      <summary>What is PTM Now?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>PTM Now is a web app that takes the entire parent-teacher meeting process online — start to finish. It sweeps away the sign-up sheets and spreadsheets and replaces them with one system: parents book their slots in seconds, teachers see their whole day at a glance, and the school office runs everything from a single place, with complete transparency over every booking.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>Who is it for?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>PTM Now is built for schools of any size. Three groups use it together: the parents who book the meetings, the teachers who hold and manage them, and the office staff and administration who organise and oversee the entire day.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>Do parents need to download an app?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>No. PTM Now runs entirely in a web browser — on any phone, whether iOS or Android, any tablet, or any computer. Parents just open the link the school shares with them. There's nothing to install.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>How do parents log in?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Parents enter their email and receive a six-digit code by email, which logs them straight in. It's secure, and there's no password to remember.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>How does booking work?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Parents view the available slots for each teacher they need to see, add the ones they want to their cart, and confirm them all at once. There's also an auto-schedule option that automatically picks a set of non-conflicting slots across all their chosen teachers.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>Can two parents book the same slot?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>No. The system checks availability at the moment a booking is confirmed, so two parents can never end up in the same slot. Double-booking isn't just discouraged — it's completely impossible.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>What if a parent has more than one child?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>One login covers the entire family — every sibling included. Parents switch between their children with a single click, and can colour-code meetings by child to keep everything clear.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>Can meetings be cancelled or changed?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Yes. Both parents and teachers can cancel a booking — which frees the slot for someone else — and book a different time. Teachers and administrators see these changes reflected live, and receive an email notification.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>How do teachers use it?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Teachers set their slots and make them available to parents, then get a clear schedule of their whole meeting day. They can mark attendance for each meeting, keep private notes only they can see, and block off slots for breaks so parents can't book over them.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>What can the school office do?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>The school office and administrators manage teachers and their slots, set the meeting date, and can see exactly which parents haven't booked yet — so they can send reminders to just those families, instead of chasing everyone.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>Is our data safe?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Yes. PTM Now stores only what it needs — students' names, classes, and sections — but never sensitive academic records. All access is role-based, so people see only their own information. Full details are in our <a href="/privacy">privacy policy</a>.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>How much does it cost?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Pricing depends on the school and how PTM Now is used. Get in touch and we'll talk through what works for you.</p></div>
+    </details>
+
+    <details class="faq">
+      <summary>How does a school get started?<span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="#C6362E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span></summary>
+      <div class="answer"><p>Getting set up takes very little time or effort. The school shares its teacher and class information, picks a meeting date, and the slots are generated automatically. Before committing, we arrange a pilot — a single PTM — to show exactly how it works.</p></div>
+    </details>
+
+    <div class="cta-band">
+      <h2>Still have a question?</h2>
+      <p>Reach out any time at parshvpmehta@gmail.com.</p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <a href="/" class="brand">
+      <svg class="logo-mark" viewBox="0 0 170 170" aria-hidden="true"><rect x="10" y="24" width="150" height="140" rx="26" fill="#EE5A52"/><rect x="36" y="10" width="16" height="34" rx="8" fill="#C6362E"/><rect x="118" y="10" width="16" height="34" rx="8" fill="#C6362E"/><rect x="10" y="24" width="150" height="34" rx="26" fill="#D8443B"/><rect x="10" y="44" width="150" height="14" fill="#D8443B"/><path d="M54 106 L76 130 L118 78" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      PTM Now
+    </a>
+    <div class="footer-links">
+      <a href="/how-it-works">How it works</a>
+      <a href="/faq">FAQ</a>
+      <a href="/privacy">Privacy</a>
+      <a href="mailto:parshvpmehta@gmail.com">Contact</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>
